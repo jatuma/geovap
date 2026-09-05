@@ -341,6 +341,145 @@ Peters et al. zároveň jmenují **zbytkové kalibrační chyby** jako primárn�
 
 ---
 
+## 12. Experimenty na datech Dražkov
+
+Sekce 1–11 jsou rešerše — čísla z jiných datasetů (Cityscapes, GOOSE, DensePASS, Toronto-3D…).
+Tahle sekce testuje stejná tvrzení přímo na vzorku, který GEOVAP předal k nulté fázi (menší obec
+Dražkov: 1503 panoramat Ladybug 8000×4000, `export.csv` s roll/pitch/yaw, 38 dlaždic LAZ terén/ostatní,
+a hlavně kompletní atributovaný JVF export `1_ZPS_GAD.geojson` — 4342 objektů s reálnými 3D
+souřadnicemi). Kód a podrobné výstupy: `geovap/experiments/` (`README.md` tam popisuje spuštění).
+
+### 12.1 Skutečné rozložení JVF tříd v Dražkově
+
+Na rozdíl od §5.2 (proxy odhad pokrytí veřejnými datasety) je tohle **přímé měření** na reálné obci:
+
+| Instancí | JVF kód | Název |
+|---|---|---|
+| 1239 | `0100000304` | hranice dopravní stavby nebo plochy |
+| 630 | `0100000162` | **plot** |
+| 512 | `0100000300` | hranice stavby |
+| 437 | `0100000299` | hranice budovy |
+| 194 | `0100000051` | příkop, násep, zářez dopravní stavby |
+| 166 | `0100000165` | stavebně upravený vjezd na pozemek |
+| 56 | `0100000193` | **čelo propustku** |
+| 17 | `0100000084` | studna na veřejném prostranství |
+| 8 | `0100000199` | **zábradlí** |
+
+Přesně ty vzácné/tenké třídy, o kterých §5.2 a §11 říkají, že je žádný veřejný dataset nepokrývá,
+tady existují v reálné, geodeticky přesné 3D podobě — plná tabulka v `experiments/out/e1/coverage_by_class.txt`.
+
+### 12.2 Klíčové zjištění: JVF vektory se dají promítnout zpět do panoramat — pseudo-GT zdarma
+
+Tentýž kamerový model, ověřený v `02_obarveni_pointcloudu.md` §2.1 proti TerraScan RGB (ΔE medián
+6,08), promítá i JVF linie/body zpět do panoramat. **3161/4342 objektů (72,8 %) má panorama do 20 m**
+a vizuální kontrola (125 náhledů, `experiments/out/e1/overlays/`) potvrzuje, že projekce sedí přesně —
+`hranice budovy` leží na patě fasády, `plot` na hraně oplocení, `čelo propustku` u kraje vozovky,
+**`zábradlí` (jen 8 instancí v celé obci) sedí přesně na červeném kovovém zábradlí mostku**, `studna`
+padá do zahrady za plotem. Tohle je druhý, nezávislý důkaz správnosti projekčního modelu — tentokrát
+na sémantice, ne na barvě — a zároveň způsob, jak získat 2D pseudo-ground-truth bez ruční anotace
+(vstup pro M2/M3/M4 v `01_plan.md`).
+
+### 12.3 Zero-shot baseline (Mask2Former, Mapillary Vistas) na reálných panoramatech
+
+Recept §4.3 (prstenec 8× yaw × pitch 0° + 4× pitch −45°, fúze softmaxů s kosinovým dobehem,
+`grid_sample` na GPU) implementován a otestován na 40 panoramatech vybraných tak, aby pokryla
+nejvíc JVF tříd z §12.2 (36/46 tříd). **3,43 s/panorama na RTX 3090 → odhad 86 minut pro celých
+1503 panoramat** (§4.4 odhadoval "jednotky GPU-hodin" pro rychlejší backbony — potvrzeno, jen s
+pomalejším Mask2Former Swin-L je to blíž horní hranici toho odhadu).
+
+**Dvě nalezené a opravené chyby při implementaci** jsou samy o sobě poučení pro kohokoli, kdo bude
+recept z §4.3 reprodukovat:
+
+1. Špatné pořadí inverzní rotace v reprojekci nechalo ~11 % pixelů v operačně důležitém pásu
+   φ∈[−55°,+45°] nepokrytých žádnou výsečí (viditelné jako tvrdé mezery mezi sousedními pohledy a
+   25 % pixelů spadlých do náhodné výchozí třídy při fúzi). Po opravě nepokryto jen 0,76 %
+   (numerický okraj).
+2. **Vertikální (elevační) souřadnice se při zpětné fúzi výseče do ERP počítala se špatným
+   znaménkem** — směr "nahoru ve světě" se zaměnil za řádek obrazu vysece (ten roste opačně, řádek 0
+   = nahoře). Efekt: segmentace byla lokálně vzhůru nohama přesně v místech, kde do fúze přispívala
+   nenulová elevace (tedy skoro všude mimo horizont) — na overlayi to vypadalo jako "obrys auta je
+   jinde a zrcadlený", protože se do stejného pixelu skládaly dvě verze pravděpodobnosti z různých
+   výsečí, jedna správně orientovaná, druhá obrácená. **Tuhle chybu odhalil až vizuální review
+   uživatelem** na konkrétním snímku (bílá dodávka v příjezdové cestě, viz `experiments/out/e2/`
+   frame 119 před/po) — ani test středu výseče, ani test čistě horizontálního posunu ji neodhalí,
+   protože se projeví jen na bodech s nenulovým vertikálním posunem od středu pohledu. Test, který ji
+   chytí: ověřit round-trip **mimostředového** bodu v obou osách zvlášť, ne jen support bod ve středu.
+
+Obě chyby jsou teď opravené v `common/reproject.py`. **Kosinový dobeh k okraji výseče (§4.3) bez
+explicitního testu pokrytí celé koule a bez mimostředového round-trip testu neodhalí ani jednu z
+nich — potvrzující test typu "vyrenderuj mapu vah, zkontroluj mezery, a ověř mimostředový bod v obou
+osách" patří do checklistu, ne jen vizuální kontrola jedné segmentované dlaždice.**
+
+### 12.4 Matice schopností po třídách — poprvé na reálné geometrii, ne na proxy datasetu
+
+Metoda: pás kolem projektované JVF linie/bodu o šířce podle tolerance 14 cm (§1, §8) v pixelech
+dané vzdálenosti; podíl pixelů v pásu s odpovídající veřejnou třídou Vistas taxonomie
+(`experiments/common/class_map.py`, rozšíření §5.2 o kódy skutečně přítomné v Dražkově):
+
+| n | skóre | JVF třída → veřejná |
+|---|---|---|
+| 2 | 0,50 | přidružená plocha pozemní komunikace → road |
+| 9 | 0,41 | hranice přírodního a polopřírodního objektu → terrain\|vegetation |
+| 3 | 0,33 | ostatní zastřešená stavba → building |
+| 3 | 0,31 | chodník → sidewalk |
+| 120 | 0,27 | hranice dopravní stavby nebo plochy → road\|sidewalk\|curb |
+| 21 | 0,27 | hranice udržované zeleně → vegetation |
+| 50 | 0,22 | hranice budovy → building |
+| 9 | 0,22 | budova → building |
+| 23 | 0,14 | udržovaná plocha zeleně → vegetation |
+| 12 | 0,11 | hranice zdi → wall |
+| 176 | 0,04 | hranice stavby → building |
+| 20 | 0,00 | hranice vodního díla → water |
+
+(čísla po opravě obou chyb z §12.3 — proti první, chybné verzi se pořadí tříd mírně mění, ale
+celkový obrázek je stejný: silnice/chodník/vegetace nejlépe, `hranice stavby` výrazně hůř než
+`hranice budovy`, voda nulová.)
+
+Tohle je **záměrně přísná metrika** (úzký pás na 14 cm, ne plošné mIoU) — nízká absolutní čísla
+nejsou v rozporu s odhadem 44–50 mIoU v §9 (jiná, shovívavější metrika). Hodnota je v **relativním
+pořadí a v tom, že jde vůbec měřit na pravé geometrii**: `hranice stavby` skóruje výrazně hůř než
+`hranice budovy`, přestože obě mapujeme na `building` — JVF rozlišuje budovu od "ostatní stavby"
+jemněji, než to umí veřejná taxonomie, a tohle rozlišení proxy datasety nemohly odhalit.
+**202 ze 4342 objektů (~4,7 %) nemá žádný veřejný ekvivalent** — to je přímé, měřené číslo pro
+rozsah vlastních tříd z §11, ne odhad.
+
+### 12.5 Rotační citlivost na reálných datech (§3.3 revidováno)
+
+Skutečné rozdělení roll/pitch pro všech 1503 snímků z `export.csv`:
+
+| | medián \|x\| | p90 | p99 | max | podíl \|x\|>5° |
+|---|---|---|---|---|---|
+| roll | 1,07° | 2,07° | 3,95° | 8,66° | 0,33 % |
+| pitch | 1,23° | 2,11° | 3,52° | 5,99° | 0,13 % |
+
+SGAT4PASS (§3.3) měřilo dopad **umělé** perturbace ±5°. Na reálných datech tohohle vozu leží skoro
+všechny snímky uvnitř ±3° a jen 0,1–0,3 % překračuje 5°. **Srovnání do vodorovné roviny zůstává
+správný krok** (pořád "jeden převzorkovací průchod zadarmo"), ale očekávaný přínos bude pravděpodobně
+menší, než ±5° ablace naznačuje, protože reálná data se ke krajní hodnotě z té ablace skoro nikdy
+nepřiblíží. Přímé A/B srovnání (se/bez srovnání do horizontu, na podvzorku s nejvyšším náklonem)
+neproběhlo v této iteraci — je to nejlevnější zbývající krok k dokončení, viz `experiments/README.md`.
+
+### 12.6 Co z toho plyne pro plán
+
+- **§12.2 (projekce JVF→panorama) je hotová infrastruktura pro M3** (`01_plan.md`) — funguje už teď,
+  ne až po M2. Stojí za zvážení přesunout ji před M2 v pořadí prací, protože je levnější a dává
+  okamžitě pseudo-GT pro cokoliv, co M2/M4 potřebují validovat.
+- **Matice schopností po třídách (§12.4) je reprodukovatelná na celém vzorku** — chybí jen spustit
+  E2/E3 přes všech 1503 panoramat (~86 min GPU čas) a zpřesnit odhad šířky pásu (aktuální je hrubý
+  odhad úhlového rozlišení, ne kalibrovaný na skutečnou vzdálenost jako v `02_obarveni_pointcloudu.md`).
+- **Riziko rotační citlivosti (§3.3) je pravděpodobně přeceněné** pro tenhle konkrétní vůz/kalibraci.
+
+### 12.7 Dodatek (září 2026): okluze v projekci JVF a inverzní mapování
+
+Balíček `mapping/` (viz `02_obarveni_pointcloudu.md` §13 a `mapping/README.md`) nahrazuje kreslení z E1/E3:
+
+- **E1 a E3 kreslily bez okluze.** S hloubkovým panoramatem snímku (`mapping.vectors.project_polyline`) se ukazuje, že nemalá část JVF linií v „pokrytých" snímcích je z daného snímku zastíněná (plot za zemědělskými stroji, hranice budovy za živým plotem, paty zábradlí za obrubou). Skóre E3 v §12.4 je tedy kontaminované — pás okolo zastíněné linie model správně neoznačí a metrika to počítá jako chybu. E3 je třeba přepočítat s maskou viditelných úseků (`mapping.cli.render_frame --jvf` zapisuje masku i zastíněné části zvlášť).
+- Dále opraveno proti E1: 3D segmenty se dělí po ≤ 0,25° (přímky jsou v ERP křivky), šev se rozděluje místo vynechání segmentu, šířka pásu se počítá z 0,14 m ve vzdálenosti každého vzorku (E3 měla jednu šířku na objekt podle těžiště).
+- **Inverzní směr existuje**: `FrameProducts.point_at(u, v)` vrací id bodu ve store a `geometry.pano_to_world` bod na paprsku, takže 2D značky (masky, pravděpodobnosti) lze přenášet na body přímo, bez opakované projekce; `mapping.accumulate.LabelVote` je připravené rozhraní pro vážené hlasování podle §9 fáze 3 (tytéž váhy `V·cos ι·1/(1+(r/8)²)` jako u barvy).
+- Snímky v zatáčkách (|dyaw/dt| > 8°/s) mají nevyřešený časový/orientační problém (02 §13.6) — pro pseudo-GT je zatím bezpečnější je vynechat.
+
+---
+
 ## Zdroje
 
 **Modely a backbony**
