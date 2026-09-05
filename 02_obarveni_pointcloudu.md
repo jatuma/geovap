@@ -474,6 +474,58 @@ Tři levné dotazy, které smrsknou většinu zbývající nejistoty:
 
 Dále, pokud existuje: **surových šest snímků z Ladybugu** místo sešitých panoramat. To je jediná skutečná cesta, jak se zbavit parallaxu na krátkou vzdálenost.
 
+4. **Co přesně je `Timestamp` a `Yaw` v `export.csv` v zatáčkách a při otáčení?** Snímky s úhlovou rychlostí přes 8°/s (začátky/konce průjezdů, otáčky) sedí na mračno výrazně hůř než rovné úseky (medián ΔE 10–15 proti 5–7) a jejich optimální časový posun kolísá snímek od snímku od −4 do +3,5 s — tedy nejde o konstantní latenci kamery. Je časová značka okamžik triggeru, nebo expozice? Je Yaw kurz (směr pohybu) nebo heading (osa vozidla), a jak se chová při couvání? Viz §13.6.
+
+---
+
+## 13. Implementace a výsledky na celém mračnu (září 2026)
+
+Fáze 4 a část fáze 2–3 jsou implementované v balíčku `mapping/` (viz `mapping/README.md`), který je postavený jako **obousměrné mapování** — tytéž per-snímkové produkty (hloubkové panorama + panorama id bodu, 2000×1000, 1 503 snímků, 17 GB) slouží pro pano→svět (`pano_to_world`, `pano_to_point`, viditelnost) i pro svět→pano (obarvení, rendrování atributů a JVF vektorů). Geometrie je maticový přepis §2.1, shoda s `experiments/common/camera.py` je testovaná (< 1e-6 px ve float64).
+
+### 13.1 Regrese pilotu a maska vozidla
+
+Recept pilotu se podařilo rekonstruovat: nejbližší snímek v čase, nejbližší pixel, bez okluze **a body blíž než 3,5 m od kamery vyřazené** → medián CIE76 **6,08** (n = 43 058 z podvzorku 1/120 dlaždice 037), tj. shoda na dvě desetinná místa. Bez vyřazení blízkých bodů je medián 7,08: 21 % bodů dlaždice (vozovka pod vozidlem) se v nejbližším snímku v čase promítá na **karoserii** (střecha, oba skenery VMX-2HA, černá čepička nadiru). Maska vozidla se hledá automaticky jako oblast se statickými hranami — koherence znaménkového gradientu přes 200 snímků (~1 na karoserii, ~0 ve scéně) a výplň pod obrysem — a pokrývá 24,6 % obrazu. S maskou dává stejný recept medián CIE76 5,73; zrcadlená varianta 15,7 (pilot 17,05).
+
+### 13.2 Okluze — tři pasti, které §5 nepředvídal
+
+1. **Mračno je sjednocení 29 průjezdů, fotka je jeden okamžik.** Brány, zaparkovaná auta, lidé z jiných průjezdů zastiňovaly geometrii, která na fotce je viditelná. Hloubkové panorama snímku se proto staví jen z bodů naskenovaných do ±45 s od snímku.
+2. **Zem pod tečným úhlem se zastiňuje sama.** Ve 20 m se hloubka mění o ~0,5 m na buňku, ve 30 m o ~1 m; pevná tolerance `max(0,15 m; 0,03 r)` pak vyřadí legitimní body. Tolerance má navíc člen s lokálním rozptylem hloubky (3×3) a člen `0,12 m / sin|el|` (výšková chyba 12 cm se na zemi promítne do metrů dosahu), oba stropované na 2 m.
+3. **Vítěz buňky z-bufferu není přesný bod.** Splat s poloměrem až 8 px znamená, že bod reprezentující buňku může ležet až 1,4° jinde. Pro obarvování to nevadí, pro kalibraci (13.5) je nutné vybírat body podle jejich vlastní buňky v jemném 4000×2000 bufferu.
+
+Kontrola pravidla A1 (§7.7) na dlaždici 037 drží: okluze srazí `%(ΔE00>20)` z 3,08 na 2,94 % a P90 z 12,1 na 11,3, medián se posune o −0,25.
+
+### 13.3 Celé mračno — rig identita, produkty bez časového okna (běh `identity`)
+
+584 809 840 bodů, 38 dlaždic, 8 procesů, ~40 min. Výstup LAS 1.4 PF7 s XYZ bitově shodným se vstupem, `red/green/blue` = mediánový produkt, extra dimenze podle §10 (plus `ref_*`, `nt_*`, tři ΔE00, `n_views`, `col_conf`, `cam_dist`, `img_grad`), VLR s provenience.
+
+| varianta | pokrytí | medián ΔE00 | MAD | P75 | P90 | P99 | >20 | <5 | medián CIE76 |
+|---|---|---|---|---|---|---|---|---|---|
+| medián top-5 (produkt) | 82,4 % | **4,98** | 2,45 | 8,78 | 15,1 | 44,7 | 6,4 % | 50,1 % | 6,12 |
+| nejbližší v čase, okluze | 48,9 % | 5,38 | 2,60 | 9,38 | 16,1 | 45,8 | 6,8 % | 46,2 % | 6,68 |
+| nejbližší v čase, bez okluze | 81,7 % | 5,98 | 3,00 | 10,58 | 19,2 | 50,1 | 9,4 % | 41,0 % | 7,38 |
+
+**Běh `tw45`** (produkty s časovým oknem ±45 s a tolerancí podle 13.2, 5 procesů, ~55 min): pokrytí produktu **94,1 %** (z 82,4 %), medián ΔE00 **4,93**, MAD 2,45, P90 15,3, `%(>20)` 6,6 %, medián CIE76 6,08; nejbližší v čase s okluzí pokrytí 60,8 % (z 48,9 %), medián 5,48. Přesnost se nezměnila, pokrytí vzrostlo o 12 bodů — potvrzuje, že v běhu `identity` byla okluze přehnaná. Zbylý rozdíl proti variantě bez okluze (81,7 %) je skutečné zastínění + zem pod tečným úhlem za horizontem viditelnosti. Výstup: `Geovap_cache/out/tw45/{tiles,report.md,stats}`.
+
+Cíl M1: medián < 5 splněn na hraně (4,93–4,98), podíl hrubých chyb 6,4–6,6 % > 5 % **nesplněn**. Stratifikace podle gradientu obrazu: hladké pixely 4,33 → hrany 15,3 (poměr 3,5; pilot 2,64 v CIE76). Podle vzdálenosti: nejlépe 4–6 m (4,67), 25–40 m 8,03 s 19 % hrubých chyb. Třída 2 (zem) 4,03, třída 1 5,08. Per-snímkový medián kolísá 3–13 po průjezdech (`out/identity/de_per_frame.png`) a sleduje osvětlení/expozici, ne geometrii — vizuální kontrola špatných snímků (např. 800) ukazuje geometricky přesné zarovnání a sky-bleed v referenčním RGB TerraScanu. Podíl nt-bodů zamítnutých okluzí (33 %) byl v tomto běhu zjevně přehnaný — viz 13.2 a běh `tw45`.
+
+### 13.4 Rendrování cloud → pano (klient A)
+
+`mapping.cli.render_frame` vykreslí do panoramatu hloubku, třídu, intenzitu, id bodu a referenční RGB (gather přes panorama id bodu, díry do 3 px se vyplňují nejbližší buňkou, značky se nikdy neinterpolují) a JVF vektory s testem viditelnosti: 3D segmenty se dělí po ≤ 0,25°, šev se rozděluje místo vynechání, šířka pásu je 0,14 m / r v každém vzorku. Zastíněné části se kreslí zvlášť (E1/E3 dosud kreslily bez okluze — jejich skóre je tedy kontaminované zastíněnými objekty, viz `03_semanticka_segmentace.md` §12.7).
+
+### 13.5 Kalibrace rigu — výsledek: identita v rámci šumu
+
+§2.7 platí: barevná ΔE je na Δt (±0,4 s) i na boresight plochá — ověřeno i s maskou vozidla a stratifikací podle gradientu. Ploché jsou na tomto venkovském datasetu i NGF/NMI na renderované intenzitě a chamfer skeny (vegetace dominuje, `mapping/calib/objective.py`, `chamfer.py`). Fungující metoda je **edge-ICP** (`mapping/calib/icp.py`): body na hloubkových nespojitostech a siluetách vůči obloze (dráty, sloupy, hřebeny střech) z jemného 4000×2000 z-bufferu ↔ nejbližší hrana fotografie (distanční transformace s indexy, potlačení texturovaných oblastí), soft-L1, okna 40→6 px, parametry (ω, φ, κ, dt, lever arm). Na 117 stratifikovaných snímcích: boresight **(0,07°, −0,01°, −0,03°)**, lever arm ≤ 2 cm, dt ≈ 1 ms; reziduum před/po beze změny (medián du/dv −0,14/−0,22 px, MAD 8/11 px), hold-out 40 % beze změny, rozptyl mezi 5 časovými bloky 0,05–0,17°. **Pro produkci se ponechává identita**; `out/calib/fit.json` nese celý protokol. Dosažitelná přesnost této metody na těchto datech je ~0,1–0,2°, tj. 2–4 px.
+
+### 13.6 Rozbor 20 nejhorších snímků — geometrie sedí, „chyba" je volba snímku v TerraScanu
+
+Dvacet snímků s nejvyšším mediánem ΔE00 (11–19) proti referenčnímu RGB vypadá v renderu referenčních barev jako scéna „z jiného místa" nebo zrcadlená. Rozbor (`mapping/align.py`, siluety `calib/chamfer.fine_edge_points`) ukázal, že **geometrie je v pořádku**: hloubkové/oblohové siluety mračna leží na hranách fotografie s mediánem odchylky |du|, |dv| ≤ 2 px (MAD 5–13 px), stejně jako u kontrolních dobrých snímků; relativní rotace mezi po sobě jdoucími fotografiemi (fázová korelace hran u horizontu) souhlasí s Δyaw z `export.csv` na 1–2° i uprostřed otoček (1170→1171: −50,8° vs −50,9°). Vyčerpávající hledání pózy (±8 s po trajektorii, pózy sousedních průjezdů, mřížka ±6 m × celý kruh yaw) nenajde nic lepšího než ΔE 12–13, protože **ΔE tady neměří geometrii**: i pro dobré snímky dává ΔE proti bodům z *jiných* průjezdů 14–15 (ty TerraScan obarvil z jiných fotografií). Špatné snímky jsou přesně ty pomalé (1,3–3 m/s, otočky na návsi): TerraScan jejich body zjevně obarvil z jiných snímků, takže referenční barvy nesou textury z jiných stanovisek namalované na správnou geometrii — odtud dojem „jiného místa". Korelace s rychlostí: medián per-snímkového ΔE 8,1 při < 2 m/s vs 4,1 při > 10 m/s.
+
+Vedlejší zjištění: (a) v oknech ±45 s kolem otoček se potkávají body dvou průjezdů a jejich siluety se v obraze rozcházejí o stupně — **průjezdy nejsou vůči sobě přesně registrované** (dvojité střechy); fúze barev napříč průjezdy je tam geometricky nepřesná. (b) Automatická maska vozidla míjela zaoblená ramena střechy až o 4° — body vozovky těsně nad střechou dostávaly červenou barvu karoserie a bílé logo; `VehicleMask` má od teď bezpečnostní okraj 10 px (3,6°). (c) Rendery z okna ±45 s mají díry tam, kde daný úsek průjezdu skener nepokryl — pro čistě vizuální rendery je vhodnější okno vypnout.
+
+### 13.7 Otevřený problém: snímky v zatáčkách
+
+Snímky s |dyaw/dt| > 8°/s mají medián ΔE 10–15 (rovné úseky 5–7) a při skenu časového posunu −6…+6 s s interpolací pózy podél průjezdu mají minima roztroušená od −4 do +3,5 s (např. snímek 765: 11,1 → 5,5 při +3,5 s; snímek 1430: 8,9 → 7,5 při −4 s). Není to konstantní latence ani otočení yaw o 180° (couvání) — obě hypotézy testovány a zamítnuty. Nejpravděpodobněji jde o definici časové značky/yaw v exportu (viz §12 bod 4). Do vyřešení doporučuji snímky s vysokou úhlovou rychlostí z fúze vyřadit (skóre 0) — v `mapping.colorize` zatím není, dopad na produkt je omezený mediánem top-5.
+
 ---
 
 ## Zdroje
