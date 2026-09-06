@@ -12,6 +12,23 @@ CORE = ["road", "sidewalk", "building", "wall", "fence", "vegetation", "terrain"
 EXT = ["water", "guard_rail", "stairs", "pole"]
 IGNORE = 255
 
+# display colours of the common classes (Cityscapes convention; GT classes reuse classes.py colours)
+COMMON_COLOURS = {
+    "road": (128, 64, 128), "sidewalk": (244, 35, 232), "building": (230, 60, 60), "wall": (102, 102, 156),
+    "fence": (190, 153, 153), "vegetation": (107, 142, 35), "terrain": (152, 251, 152), "water": (0, 130, 180),
+    "guard_rail": (180, 165, 180), "stairs": (150, 100, 100), "pole": (153, 153, 153), "sky": (70, 130, 180),
+    "vehicle": (0, 0, 142), "person": (220, 20, 60), "other": (255, 200, 0),
+}
+
+
+def common_palette(unlabelled: tuple[int, int, int] = (60, 60, 60)) -> np.ndarray:
+    """[256,3] uint8 RGB lookup for common ids; 255 (unlabelled) -> `unlabelled`, unused ids -> black."""
+    pal = np.zeros((256, 3), np.uint8)
+    for i, n in enumerate(COMMON):
+        pal[i] = COMMON_COLOURS[n]
+    pal[IGNORE] = unlabelled
+    return pal
+
 # GT dataset class -> common (diagnostic classes -> None: excluded from the confusion matrix)
 GT_TO_COMMON: dict[str, str | None] = {
     "road": "road", "sidewalk": "sidewalk", "building": "building", "wall": "wall", "fence": "fence",

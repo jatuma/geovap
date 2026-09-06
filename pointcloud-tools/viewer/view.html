@@ -65,9 +65,25 @@
 
 				// If the file has an existing classification, show it by
 				// default - this is a common way to inspect ground/veg/etc.
-				if (e.pointcloud.material.availableAttributes.some(a => a.name === "classification")) {
+				const hasClassification = e.pointcloud.material.availableAttributes.some(a => a.name === "classification");
+				if (hasClassification) {
 					material.activeAttributeName = "classification";
 				}
+
+				// Optional per-cloud class palette: <cloud dir>/classes.json
+				// { "classes": { "<id>": { "name": "...", "color": [r,g,b,a 0-255], "visible": true }, "DEFAULT": {...} } }
+				const dir = cloudPath.substring(0, cloudPath.lastIndexOf("/"));
+				fetch(dir + "/classes.json").then(r => r.ok ? r.json() : null).then(spec => {
+					if (!spec || !spec.classes) return;
+					const cls = {};
+					for (const [id, c] of Object.entries(spec.classes)) {
+						const col = (c.color || [0, 0, 0, 255]).map(x => x / 255);
+						while (col.length < 4) col.push(1);
+						cls[id] = { visible: c.visible !== false, name: c.name || id, color: col };
+					}
+					viewer.setClassifications(cls);
+					if (hasClassification) material.activeAttributeName = "classification";
+				}).catch(() => {});
 
 				viewer.fitToScreen();
 			});
