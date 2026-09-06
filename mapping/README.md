@@ -102,3 +102,20 @@ další použití; `dataset/frame_quality.csv` nese všechny veličiny.
 LAS 1.4 PF7, XYZ/čas/třída/intenzita/psid bitově shodné se vstupem, `red/green/blue` = náš produkt
 (8 bit × 256), extra dimenze `ref_r/g/b`, `nt_r/g/b`, `dE00_med`, `dE00_nt`, `dE00_nt_noocc`,
 `src_image`, `n_views`, `col_conf`, `cam_dist`, `inc_angle`, `img_grad`, VLR `geovap_map` s provenience.
+
+## Segmentační dataset a benchmark (`seg/`, `05_benchmark_segmentace.md`, `dataset/seg/`)
+
+Značky pro sémantickou segmentaci z JVF exportu bez ruční anotace: `seg.areas` polygonizuje hraniční linie a
+přiřadí třídu podle definičních bodů (95 % plochy), `seg.rasters` + `seg.point_labels` označí každý bod store
+(0,1 m rastry ploch/linií, výška nad DTM, 3D pravidla), `seg.render_labels` je vykreslí do ERP 2000×1000 přes
+`point_id` produkty (okluze zdarma) a `seg.views` exportuje 16 gnómonických výsečí 1024² srovnaných do horizontu.
+`seg.models` / `seg.fusion` / `seg.bench` / `seg.evaluate` = zero-shot benchmark (Mask2Former, OneFormer, EoMT,
+SegFormer) se společnou taxonomií (`seg.taxonomy`).
+
+```
+uv sync --extra seg
+uv run python -m mapping.cli.seg_build areas|rasters|points|labels|views|dataset
+uv run python -m mapping.cli.seg_bench run --models all --frames bench ; evaluate ; report
+```
+
+Výstupy v `Geovap_cache/segds/` (README tam), metadata a tabulky v `dataset/seg/`.
