@@ -1,0 +1,30 @@
+services:
+  # Command-line point cloud processing / classification (PDAL pipelines).
+  # No long-running process; exec into it to run pdal commands:
+  #   docker compose exec pdal pdal info /data/DTM_Dražkov/LAZ_Dražkov_ground/ID3432_000035_JTSK.laz
+  pdal:
+    image: pdal/pdal:latest
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - ../Geovap_data:/data:ro
+      - ./output:/output
+    working_dir: /data
+
+  # Converts LAS/LAZ into Potree's web-viewable octree format.
+  # This image is built from PotreeConverter's own source (see ./potreeconverter),
+  # since there is no official prebuilt image on Docker Hub. Run with:
+  #   docker compose run --rm potreeconverter \
+  #     "/data/DTM_Dražkov/LAZ_Dražkov_ground/ID3432_000035_JTSK.laz" -o /output/drazkov_ground
+  potreeconverter:
+    build: ./potreeconverter
+    volumes:
+      - ../Geovap_data:/data:ro
+      - ./output:/output
+
+  # Web viewer, serves ./output/<name> as browsable/viewable point clouds.
+  viewer:
+    build: ./viewer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./output:/usr/share/nginx/html/pointclouds:ro

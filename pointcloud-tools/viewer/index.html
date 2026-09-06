@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Point clouds</title>
+	<style>
+		body { font-family: sans-serif; background: #1e1e1e; color: #eee; padding: 2em; }
+		a { color: #6cf; }
+		li { margin: 0.5em 0; }
+		#empty { color: #999; }
+	</style>
+</head>
+<body>
+	<h1>Available point clouds</h1>
+	<ul id="list"></ul>
+	<p id="empty" style="display:none;">
+		No converted point clouds found yet. Run PotreeConverter against a file in <code>./data</code>
+		with output into <code>./output/&lt;name&gt;</code>, then reload this page.
+	</p>
+
+	<script>
+		// Nginx JSON autoindex on /pointclouds/ lists each converted dataset
+		// (one subfolder per PotreeConverter run, each containing metadata.json).
+		fetch("/pointclouds/", { headers: { "Accept": "application/json" } })
+			.then(r => r.json())
+			.then(entries => {
+				const dirs = entries.filter(e => e.type === "directory");
+				const list = document.getElementById("list");
+				if (dirs.length === 0) {
+					document.getElementById("empty").style.display = "block";
+					return;
+				}
+				for (const d of dirs) {
+					const li = document.createElement("li");
+					const a = document.createElement("a");
+					a.href = `/potree/view.html?cloud=/pointclouds/${d.name}/metadata.json`;
+					a.textContent = d.name;
+					li.appendChild(a);
+					list.appendChild(li);
+				}
+			})
+			.catch(() => {
+				document.getElementById("empty").style.display = "block";
+			});
+	</script>
+</body>
+</html>
