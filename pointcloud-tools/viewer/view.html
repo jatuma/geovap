@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Potree Viewer</title>
+	<link rel="stylesheet" type="text/css" href="./build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="./libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="./libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jstree/themes/mixed/style.css">
+	<style>
+		body { margin: 0; padding: 0; overflow: hidden; }
+	</style>
+</head>
+<body>
+	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="./libs/spectrum/spectrum.js"></script>
+	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="./libs/other/BinaryHeap.js"></script>
+	<script src="./libs/tween/tween.min.js"></script>
+	<script src="./libs/d3/d3.js"></script>
+	<script src="./libs/proj4/proj4.js"></script>
+	<script src="./libs/openlayers3/ol.js"></script>
+	<script src="./libs/i18next/i18next.js"></script>
+	<script src="./libs/jstree/jstree.js"></script>
+	<script src="./build/potree/potree.js"></script>
+	<script src="./libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;">
+		<div id="potree_render_area" style="background-image: url('./build/potree/resources/images/background.jpg')"></div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+
+	<script>
+		// S-JTSK / Krovak East North: PotreeConverter stamps EPSG:5514 into metadata.json and Potree
+		// hands it to proj4 for the map overlay; proj4 only knows EPSG:4326/3857 out of the box.
+		proj4.defs("EPSG:5514", "+proj=krovak +lat_0=49.5 +lon_0=24.8333333333333 +alpha=30.2881397527778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +towgs84=589,76,480,0,0,0,0 +units=m +no_defs +type=crs");
+
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(2_000_000);
+		viewer.loadSettingsFromURL();
+		viewer.setDescription("");
+
+		viewer.loadGUI(() => {
+			viewer.setLanguage('en');
+			$("#menu_appearance").next().show();
+		});
+
+		function getParam(name) {
+			const params = new URLSearchParams(window.location.search);
+			return params.get(name);
+		}
+
+		const cloudPath = getParam("cloud");
+		if (!cloudPath) {
+			document.getElementById("potree_render_area").innerHTML =
+				"<h2 style='color:white;padding:2em;'>No point cloud specified. Use ?cloud=&lt;folder&gt;/metadata.json (see index.html)</h2>";
+		} else {
+			Potree.loadPointCloud(cloudPath, "pointcloud", e => {
+				let scene = viewer.scene;
+				scene.addPointCloud(e.pointcloud);
+
+				let material = e.pointcloud.material;
+				material.size = 1;
+				material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+				material.shape = Potree.PointShape.SQUARE;
+
+				// If the file has an existing classification, show it by
+				// default - this is a common way to inspect ground/veg/etc.
+				// Potree 1.8 lists the attributes on the geometry, not on the material.
+				const attrs = (e.pointcloud.pcoGeometry && e.pointcloud.pcoGeometry.pointAttributes && e.pointcloud.pcoGeometry.pointAttributes.attributes) || [];
+				const hasClassification = attrs.some(a => a.name === "classification");
+				if (hasClassification) {
+					material.activeAttributeName = "classification";
+				}
+
+				// Optional per-cloud class palette: <cloud dir>/classes.json
+				// { "classes": { "<id>": { "name": "...", "color": [r,g,b,a 0-255], "visible": true }, "DEFAULT": {...} } }
+				const dir = cloudPath.substring(0, cloudPath.lastIndexOf("/"));
+				fetch(dir + "/classes.json").then(r => r.ok ? r.json() : null).then(spec => {
+					if (!spec || !spec.classes) return;
+					const cls = {};
+					for (const [id, c] of Object.entries(spec.classes)) {
+						const col = (c.color || [0, 0, 0, 255]).map(x => x / 255);
+						while (col.length < 4) col.push(1);
+						cls[id] = { visible: c.visible !== false, name: c.name || id, color: col };
+					}
+					viewer.setClassifications(cls);
+					if (hasClassification) material.activeAttributeName = "classification";
+				}).catch(err => console.warn("classes.json not applied:", err));
+
+				viewer.fitToScreen();
+			});
+		}
+	</script>
+</body>
+</html>

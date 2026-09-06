@@ -27,12 +27,24 @@ EXTRA_DIMS = [
     ("img_grad", np.float32, "image gradient at the sampled pixel, nearest-in-time frame"),
 ]
 
+# semantic-segmentation product (mapping.seg.project): `classification` carries the common15 label
+SEG_EXTRA_DIMS = [
+    ("seg_conf", np.uint8, "label vote share 0-255 (winning class)"),
+    ("seg_n_views", np.uint8, "number of frames that voted (0 = unlabelled)"),
+    ("seg_src_frame", np.uint16, "frame index of the strongest vote"),
+    ("src_class", np.uint8, "original LAS classification"),
+]
+
 PROVENANCE_USER_ID = "geovap_map"
 PROVENANCE_RECORD_ID = 1
 
 
-def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: dict[str, np.ndarray], provenance: dict) -> Path:
-    """`product_rgb` u8 [n,3] and `extras` arrays are in STORE (cell-sorted) order; written in source order."""
+def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: dict[str, np.ndarray], provenance: dict,
+               extra_dims: list[tuple] = EXTRA_DIMS, classification: np.ndarray | None = None, description: str = "colorization provenance") -> Path:
+    """`product_rgb` u8 [n,3], `extras` and `classification` arrays are in STORE (cell-sorted) order; written in source order.
+
+    `classification` replaces the source classification when given (e.g. semantic labels); otherwise it is copied bit-exact.
+    """
     src = laspy.read(td.info.laz)
     n = len(src.points)
     assert n == len(td)
@@ -41,9 +53,9 @@ def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: di
     header = laspy.LasHeader(version="1.4", point_format=7)
     header.scales = src.header.scales
     header.offsets = src.header.offsets
-    for name, dt, desc in EXTRA_DIMS:
+    for name, dt, desc in extra_dims:
         header.add_extra_dim(laspy.ExtraBytesParams(name=name, type=dt, description=desc[:31]))
-    header.vlrs.append(laspy.vlrs.VLR(user_id=PROVENANCE_USER_ID, record_id=PROVENANCE_RECORD_ID, description="colorization provenance", record_data=json.dumps(provenance).encode()))
+    header.vlrs.append(laspy.vlrs.VLR(user_id=PROVENANCE_USER_ID, record_id=PROVENANCE_RECORD_ID, description=description[:31], record_data=json.dumps(provenance).encode()))
 
     las = laspy.LasData(header)
     las.X, las.Y, las.Z = src.X, src.Y, src.Z
@@ -63,7 +75,9 @@ def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: di
 
     rgb = to_src(product_rgb).astype(np.uint16) * 256
     las.red, las.green, las.blue = rgb[:, 0], rgb[:, 1], rgb[:, 2]
-    for name, dt, _ in EXTRA_DIMS:
+    if classification is not None:
+        las.classification = to_src(np.asarray(classification, np.uint8))
+    for name, dt, _ in extra_dims:
         setattr(las, name, to_src(extras[name]).astype(dt))
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,11 +85,11 @@ def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: di
     return out_path
 
 
-def verify(out_path: Path, td: TileData) -> dict:
+def verify(out_path: Path, td: TileData, expect_class_exact: bool = True) -> dict:
     las = laspy.read(str(out_path))
     src = laspy.read(td.info.laz)
     ok_xyz = np.array_equal(las.X, src.X) and np.array_equal(las.Y, src.Y) and np.array_equal(las.Z, src.Z)
-    ok_cls = np.array_equal(np.asarray(las.classification), np.asarray(src.classification))
+    ok_cls = np.array_equal(np.asarray(las.classification), np.asarray(src.classification)) if expect_class_exact else True
     prov = None
     for v in las.header.vlrs:
         if v.user_id == PROVENANCE_USER_ID:

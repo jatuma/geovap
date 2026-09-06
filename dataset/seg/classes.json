@@ -1,0 +1,235 @@
+{
+ "ignore": 255,
+ "classes": [
+  {
+   "id": 0,
+   "name": "road",
+   "czech": "vozovka (provozní plocha, nájezd, parkoviště, most)",
+   "colour": [
+    128,
+    64,
+    128
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 1,
+   "name": "sidewalk",
+   "czech": "chodník",
+   "colour": [
+    244,
+    35,
+    232
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 2,
+   "name": "building",
+   "czech": "budova a ostatní zastřešené stavby",
+   "colour": [
+    230,
+    60,
+    60
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 3,
+   "name": "wall",
+   "czech": "zeď",
+   "colour": [
+    102,
+    102,
+    156
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 4,
+   "name": "fence",
+   "czech": "plot (všechny materiály včetně živého)",
+   "colour": [
+    190,
+    153,
+    153
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 5,
+   "name": "vegetation",
+   "czech": "vegetace nad zemí v plochách zeleně / zahrad / polí",
+   "colour": [
+    107,
+    142,
+    35
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 6,
+   "name": "terrain",
+   "czech": "zem v plochách zeleně, zahrad, polí, příkopů",
+   "colour": [
+    152,
+    251,
+    152
+   ],
+   "eval": "core"
+  },
+  {
+   "id": 7,
+   "name": "water",
+   "czech": "vodní tok, koryto, nádrž",
+   "colour": [
+    0,
+    130,
+    180
+   ],
+   "eval": "ext"
+  },
+  {
+   "id": 8,
+   "name": "guard_rail",
+   "czech": "zábradlí",
+   "colour": [
+    180,
+    165,
+    180
+   ],
+   "eval": "ext"
+  },
+  {
+   "id": 9,
+   "name": "stairs",
+   "czech": "schodiště",
+   "colour": [
+    150,
+    100,
+    100
+   ],
+   "eval": "ext"
+  },
+  {
+   "id": 10,
+   "name": "pole",
+   "czech": "nosič technického zařízení",
+   "colour": [
+    153,
+    153,
+    153
+   ],
+   "eval": "ext"
+  },
+  {
+   "id": 11,
+   "name": "verge",
+   "czech": "přidružená plocha pozemní komunikace (krajnice, většinou nezpevněná)",
+   "colour": [
+    170,
+    200,
+    120
+   ],
+   "eval": "diag"
+  },
+  {
+   "id": 12,
+   "name": "paved_other",
+   "czech": "dvůr, manipulační plocha, zpevnění povrchu, hřiště",
+   "colour": [
+    200,
+    200,
+    160
+   ],
+   "eval": "diag"
+  },
+  {
+   "id": 13,
+   "name": "culvert_head",
+   "czech": "čelo propustku",
+   "colour": [
+    220,
+    120,
+    60
+   ],
+   "eval": "diag"
+  },
+  {
+   "id": 14,
+   "name": "structure_other",
+   "czech": "patka/deska/pilíř, nerozlišená hranice stavby",
+   "colour": [
+    120,
+    120,
+    200
+   ],
+   "eval": "diag"
+  },
+  {
+   "id": 15,
+   "name": "road_or_verge",
+   "czech": "dopravní plocha bez uzavřené hranice mezi vozovkou a krajnicí (hlavní ulice)",
+   "colour": [
+    150,
+    110,
+    150
+   ],
+   "eval": "diag"
+  }
+ ],
+ "area_class": {
+  "0100000005": "road",
+  "0100000017": "road",
+  "0100000011": "road",
+  "0100000058": "road",
+  "0100000007": "sidewalk",
+  "0100000001": "building",
+  "0100000314": "building",
+  "0100000179": "building",
+  "0100000159": "building",
+  "0100000154": "building",
+  "0100000168": "wall",
+  "0100000215": "terrain",
+  "0100000209": "terrain",
+  "0100000207": "terrain",
+  "0100000213": "terrain",
+  "0100000051": "terrain",
+  "0100000080": "terrain",
+  "0100000203": "water",
+  "0100000078": "water",
+  "0100000330": "water",
+  "0100000166": "stairs",
+  "0100000320": "verge",
+  "0100000189": "paved_other",
+  "0100000055": "paved_other",
+  "0100000187": "paved_other",
+  "0100000152": "paved_other",
+  "0100000193": "culvert_head",
+  "0100000183": "structure_other"
+ },
+ "rules": {
+  "fence_dist": 0.35,
+  "fence_dz_min": 0.0,
+  "fence_dz_max": 2.5,
+  "fence_ring": 1.0,
+  "fence_ring_hag_min": 0.3,
+  "rail_dist": 0.3,
+  "rail_dz_min": 0.2,
+  "rail_dz_max": 1.5,
+  "wall_dist": 0.3,
+  "wall_hag_max": 3.0,
+  "bldg_buffer": 0.5,
+  "bldg_hag_min": 0.2,
+  "struct_dist": 0.5,
+  "ground_hag": 0.2,
+  "water_hag": 0.3,
+  "stairs_hag": 3.0,
+  "veg_hag_min": 0.5,
+  "veg_bldg_dist": 1.0,
+  "pole_dist": 0.4,
+  "pole_hag_max": 12.0,
+  "range_max_m": 40.0
+ },
+ "rules_hash": "e1d1747d17"
+}
