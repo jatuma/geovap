@@ -7,3 +7,9 @@ experiments/out/
 pointcloud-tools/output/*/octree.bin
 pointcloud-tools/output/seg_eomt/
 pointcloud-tools/output/eomt_city_seg/
+*.laz
+*.png
+*.jpeg
+*.jpg
+*/output/**
+*.bin
