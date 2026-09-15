@@ -13,11 +13,11 @@ import cv2
 import numpy as np
 
 from .. import render
-from ..cloud_store import CloudStore
+from ..cloud_store import CloudStore, open_store
 from ..config import NO_POINT
 from ..frame_select import FrameIndex
 from ..poses import load_poses
-from ..products import FrameProducts
+from ..products import load_products
 from ..vehicle_mask import VehicleMask
 from . import taxonomy as T
 from .bench import DATASET_SEG_DIR
@@ -64,8 +64,8 @@ def _iou(cm: np.ndarray) -> np.ndarray:
         return np.where(den > 0, tp / den, np.nan)
 
 
-def evaluate(out_dir: Path = SEG_OUT_DIR) -> dict:
-    store = CloudStore()
+def evaluate(out_dir: Path = SEG_OUT_DIR, poses_source: str | None = None) -> dict:
+    store = open_store(load_poses(poses_source))
     lut = T.gt_to_common_lut()
     cm = np.zeros((N_CLASSES, N_CLASSES), np.float64)
     cm_ground = np.zeros_like(cm)
@@ -152,7 +152,7 @@ def erp_roundtrip(k: int, store: CloudStore, sl: SegLabels, fi: FrameIndex, pose
     from .render_labels import gather_labels
 
     photo = cv2.imread(poses.path(k))
-    fp = FrameProducts.load(k)
+    fp = load_products(k, poses)
     common, _conf, _ = load_mask(tag, k, 0)
     cloud_lab, valid = gather_labels(store, sl, fp)
     cloud_lab[~valid] = T.IGNORE
@@ -317,12 +317,12 @@ def _pick_tiles(sl_root: Path, n_pick: int = 3) -> list[str]:
     return picks[:n_pick]
 
 
-def render_all(frames: list[int] | None = None, tiles: list[str] | None = None, tag: str = "eomt_city", out_dir: Path = SEG_OUT_DIR) -> dict:
+def render_all(frames: list[int] | None = None, tiles: list[str] | None = None, tag: str = "eomt_city", out_dir: Path = SEG_OUT_DIR, poses_source: str | None = None) -> dict:
     out = Path(out_dir) / "report"
     out.mkdir(parents=True, exist_ok=True)
     sl_root = Path(out_dir) / "labels"
-    store = CloudStore()
-    poses = load_poses()
+    poses = load_poses(poses_source)
+    store = open_store(poses)
     fi = FrameIndex(poses)
     sl = SegLabels(store, sl_root)
     vm_cells = vehicle_cells(VehicleMask())

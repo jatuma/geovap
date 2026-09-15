@@ -115,8 +115,8 @@ def extract_image(pano_bgr: np.ndarray, map_u: np.ndarray, map_v: np.ndarray, in
 _G: dict = {}
 
 
-def _init():
-    _G["poses"] = load_poses()
+def _init(poses_source=None):
+    _G["poses"] = load_poses(poses_source)
     _G["fi"] = FrameIndex(_G["poses"])
 
 
@@ -143,12 +143,12 @@ def _work(k):
     return export_frame(k)
 
 
-def build(frames: str = "clean", workers: int = 8, limit: int | None = None, out_dir: Path = VIEWS_DIR) -> None:
+def build(frames: str = "clean", workers: int = 8, limit: int | None = None, out_dir: Path = VIEWS_DIR, poses_source: str | None = None) -> None:
     (out_dir / "images").mkdir(parents=True, exist_ok=True)
     (out_dir / "labels").mkdir(parents=True, exist_ok=True)
     ks = [k for k in frames_arg(frames) if (LABELS_DIR / f"f{k:04d}.png").exists()][:limit]
     res = []
-    with Pool(workers, initializer=_init) as pool:
+    with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool:
         for i, r in enumerate(pool.imap_unordered(_work, ks, chunksize=2)):
             res.append(r)
             if i % 50 == 0:

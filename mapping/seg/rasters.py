@@ -18,7 +18,8 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from ..cloud_store import CloudStore
+from ..cloud_store import CloudStore, open_store
+from ..poses import load_poses
 from . import classes as C
 from .areas import AREAS_DIR, SEGDS_DIR, load_faces, load_objects
 
@@ -134,9 +135,13 @@ def build_dtm(store: CloudStore, grid: Grid, cell: float = DTM_CELL, chunk: int 
     return dtm, g
 
 
-def build(out_dir: Path = RASTER_DIR) -> dict:
+def build(out_dir: Path = RASTER_DIR, poses_source: str | None = None) -> dict:
+    """DTM and face/line rasters are built from the REGISTERED cloud (`open_store`): the DTM's ground
+    height and every line-group distance/height must sit at the same S5b-corrected positions the
+    corrected poses assume, or point_labels (which reads these rasters back against `xyz_m()` of the
+    same store) would compare unregistered rasters against registered points."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    store = CloudStore()
+    store = open_store(load_poses(poses_source))
     grid = grid_from_store(store)
     faces = load_faces(AREAS_DIR / "faces.geojson")
     objects = load_objects()

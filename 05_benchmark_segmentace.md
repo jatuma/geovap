@@ -264,3 +264,15 @@ uv run python -m mapping.cli.seg_bench run --models all --frames bench     # ~1 
 uv run python -m mapping.cli.seg_bench evaluate && uv run python -m mapping.cli.seg_bench report
 uv run pytest     # test_seg_*: polygonizace, pravidla bodů, round-trip výsečí, taxonomie, metriky
 ```
+
+
+## 5. Dodatek: projekce do mračna na korigovaných pózách
+
+Fáze 2D→3D (`mapping.seg.project`, ne benchmark samotný) proběhla znovu na `poses_corrected`
+(registrované mračno, čistá množina 830 místo 825) — plný popis, opravený bug (`BENCH_DIR` byl mylně
+pose-source-aware) a čísla v `08_korekce_poz_panoramat.md §7` ("Projekce segmentace do mračna") a
+`dataset/seg/project_eomt_city.{json,md}` (export baseline v `dataset/seg/export_baseline/`).
+Krátce: coverage +0,8 pp, pixel acc a mIoU_core mírně KLESLY (−1,5 / −2,4 pp) — ale pseudo-GT se mezitím
+taky přestavěl, takže to není čistě geometrický regres. Předpověď EoMT-L (`segds/bench/eomt_city/`) je
+teď kompletní pro všech **830** čistých snímků (dřív 825) — je pózo-nezávislá (jen fotka), takže tahle
+tabulka (§3.1, 100 snímků benchmarku) se korekcí pozic nemění.

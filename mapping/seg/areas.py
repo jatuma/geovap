@@ -23,10 +23,19 @@ from shapely.ops import polygonize_full, unary_union
 from shapely.strtree import STRtree
 
 from .. import compat
-from ..config import CACHE_ROOT
+from ..config import CACHE_ROOT, source_dir
+from ..poses import load_poses
 from . import classes as C
 
-SEGDS_DIR = CACHE_ROOT / "segds"
+# The segds root is pose-source aware: byte-identical to today (SEGDS_ROOT) for the default
+# "export" pose table (env GEOVAP_POSES unset -- the regression anchor), a hash-suffixed sibling
+# for a corrected one, so a corrected-poses run's ERP labels/views/bench outputs (which pass
+# through per-frame products, hence the pose table) never land in the same tree as the export
+# ones. Face/point rasters here are cloud-only (not pose-dependent) but still live under this same
+# root for a single, consistent segds tree per run. Resolved once at import time, like
+# `config.POSES_SOURCE` -- set GEOVAP_POSES before importing `mapping.seg.*`.
+SEGDS_ROOT = CACHE_ROOT / "segds"
+SEGDS_DIR = source_dir(SEGDS_ROOT, load_poses())
 AREAS_DIR = SEGDS_DIR / "areas"
 PRECISION_M = 0.01
 

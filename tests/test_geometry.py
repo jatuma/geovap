@@ -126,3 +126,17 @@ def test_nadir_projects_to_bottom_row(poses):
     for k in range(5):
         u, v, r, el = geometry.world_to_pano(nadir[k : k + 1], R[k], C[k])
         assert v[0] > PANO_H * (1 - 10 / 180), v  # within 10 deg of nadir (roll/pitch <= 9 deg)
+
+
+def test_euler_from_vehicle_rotation_round_trip():
+    rng = np.random.default_rng(3)
+    yaw = rng.uniform(-180, 180, 500)
+    roll = rng.uniform(-9, 9, 500)
+    pitch = rng.uniform(-9, 9, 500)
+    R = geometry.vehicle_rotation(yaw, roll, pitch)
+    y2, r2, p2 = geometry.euler_from_vehicle_rotation(R)
+    dy = (y2 - yaw + 180.0) % 360.0 - 180.0
+    np.testing.assert_allclose(dy, 0.0, atol=1e-9)
+    np.testing.assert_allclose(r2, roll, atol=1e-9)
+    np.testing.assert_allclose(p2, pitch, atol=1e-9)
+    np.testing.assert_allclose(geometry.vehicle_rotation(y2, r2, p2), R, atol=1e-12)

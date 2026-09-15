@@ -52,6 +52,22 @@ def vehicle_rotation(yaw_deg, roll_deg, pitch_deg) -> np.ndarray:
     return _ry(p) @ _rx(r) @ Ry  # Rp @ Rr @ Ry  (Rr == _rx(r), Rp == _ry(p))
 
 
+def euler_from_vehicle_rotation(R: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Inverse of `vehicle_rotation`: R_v[...,3,3] -> (yaw_deg, roll_deg, pitch_deg) in the verified convention.
+
+    R_v = Ry(p) Rx(r) Rz'(y) with r = -roll, p = -pitch. Third column of R is (sp*cr, -sr, cp*cr) and
+    row 1 is (-cr*sy, cr*cy, -sr), which gives all three angles without ambiguity for |roll| < 90 deg.
+    yaw is wrapped to (-180, 180].
+    """
+    R = np.asarray(R, dtype=np.float64)
+    sr = -R[..., 1, 2]
+    r = np.arctan2(sr, np.hypot(R[..., 0, 2], R[..., 2, 2]))
+    p = np.arctan2(R[..., 0, 2], R[..., 2, 2])
+    y = np.arctan2(-R[..., 1, 0], R[..., 1, 1])
+    yaw = (np.degrees(y) + 180.0) % 360.0 - 180.0
+    return yaw, -np.degrees(r), -np.degrees(p)
+
+
 def boresight_rotation(rig: RigModel) -> np.ndarray:
     """R_b[3,3]: body -> camera. Rz(kappa) @ Ry(phi) @ Rx(omega), angles in degrees."""
     w, f, k = (np.deg2rad(np.float64(a)) for a in rig.boresight_deg)

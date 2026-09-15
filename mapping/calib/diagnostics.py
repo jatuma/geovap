@@ -142,3 +142,194 @@ def plot(shifts: list[SectorShift], out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_dir / "shifts.png", dpi=120)
     plt.close(fig)
+
+
+# --------------------------------------------------------------------------------------------
+# S2 residual maps: edge-ICP (rig identity) residual structure by (azimuth, elevation) and by
+# (azimuth, 1/range), on the same 120-frame calibration selection as `calib.fit.run`.
+#
+# du, dv sign convention (full-resolution px, same as `icp.EdgeICP.structure`): photo edge pixel
+# minus projected cloud-silhouette pixel — `du = edge_col - proj_col`, `dv = edge_row - proj_row`
+# (icp.py: `du = ec - x[ok]`, `dv = er - y[ok]`, `ec`/`er` = nearest photo-edge pixel). A positive
+# du means the photo's edge lies at a larger azimuth (more to the right) than the projected cloud
+# point. `az` is the camera-frame azimuth of the projected cloud point, 0..360 deg (0 = the pano
+# seam = yaw direction), read straight from `geometry.world_to_pano`'s `u / PANO_W * 360`.
+
+AZ_BIN_DEG = 5.0
+EL_BIN_DEG = 10.0
+N_INV_R_BINS = 6
+INV_R_LO, INV_R_HI = 1.0 / 40.0, 1.0 / 1.0  # spans R_MIN..R_MAX
+R_REPORT_M = 4.4  # near-field range the fitted amplitude is reported at (07 doc: up to 11 px there)
+MIN_BIN_N = 20  # bins with fewer associations report a NaN median
+
+
+def _fourier_design(az_deg: np.ndarray, inv_r: np.ndarray, order: int) -> np.ndarray:
+    """[N, 1+2*order] design for `du ~ (1/r) * (a0 + sum_k a_k cos(k az) + b_k sin(k az))`."""
+    az = np.radians(np.asarray(az_deg, dtype=np.float64))
+    cols = [np.ones_like(az)]
+    for k in range(1, order + 1):
+        cols.append(np.cos(k * az))
+        cols.append(np.sin(k * az))
+    return np.asarray(inv_r, dtype=np.float64)[:, None] * np.stack(cols, axis=1)
+
+
+def _fourier_fit(du: np.ndarray, az_deg: np.ndarray, inv_r: np.ndarray, order: int) -> dict:
+    """Least-squares fit of `du ~ (1/r) f(az)`, f a Fourier series to `order`; R^2 and the
+    peak-to-peak amplitude of f(az)/2 evaluated at r = R_REPORT_M, in px."""
+    X = _fourier_design(az_deg, inv_r, order)
+    coef, *_ = np.linalg.lstsq(X, du, rcond=None)
+    pred = X @ coef
+    ss_res = float(np.sum((du - pred) ** 2))
+    ss_tot = float(np.sum((du - du.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+    az_grid = np.linspace(0.0, 360.0, 721)
+    f_grid = _fourier_design(az_grid, np.ones_like(az_grid), order) @ coef  # f(az) at r=1 m
+    amp = float((f_grid.max() - f_grid.min()) / 2.0 / R_REPORT_M)
+    return {"order": order, "r2": round(r2, 4), "coef": coef.round(4).tolist(), "amplitude_at_4.4m_px": round(amp, 3)}
+
+
+def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, window: float = 20.0, out_dir: Path = OUT_DIR / "diag", log=print) -> dict:
+    """Edge-ICP residual structure at rig identity, on the calibration frame selection.
+
+    Bins median du/dv (full-res px) and counts by (az 5deg, el 10deg) and by (az 5deg, 1/r in
+    N_INV_R_BINS bins spanning 1/40..1/1 m^-1); saves `residual_maps.npz` (grids) +
+    `residual_maps.json` (summary) + `residual_maps.png` (heatmaps) to `out_dir`. Fits
+    `du ~ (1/r) f(az)` with f a Fourier series (order 1 vs order 5/6) to test for Ladybug
+    stitching-seam parallax: a periodic du(az) with ~5-6 sign flips whose amplitude grows with
+    1/r. Returns the summary dict (also the `verdict`: "present" / "absent" / "inconclusive").
+    """
+    from ..cloud_store import CloudStore
+    from ..frame_select import FrameIndex
+    from ..poses import load_poses
+    from ..rig import IDENTITY
+    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from . import icp as I
+    from .fit import select_frames
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    store = CloudStore()
+    poses = load_poses()
+    fi = FrameIndex(poses, IDENTITY)
+    vmask = VehicleMask() if MASK_PATH.exists() else None
+    frames_idx = select_frames(poses, n_frames, seed)
+    frames = [I.prepare_frame(int(f), store, fi, vmask, n_points) for f in frames_idx]
+    frames = [f for f in frames if len(f.xyz) >= 200]
+    log(f"prepared {len(frames)} calibration frames, {sum(len(f.xyz) for f in frames)} edge points")
+
+    icp = I.EdgeICP(frames, poses)
+    theta0 = np.zeros(len(icp.free))
+    _, meta = icp.residuals(theta0, window, return_meta=True)
+    az = np.concatenate([m["az"] for m in meta])
+    el = np.concatenate([m["el"] for m in meta])
+    r = np.concatenate([m["r"] for m in meta])
+    du = np.concatenate([m["du"] for m in meta]) / icp.s
+    dv = np.concatenate([m["dv"] for m in meta]) / icp.s
+    n = len(du)
+    inv_r = 1.0 / np.clip(r, 0.5, None)
+    log(f"n associations = {n} (window {window} CHAM px)")
+
+    from scipy.stats import binned_statistic_2d
+
+    az_edges = np.arange(0.0, 360.0 + AZ_BIN_DEG, AZ_BIN_DEG)
+    el_edges = np.arange(-90.0, 90.0 + EL_BIN_DEG, EL_BIN_DEG)
+    invr_edges = np.linspace(INV_R_LO, INV_R_HI, N_INV_R_BINS + 1)
+
+    def _bin(y, edges, values):
+        med = binned_statistic_2d(az, y, values, statistic="median", bins=[az_edges, edges]).statistic
+        cnt = binned_statistic_2d(az, y, values, statistic="count", bins=[az_edges, edges]).statistic.astype(np.int64)
+        med = np.where(cnt >= MIN_BIN_N, med, np.nan)
+        return med, cnt
+
+    du_azel, cnt_azel = _bin(el, el_edges, du)
+    dv_azel, _ = _bin(el, el_edges, dv)
+    du_azr, cnt_azr = _bin(inv_r, invr_edges, du)
+    dv_azr, _ = _bin(inv_r, invr_edges, dv)
+
+    fit1 = _fourier_fit(du, az, inv_r, 1)
+    fit5 = _fourier_fit(du, az, inv_r, 5)
+    fit6 = _fourier_fit(du, az, inv_r, 6)
+
+    # Coverage across the 6 1/r bins: edge-ICP associations are depth-edge / sky-silhouette points,
+    # which on this rural scene are almost all distant rooflines / horizon, not near-field facades
+    # or curbs — so most or all of the 6 bins spanning 1/40..1/1 (r = 40..1 m) can end up empty. The
+    # "amplitude at 4.4 m" is then an extrapolation beyond the data, not a measurement, and the
+    # near-field sign-flip count is meaningless if that bin itself has no data.
+    bin_n = cnt_azr.sum(0)  # associations per 1/r bin, summed over azimuth
+    populated_bins = int((bin_n >= MIN_BIN_N * 5).sum())  # bins with enough data to be usable at all
+    near_populated = bool(bin_n[-1] >= MIN_BIN_N * 5)
+    r_covered_min = float(1.0 / inv_r[np.argmax(inv_r)]) if n else float("nan")  # closest r actually seen
+
+    # sign-flip count of median du(az) in the nearest (largest 1/r) range bin with data
+    near_col = du_azr[:, -1]
+    sign = np.sign(near_col[np.isfinite(near_col)])
+    sign = sign[sign != 0]
+    n_flips = int(np.sum(np.diff(sign) != 0)) if len(sign) > 1 else 0
+
+    r2_gain = fit6["r2"] - fit1["r2"]
+    if n < 20_000:
+        verdict = "inconclusive (too few associations)"
+    elif populated_bins <= 1:
+        verdict = f"inconclusive (no near-field associations: all {n} within r >= {r_covered_min:.1f} m, only the outermost 1/r bin has data — cannot test amplitude growth with 1/r)"
+    elif not near_populated:
+        verdict = f"inconclusive (near-field 1/r bin empty; associations span r >= {r_covered_min:.1f} m only)"
+    elif n_flips >= 4 and r2_gain > 0.02:
+        verdict = "present"
+    elif n_flips <= 2 and r2_gain < 0.01:
+        verdict = "absent"
+    else:
+        verdict = "inconclusive"
+
+    summary = {
+        "n_frames": len(frames), "n_assoc": int(n), "window_cham_px": window,
+        "az_bin_deg": AZ_BIN_DEG, "el_bin_deg": EL_BIN_DEG, "n_inv_r_bins": N_INV_R_BINS, "inv_r_range": [INV_R_LO, INV_R_HI],
+        "du_median_px": float(np.median(du)), "dv_median_px": float(np.median(dv)),
+        "fourier_order1": fit1, "fourier_order5": fit5, "fourier_order6": fit6,
+        "near_field_sign_flips": n_flips, "r2_gain_order1_to_6": round(r2_gain, 4),
+        "inv_r_bin_counts": bin_n.astype(int).tolist(), "inv_r_populated_bins": populated_bins, "r_covered_min_m": round(r_covered_min, 2),
+        "verdict": verdict,
+    }
+    np.savez_compressed(
+        out_dir / "residual_maps.npz",
+        az_edges=az_edges, el_edges=el_edges, invr_edges=invr_edges,
+        du_azel=du_azel, dv_azel=dv_azel, cnt_azel=cnt_azel,
+        du_azr=du_azr, dv_azr=dv_azr, cnt_azr=cnt_azr,
+        frames=np.array([f.frame for f in frames]),
+    )
+    (out_dir / "residual_maps.json").write_text(json.dumps(summary, indent=1, default=float))
+    _plot_residual_maps(az_edges, el_edges, invr_edges, du_azel, dv_azel, du_azr, dv_azr, out_dir)
+    log("residual_maps summary: " + json.dumps({k: v for k, v in summary.items() if not isinstance(v, dict)}, default=float))
+    log(f"  fourier R^2: order1={fit1['r2']:.3f} order5={fit5['r2']:.3f} order6={fit6['r2']:.3f}  "
+        f"amplitude@4.4m: order1={fit1['amplitude_at_4.4m_px']:.2f}px order6={fit6['amplitude_at_4.4m_px']:.2f}px  "
+        f"near-field sign flips={n_flips}  verdict={verdict}")
+    return summary
+
+
+def _plot_residual_maps(az_edges, el_edges, invr_edges, du_azel, dv_azel, du_azr, dv_azr, out_dir: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    az_c = (az_edges[:-1] + az_edges[1:]) / 2
+    el_c = (el_edges[:-1] + el_edges[1:]) / 2
+    invr_c = (invr_edges[:-1] + invr_edges[1:]) / 2
+    finite = np.concatenate([g[np.isfinite(g)] for g in (du_azel, dv_azel, du_azr, dv_azr)])
+    vmax = float(np.nanpercentile(np.abs(finite), 95)) if finite.size else 5.0
+
+    fig, axs = plt.subplots(2, 2, figsize=(14, 8))
+    for ax, grid, title, ylab, yc in (
+        (axs[0, 0], du_azel, "du(az, el)", "elevation [deg]", el_c),
+        (axs[0, 1], dv_azel, "dv(az, el)", "elevation [deg]", el_c),
+        (axs[1, 0], du_azr, "du(az, 1/r)", "1/r [1/m]", invr_c),
+        (axs[1, 1], dv_azr, "dv(az, 1/r)", "1/r [1/m]", invr_c),
+    ):
+        im = ax.imshow(grid.T, origin="lower", aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax, extent=[az_edges[0], az_edges[-1], yc[0], yc[-1]])
+        ax.set_xlabel("azimuth [deg]")
+        ax.set_ylabel(ylab)
+        ax.set_title(f"{title}  (photo edge - projected cloud, px)")
+        fig.colorbar(im, ax=ax, label="px")
+    fig.tight_layout()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / "residual_maps.png", dpi=120)
+    plt.close(fig)

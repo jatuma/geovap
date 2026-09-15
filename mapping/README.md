@@ -48,6 +48,40 @@ uv run python -m mapping.cli.render_frame 367 --layers rgb depth classification 
 uv run python -m mapping.cli.colorize --workers 8 --tag run [--no-occlusion] [--sampling nearest]
 uv run python -m mapping.report run                # out/run/report.md + PNG
 uv run python -m mapping.cli.calibrate             # edge-ICP kalibrace rigu, out/calib/{rig_fit,fit}.json
+uv run python -m mapping.cli.export_panos --cloud pointcloud-tools/output/eomt_city_seg   # 360 koule do Potree
+```
+
+### Panoramata v Potree (`panos.py`, `Images360`)
+
+`export_panos` zapíše vedle oktree `<cloud>/panos/` = Potree formát `coordinates.txt`
+(TAB: `file time longitude latitude altitude course pitch roll`) + zmenšené JPEG. Souřadnice jdou
+přímo v S-JTSK (identická transformace v Potree), takže koule sedí na stejných číslech jako mračno.
+
+**Course/pitch/roll nejsou naše roll/pitch/yaw.** Potree z nich staví natočení koule jako
+`Rz(90 − course) · Ry(−pitch) · Rx(roll + 90)` (three.js Euler „ZYX"), takže jde o
+přeparametrizaci celé rotace; `panos.potree_angles` tenhle vzorec invertuje pro rotaci, kterou
+koule opravdu potřebuje (`(POTREE_M @ R)^T`). Ověřeno v `tests/test_panos.py` proti nezávislému
+přepisu toho, co dělá prohlížeč (three.js r124 `SphereGeometry` + `Images360Loader`), na < 1e-5°.
+
+`AZ_OFFSET_DEG = 180` (přepínač `--az-offset`) přitáčí kouli kolem svislé osy kamery. Odvození
+říká 0 a každý jeho článek je ověřený proti sestavenému `potree.js` v kontejneru prohlížeče, ale
+na obrazovce koule vycházely otočené o půl otáčky — platí naměřená hodnota. Jediné číslo, které
+se mění, kdyby upgrade Potree udělal z 0 správnou odpověď. Přepis samotného `coordinates.txt`
+trvá zlomek vteřiny (obrázky se nepřegenerovávají), takže se dá zkoušet.
+
+Prohlížeč (`pointcloud-tools/viewer/view.html`) si `panos/` najde sám (`?panos=<dir>` přebije) a
+proti výchozímu Potree mění dvě věci — obě kvůli srovnání fotky s mračnem:
+
+* Potree nastavuje `texture.repeat.x = -1` (zrcadlená panoramata); naše zrcadlená nejsou a úhly
+  jsou odvozené pro `+1`, takže `view.html` to po každém načtení vrací zpátky. **Držet spolu s
+  `panos.py`.**
+* koule je neprůhledná a 1000 m široká (mračno by nebylo vidět) — panel vlevo dole má posuvník
+  krytí (blend fotka ↔ mračno), poloměr koule a klávesy `[` `]` (snímek), `B` (blink), `Esc`.
+
+```
+uv run python -m mapping.cli.export_panos --cloud <octree> --poses corrected --width 2048
+uv run python -m mapping.cli.export_panos --out <dir> --frames clean --stride 4 \
+    --image-dir Geovap_cache/segds_e8f3e1/qa      # místo fotek QA překryvy segmentace
 ```
 
 ## Konvence (ověřené, neměnit)
@@ -96,6 +130,43 @@ z nahoru), časový offset dt. Identita reprodukuje pilot. Produkty nesou hash r
 Per-snímková kontrola zarovnání (siluety mračna vs. hrany fotky, konflikt průjezdů, pohyb, ostrost) →
 třídy clean 825 / unverified 163 / usable 295 / reject 220. `dataset/clean_frames.json` je seznam pro
 další použití; `dataset/frame_quality.csv` nese všechny veličiny.
+
+## Korekce pozic panoramat (`poses.py`, `trajectory.py`, `pose_refine.py`, `pass_reg.py`, `08_korekce_poz_panoramat.md`)
+
+Volitelná vrstva korekcí nad `export.csv` (plán S0–S7, plné výsledky a otevřené problémy v
+`08_korekce_poz_panoramat.md`). Nové moduly: `trajectory.py` (S3/S3b — hustá 200 Hz trajektorie
+z rovin skenovacích hlav VMX-2HA; poziční mód je degenerovaný a nepoužívá se, rotační mód
+`mode="rot_only"` jde do produkce), `pose_refine.py` (S4 — per-snímkové edge-ICP zpřesnění, 6
+parametrů/snímek), `pass_reg.py` (S5/S5b — párová ICP registrace 30 průjezdů; ukotvení proti JVF
+vyzkoušeno a zavrženo), `pose_report.py` (S2 baseline + S7 finální validace `export` vs.
+`poses_corrected` — siluety, barva, cross-pass konflikty, přínos interpolace, invariance,
+regresní kontrola). CLI: `cli/store_add_columns.py`, `cli/pass_psid.py`, `cli/align_frames.py`,
+`cli/build_trajectory.py [--rot-only]`, `cli/refine_poses.py`, `cli/register_passes.py`,
+`cli/assemble_poses.py` (S_assemble — složí S3b+S4+S5b do finální tabulky),
+`cli/pose_report.py run` (S7 — `out/poses/report_final.md`/`.json`).
+
+**Export zůstává výchozí a byte-identický** — `load_poses()` bez argumentu (`GEOVAP_POSES`
+nenastavené / `="export"`) je přesně dnešní chování (`test_regression_037.py`,
+`test_load_poses_export_unchanged`). Opt-in: `export GEOVAP_POSES=corrected` (nebo cesta k pose
+tabulce), případně `load_poses("corrected")` / `load_poses("/path/to/poses.csv")` v kódu. Produkty
+na korigovaných pózách jdou do `FRAMES_DIR/<hash[:6]>` (`products.frames_dir`) — nikdy nepřepíšou
+produkty z exportu.
+
+Stejný vzor (`mapping.config.source_dir`) používají i navazující datasety: `mapping.quality`
+(`04_cisty_dataset.md`) píše do `Geovap_cache/out/dataset/` pro export, `out/dataset_<hash[:6]>` pro
+cokoliv jiného; `mapping.seg.*` (níže) do `Geovap_cache/segds/` resp. `Geovap_cache/segds_<hash[:6]>/`
+(`--poses corrected` na `cli/seg_build.py`, nebo `GEOVAP_POSES` v prostředí — obojí funguje, `--poses`
+navíc nastaví `GEOVAP_POSES` pro zbytek procesu). Obě tyhle dvě pipeline berou registraci mračna
+(`CloudStore(registration=pass_transforms.json)`) automaticky z `poses_corrected.json`
+(`open_store(poses)`) — kdokoliv jiný, kdo čte `load_poses("corrected")` napřímo, musí `CloudStore`
+zaregistrovat sám (viz `08_korekce_poz_panoramat.md §1`, dlaždice 037: bez registrace ΔE 6,08→7,80).
+Dopad korekce na oba datasety (před/po tabulky, verdikt) je v `08_korekce_poz_panoramat.md §7` a
+`dataset/README.md`.
+
+**Formát pose tabulky** (`write_pose_table`/`read_pose_table`): CSV `frame, filename, t, E, N, H,
+roll, pitch, yaw, pass_id` + volitelné sloupce (`status, dt_s, dyaw, droll, dpitch, ...`) + sidecar
+`<jméno>.json` s provenience (git rev, sha1 `export.csv`, `poses_hash`, případně jméno připojené
+`trajectory.npz`). `pass_id` se z tabulky vždy jen čte, nikdy znovu nesegmentuje.
 
 ## Výstupní LAZ (`las_out.py`)
 

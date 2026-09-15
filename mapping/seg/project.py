@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 
 from .. import geometry, las_out, products, zbuffer
-from ..cloud_store import CloudStore, TileInfo
+from ..cloud_store import CloudStore, TileInfo, open_store
 from ..config import OUT_DIR, R_MAX, R_MIN, SCORE_R0
 from ..frame_select import FrameIndex
 from ..poses import load_poses
@@ -57,6 +57,7 @@ class Options:
     write_las: bool = True
     subsample: int | None = None
     frame_limit: int | None = None
+    poses_source: str | None = None  # None -> env GEOVAP_POSES / "export"; explicit initarg for worker pools
 
 
 @dataclass
@@ -193,7 +194,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
         sel, u, v, r = sel[inr], u[inr], v[inr], r[inr]
         if len(sel) == 0:
             continue
-        fp = products.FrameProducts.load(k, IDENTITY)
+        fp = products.load_products(k, fi.poses, IDENTITY)
         if opt.occlusion:
             vis = fp.visible(r, u, v)
             sel, u, v, r = sel[vis], u[vis], v[vis], r[vis]
@@ -219,7 +220,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
         w = (cf[ok].astype(np.float32) / 255.0) * _score(r[ok]) * ef[cv[ok], cu[ok]]
         acc.update(sel[ok], lab[ok], w, k)
 
-    store.drop_cache((Path(products.FRAMES_DIR),))
+    store.drop_cache((products.frames_dir(fi.poses),))
     out = acc.finalize()
     label = out["label"]
     counts = np.bincount(label, minlength=256)
@@ -271,8 +272,11 @@ _G: dict = {}
 
 
 def _init(opt: Options):
-    _G["store"] = CloudStore()
-    _G["fi"] = FrameIndex(load_poses(), IDENTITY)
+    # explicit poses_source on opt (not just env inheritance via fork) so it is honoured even if
+    # the pool start method is not "fork".
+    poses = load_poses(opt.poses_source)
+    _G["store"] = open_store(poses)
+    _G["fi"] = FrameIndex(poses, IDENTITY)
     _G["opt"] = opt
 
 
@@ -284,7 +288,7 @@ def _run_tile(name: str) -> TileResult:
 def run(tiles: list[str] | None, opt: Options, workers: int = 5) -> list[TileResult]:
     from multiprocessing import Pool
 
-    store = CloudStore()
+    store = open_store(load_poses(opt.poses_source))
     names = [t.name for t in store.tiles] if tiles is None else list(tiles)
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / "labels").mkdir(parents=True, exist_ok=True)

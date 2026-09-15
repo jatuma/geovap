@@ -17,7 +17,7 @@ import numpy as np
 
 from . import geometry, las_out, metrics, products, zbuffer
 from .accumulate import ColourTopK, NearestInTime
-from .cloud_store import CloudStore, TileInfo
+from .cloud_store import CloudStore, TileInfo, open_store
 from .config import INCIDENCE_MAX_DEG, OUT_DIR, R_MAX, R_MIN, SCORE_R0, TOP_K
 from .frame_select import FrameIndex
 from .poses import load_poses
@@ -40,6 +40,7 @@ class Options:
     tag: str = "run"
     mirror: bool = False  # regression check: mirrored azimuth must give median CIE76 ~ 17
     vehicle_mask: bool = True  # drop samples that fall on the vehicle body
+    poses_source: str | None = None  # None -> env GEOVAP_POSES / "export"; explicit initarg for worker pools
 
 
 @dataclass
@@ -108,7 +109,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
         if len(sel) == 0:
             continue
         if opt.occlusion:
-            fp = products.FrameProducts.load(k, opt.rig)
+            fp = products.load_products(k, fi.poses, opt.rig)
             vis = fp.visible(r, u, v)
         else:
             vis = zbuffer.range_filter(r, R_MIN, opt.r_max)
@@ -145,7 +146,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
             v_nt = vis[is_nt]
             acc_nt.update(rows_nt[v_nt], rgb_n[v_nt], k, r[is_nt][v_nt], grad[v_nt])
 
-    store.drop_cache((Path(products.FRAMES_DIR),))  # keep free memory high for the memory watchdog
+    store.drop_cache((products.frames_dir(fi.poses),))  # keep free memory high for the memory watchdog
     fused = acc_top.finalize()
     variants = {
         "med": (fused["rgb"], fused["n_views"] > 0),
@@ -211,8 +212,10 @@ _G: dict = {}
 
 
 def _init(opt: Options):
-    _G["store"] = CloudStore()
-    _G["poses"] = load_poses()
+    # explicit poses_source on opt (not just env inheritance via fork) so it is honoured even if
+    # the pool start method is not "fork".
+    _G["poses"] = load_poses(opt.poses_source)
+    _G["store"] = open_store(_G["poses"])  # registered cloud when poses carries a "registration"
     _G["fi"] = FrameIndex(_G["poses"], opt.rig)
     _G["opt"] = opt
 
@@ -235,7 +238,7 @@ def _run_tile(name: str) -> TileResult:
 def run(tiles: list[str] | None, opt: Options, workers: int = 8) -> list[TileResult]:
     from multiprocessing import Pool
 
-    store = CloudStore()
+    store = open_store(load_poses(opt.poses_source))
     names = [t.name for t in store.tiles] if tiles is None else tiles
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / opt.tag).mkdir(parents=True, exist_ok=True)

@@ -20,6 +20,11 @@ FRAMES_DIR = CACHE_ROOT / "frames"
 GRAY_DIR = CACHE_ROOT / "gray"
 RENDERS_DIR = CACHE_ROOT / "renders"
 OUT_DIR = CACHE_ROOT / "out"
+POSES_DIR = OUT_DIR / "poses"
+
+# pose source: "export" (default, the regression anchor) or a corrected pose-table name/path.
+# override with env GEOVAP_POSES; see mapping/poses.py:load_poses.
+POSES_SOURCE = os.environ.get("GEOVAP_POSES", "export")
 
 # panorama
 PANO_W = 8000
@@ -57,3 +62,14 @@ CELL_SIZE = 4.0  # m
 EXPECTED_TOTAL_POINTS = 584_809_840
 
 NO_POINT = 0xFFFFFFFF  # uint32 sentinel in point_id panoramas
+
+
+def source_dir(base: Path, poses) -> Path:
+    """Per-pose-source output root: `base` itself for the default "export" pose table (byte-identical
+    paths, the regression anchor), a hash-suffixed sibling directory for any corrected one, so a
+    corrected run's outputs never overwrite (or mix with) the export ones. `poses` is any object with
+    `.source` and `.hash()` (a `mapping.poses.Poses`); mirrors `mapping.products.frames_dir`."""
+    base = Path(base)
+    if poses.source == "export":
+        return base
+    return base.with_name(base.name + "_" + poses.hash()[:6])

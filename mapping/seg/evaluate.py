@@ -18,7 +18,8 @@ import numpy as np
 from scipy import ndimage
 
 from ..config import ZB_H, ZB_W
-from ..products import FrameProducts
+from ..poses import load_poses
+from ..products import load_products
 from . import classes as C
 from . import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
@@ -92,7 +93,7 @@ def transition_distance(pred: np.ndarray, band: np.ndarray, classes: tuple[int, 
     return dist[band]
 
 
-def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray) -> dict:
+def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray, poses=None) -> dict:
     can = set(np.unique(_model_common_ids(tag)).tolist())  # common ids the model can output
     cm = np.zeros((NC, NC))
     cmw = np.zeros((NC, NC))
@@ -146,7 +147,7 @@ def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray) 
             d = transition_distance(pred, bm, cls_ids, cov)
             trans[bname].append(d)
             if depth is None:
-                depth = FrameProducts.load(k).depth_m
+                depth = load_products(k, poses or load_poses()).depth_m
             r = np.maximum(depth[bm], 1.0)
             tol_px = 0.14 / r * ZB_W / (2 * np.pi)  # 14 cm at the pixel's range, in ERP px
             trans_tol[bname][0] += int((d <= np.maximum(tol_px, 1.0)).sum())
@@ -204,11 +205,12 @@ def timing(tag: str) -> dict:
     return {"s_per_pano_median": _f(np.median(secs[1:] if len(secs) > 1 else secs)), "peak_mib": int(max(float(r["peak_mib"]) for r in rows))}
 
 
-def run(tags: list[str], frames: list[int]) -> dict:
+def run(tags: list[str], frames: list[int], poses_source: str | None = None) -> dict:
     """Evaluate on all frames and on the near-field-clean subset (labels not displaced by pass registration)."""
     from . import nearfield
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    poses = load_poses(poses_source)
     lut = T.gt_to_common_lut()
     W = lat_weights()
     nf = nearfield.load()
@@ -218,8 +220,8 @@ def run(tags: list[str], frames: list[int]) -> dict:
         if not (BENCH_DIR / tag).exists():
             print(f"[{tag}] no predictions, skipped")
             continue
-        r = evaluate_model(tag, subsets["all"], lut, W)
-        r["nf_ok"] = evaluate_model(tag, subsets["nf_ok"], lut, W)
+        r = evaluate_model(tag, subsets["all"], lut, W, poses)
+        r["nf_ok"] = evaluate_model(tag, subsets["nf_ok"], lut, W, poses)
         r["nf_ok"].pop("confusion", None)
         r["timing"] = timing(tag)
         r["spec"] = {"checkpoint": SPECS[tag].checkpoint, "taxonomy": SPECS[tag].taxonomy, "licence": SPECS[tag].licence, "note": SPECS[tag].note}

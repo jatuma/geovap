@@ -11,7 +11,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..cloud_store import CloudStore
+from ..cloud_store import open_store
 from ..config import ZB_H
 from ..poses import load_poses
 from ..products import git_rev
@@ -49,7 +49,7 @@ def frame_stats(frames: list[int]) -> dict[int, dict]:
 
 
 def camera_tiles(poses, frames: list[int]) -> dict[int, str]:
-    store = CloudStore()
+    store = open_store(poses)
     tiles = {}
     for k in frames:
         e, n = poses.origin[k][:2]
@@ -144,9 +144,9 @@ def select_bench_frames(poses, frames: list[int], stats: dict, tiles: dict[int, 
     return chosen
 
 
-def build(out_dir: Path = DATASET_SEG_DIR) -> dict:
+def build(out_dir: Path = DATASET_SEG_DIR, poses_source: str | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    poses = load_poses()
+    poses = load_poses(poses_source)
     frames = [k for k in clean_frames() if (LABELS_DIR / f"f{k:04d}.png").exists()]
     quality = {int(r["frame"]): r for r in csv.DictReader(QUALITY_CSV.open())}
     stats = frame_stats(frames)

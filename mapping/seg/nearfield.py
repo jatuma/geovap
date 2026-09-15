@@ -49,8 +49,8 @@ def band_edge_distance(photo_bgr: np.ndarray, bands: np.ndarray, band_id: int = 
     return {"n": int(centre.sum()), "median_px": round(float(np.median(d)), 1), "p75_px": round(float(np.percentile(d, 75)), 1), "within3": round(float((d <= 3).mean()), 3)}
 
 
-def _init():
-    _G["poses"] = load_poses()
+def _init(poses_source=None):
+    _G["poses"] = load_poses(poses_source)
 
 
 def _work(k: int):
@@ -59,10 +59,10 @@ def _work(k: int):
     return k, band_edge_distance(photo, bands)
 
 
-def run(frames: list[int] | None = None, workers: int = 8, out: Path = OUT) -> dict:
+def run(frames: list[int] | None = None, workers: int = 8, out: Path = OUT, poses_source: str | None = None) -> dict:
     frames = frames if frames is not None else clean_frames()
     res = {}
-    with Pool(workers, initializer=_init) as pool:
+    with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool:
         for i, (k, r) in enumerate(pool.imap_unordered(_work, frames, chunksize=8)):
             res[k] = r
             if i % 200 == 0:

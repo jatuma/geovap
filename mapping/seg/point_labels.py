@@ -20,7 +20,8 @@ from pathlib import Path
 
 import numpy as np
 
-from ..cloud_store import CloudStore
+from ..cloud_store import CloudStore, open_store
+from ..poses import load_poses
 from . import classes as C
 from .areas import SEGDS_DIR
 from .rasters import Rasters
@@ -81,10 +82,12 @@ def label_points(xyz: np.ndarray, R: Rasters, rules: dict = C.RULES) -> np.ndarr
     return lab
 
 
-def _init(root):
+def _init(root, poses_source=None):
     global _R, _STORE
     _R = Rasters(root)
-    _STORE = CloudStore()
+    # registered cloud: the rasters (see `rasters.build`) are built from the same registered
+    # positions, so points must be compared against them at those positions too.
+    _STORE = open_store(load_poses(poses_source))
 
 
 def _label_tile(name: str) -> tuple[str, np.ndarray]:
@@ -100,12 +103,12 @@ def _label_tile(name: str) -> tuple[str, np.ndarray]:
     return name, np.bincount(out, minlength=256)
 
 
-def build(workers: int = 4, out_dir: Path = LABEL_DIR) -> dict:
+def build(workers: int = 4, out_dir: Path = LABEL_DIR, poses_source: str | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    store = CloudStore()
+    store = open_store(load_poses(poses_source))
     names = [t.name for t in store.tiles]
     hist = np.zeros(256, np.int64)
-    with Pool(workers, initializer=_init, initargs=(Rasters().root,)) as pool:
+    with Pool(workers, initializer=_init, initargs=(Rasters().root, poses_source)) as pool:
         for name, h in pool.imap_unordered(_label_tile, names):
             hist += h
             print(f"tile {name}: {h.sum()} pts, labelled {1 - h[255] / h.sum():.3f}")

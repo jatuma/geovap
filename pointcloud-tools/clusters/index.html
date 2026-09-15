@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Dražkov – clusters</title>
+	<link rel="stylesheet" type="text/css" href="/potree/build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/jstree/themes/mixed/style.css">
+	<style>
+		body { margin: 0; padding: 0; overflow: hidden; }
+		#modes { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10000;
+			display: flex; gap: 4px; background: rgba(20,20,20,.85); padding: 6px; border-radius: 6px; font-family: sans-serif; }
+		#modes button { background: #333; color: #ddd; border: 1px solid #555; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+		#modes button.active { background: #2b7bd6; color: #fff; border-color: #2b7bd6; }
+		#modes span { color: #aaa; font-size: 12px; align-self: center; margin-left: 8px; }
+	</style>
+</head>
+<body>
+	<script src="/potree/libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="/potree/libs/spectrum/spectrum.js"></script>
+	<script src="/potree/libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="/potree/libs/other/BinaryHeap.js"></script>
+	<script src="/potree/libs/tween/tween.min.js"></script>
+	<script src="/potree/libs/d3/d3.js"></script>
+	<script src="/potree/libs/proj4/proj4.js"></script>
+	<script src="/potree/libs/openlayers3/ol.js"></script>
+	<script src="/potree/libs/i18next/i18next.js"></script>
+	<script src="/potree/libs/jstree/jstree.js"></script>
+	<script src="/potree/build/potree/potree.js"></script>
+	<script src="/potree/libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;">
+		<div id="potree_render_area" style="background-image: url('/potree/build/potree/resources/images/background.jpg')"></div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+	<div id="modes">
+		<button data-mode="rgb">RGB (vendor)</button>
+		<button data-mode="colored">Colored (panoramas)</button>
+		<button data-mode="objects">Objects</button>
+		<button data-mode="classification">Classification</button>
+		<button data-mode="objclass">Object class</button>
+		<span>keys: 1 / 2 / 3 / 4 / 5</span>
+	</div>
+
+	<script>
+		proj4.defs("EPSG:5514", "+proj=krovak +lat_0=49.5 +lon_0=24.8333333333333 +alpha=30.2881397527778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +towgs84=589,76,480,0,0,0,0 +units=m +no_defs +type=crs");
+
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(3_000_000);
+		viewer.loadSettingsFromURL();
+		viewer.setDescription("");
+		viewer.loadGUI(() => { viewer.setLanguage('en'); });
+
+		// classification palette for the vendor classes (1 = unclassified/objects, 2 = ground)
+		viewer.setClassifications({
+			"1": { visible: true, name: "unclassified", color: [0.55, 0.65, 0.85, 1.0] },
+			"2": { visible: true, name: "ground",       color: [0.55, 0.40, 0.25, 1.0] },
+			"DEFAULT": { visible: true, name: "other",  color: [0.3, 0.3, 0.3, 1.0] },
+		});
+
+		const base = "/pointclouds/clusters/";
+		const clouds = {};   // name -> pointcloud
+
+		function load(name) {
+			return new Promise(res => Potree.loadPointCloud(base + name + "/metadata.json", name, e => {
+				const pc = e.pointcloud;
+				viewer.scene.addPointCloud(pc);
+				const m = pc.material;
+				m.size = 1;
+				m.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+				m.shape = Potree.PointShape.SQUARE;
+				m.activeAttributeName = "rgba";
+				clouds[name] = pc;
+				res(pc);
+			}));
+		}
+
+		function setMode(mode) {
+			if (!clouds.rgb || !clouds.objects || !clouds.colored) return;
+			clouds.rgb.visible = mode !== "objects" && mode !== "colored";
+			clouds.objects.visible = mode === "objects";
+			clouds.colored.visible = mode === "colored";   // our colourisation from the panoramas (run tw45)
+			clouds.rgb.material.activeAttributeName = mode === "classification" ? "classification" : mode === "objclass" ? "obj_class" : "rgba";
+			if (mode === "objclass") {           // 0 ground/low, 1 structure, 2 vegetation, 3 wire
+				clouds.rgb.material.activeAttributeName = "obj_class";
+				clouds.rgb.material.gradient = [[0.0, new THREE.Color(0.2, 0.2, 0.2)], [0.33, new THREE.Color(0.35, 0.45, 0.9)],
+					[0.66, new THREE.Color(0.25, 0.7, 0.25)], [1.0, new THREE.Color(1.0, 0.25, 0.25)]];
+			} else {
+				clouds.rgb.material.gradient = Potree.Gradients.SPECTRAL;
+			}
+			clouds.objects.material.activeAttributeName = "rgba";
+			clouds.colored.material.activeAttributeName = "rgba";
+			document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+			history.replaceState(null, "", "#" + mode);
+		}
+
+		document.querySelectorAll("#modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+		window.addEventListener("keydown", e => {
+			if (e.target.tagName === "INPUT") return;
+			if (e.key === "1") setMode("rgb");
+			if (e.key === "2") setMode("objects");
+			if (e.key === "3") setMode("classification");
+			if (e.key === "4") setMode("objclass");
+			if (e.key === "5") setMode("colored");
+		});
+
+		Promise.all([load("rgb"), load("objects"), load("colored")]).then(() => {
+			// keep the two clouds' LOD in sync so switching does not reload
+			setMode((location.hash || "#objects").slice(1));
+			viewer.fitToScreen();
+		});
+	</script>
+</body>
+</html>

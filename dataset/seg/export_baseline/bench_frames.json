@@ -1,0 +1,1011 @@
+{
+"n": 100,
+"frames": [
+6,
+29,
+47,
+61,
+64,
+70,
+86,
+110,
+152,
+228,
+232,
+236,
+239,
+245,
+261,
+271,
+275,
+298,
+335,
+339,
+343,
+363,
+386,
+403,
+407,
+411,
+415,
+422,
+431,
+447,
+478,
+483,
+492,
+497,
+502,
+517,
+521,
+560,
+570,
+624,
+646,
+667,
+679,
+699,
+713,
+728,
+742,
+746,
+756,
+760,
+795,
+801,
+804,
+807,
+811,
+817,
+1004,
+1031,
+1040,
+1044,
+1059,
+1072,
+1106,
+1114,
+1119,
+1132,
+1145,
+1151,
+1174,
+1192,
+1212,
+1220,
+1240,
+1257,
+1263,
+1266,
+1271,
+1274,
+1281,
+1296,
+1306,
+1310,
+1315,
+1321,
+1326,
+1332,
+1341,
+1345,
+1349,
+1363,
+1379,
+1399,
+1409,
+1419,
+1425,
+1438,
+1451,
+1463,
+1488,
+1494
+],
+"detail": [
+{
+"frame": 6,
+"reason": "fill",
+"nearfield_px": 12.0,
+"nearfield_bad": false,
+"tile": "037",
+"pass": 0,
+"split": "test"
+},
+{
+"frame": 29,
+"reason": "fill",
+"nearfield_px": 4.0,
+"nearfield_bad": false,
+"tile": "033",
+"pass": 0,
+"split": "test"
+},
+{
+"frame": 47,
+"reason": "tile:030",
+"nearfield_px": 20.3,
+"nearfield_bad": true,
+"tile": "030",
+"pass": 0,
+"split": "buffer"
+},
+{
+"frame": 61,
+"reason": "rare:wall",
+"nearfield_px": 7.3,
+"nearfield_bad": false,
+"tile": "021",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 64,
+"reason": "tile:021",
+"nearfield_px": 25.5,
+"nearfield_bad": true,
+"tile": "021",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 70,
+"reason": "tile:021",
+"nearfield_px": 5.0,
+"nearfield_bad": false,
+"tile": "021",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 86,
+"reason": "tile:015",
+"nearfield_px": 9.0,
+"nearfield_bad": false,
+"tile": "015",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 110,
+"reason": "tile:005",
+"nearfield_px": 14.0,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 152,
+"reason": "tile:002",
+"nearfield_px": 14.2,
+"nearfield_bad": false,
+"tile": "002",
+"pass": 0,
+"split": "train"
+},
+{
+"frame": 228,
+"reason": "tile:004",
+"nearfield_px": 12.1,
+"nearfield_bad": false,
+"tile": "004",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 232,
+"reason": "tile:004",
+"nearfield_px": 7.0,
+"nearfield_bad": false,
+"tile": "004",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 236,
+"reason": "tile:004",
+"nearfield_px": 4.1,
+"nearfield_bad": false,
+"tile": "004",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 239,
+"reason": "tile:004",
+"nearfield_px": 5.8,
+"nearfield_bad": false,
+"tile": "004",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 245,
+"reason": "tile:005",
+"nearfield_px": 2.2,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 261,
+"reason": "fill",
+"nearfield_px": 8.6,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 271,
+"reason": "tile:011",
+"nearfield_px": 9.4,
+"nearfield_bad": false,
+"tile": "011",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 275,
+"reason": "tile:011",
+"nearfield_px": 3.6,
+"nearfield_bad": false,
+"tile": "011",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 298,
+"reason": "tile:015",
+"nearfield_px": 6.0,
+"nearfield_bad": false,
+"tile": "015",
+"pass": 1,
+"split": "train"
+},
+{
+"frame": 335,
+"reason": "rare:guard_rail",
+"nearfield_px": 4.0,
+"nearfield_bad": false,
+"tile": "030",
+"pass": 1,
+"split": "test"
+},
+{
+"frame": 339,
+"reason": "tile:033",
+"nearfield_px": 3.6,
+"nearfield_bad": false,
+"tile": "033",
+"pass": 1,
+"split": "test"
+},
+{
+"frame": 343,
+"reason": "tile:033",
+"nearfield_px": 4.1,
+"nearfield_bad": false,
+"tile": "033",
+"pass": 1,
+"split": "test"
+},
+{
+"frame": 363,
+"reason": "tile:033",
+"nearfield_px": 5.0,
+"nearfield_bad": false,
+"tile": "033",
+"pass": 1,
+"split": "test"
+},
+{
+"frame": 386,
+"reason": "tile:027",
+"nearfield_px": 28.0,
+"nearfield_bad": true,
+"tile": "027",
+"pass": 2,
+"split": "test"
+},
+{
+"frame": 403,
+"reason": "tile:020",
+"nearfield_px": 31.4,
+"nearfield_bad": true,
+"tile": "020",
+"pass": 3,
+"split": "test"
+},
+{
+"frame": 407,
+"reason": "tile:020",
+"nearfield_px": 31.1,
+"nearfield_bad": true,
+"tile": "020",
+"pass": 3,
+"split": "test"
+},
+{
+"frame": 411,
+"reason": "fill",
+"nearfield_px": 21.0,
+"nearfield_bad": true,
+"tile": "020",
+"pass": 3,
+"split": "test"
+},
+{
+"frame": 415,
+"reason": "tile:028",
+"nearfield_px": 32.2,
+"nearfield_bad": true,
+"tile": "028",
+"pass": 3,
+"split": "buffer"
+},
+{
+"frame": 422,
+"reason": "tile:028",
+"nearfield_px": 26.4,
+"nearfield_bad": true,
+"tile": "028",
+"pass": 3,
+"split": "train"
+},
+{
+"frame": 431,
+"reason": "tile:023",
+"nearfield_px": 44.0,
+"nearfield_bad": true,
+"tile": "023",
+"pass": 3,
+"split": "train"
+},
+{
+"frame": 447,
+"reason": "tile:020",
+"nearfield_px": 37.5,
+"nearfield_bad": true,
+"tile": "020",
+"pass": 3,
+"split": "train"
+},
+{
+"frame": 478,
+"reason": "tile:020",
+"nearfield_px": 14.0,
+"nearfield_bad": false,
+"tile": "020",
+"pass": 4,
+"split": "train"
+},
+{
+"frame": 483,
+"reason": "tile:023",
+"nearfield_px": 14.9,
+"nearfield_bad": false,
+"tile": "023",
+"pass": 4,
+"split": "train"
+},
+{
+"frame": 492,
+"reason": "tile:023",
+"nearfield_px": 16.6,
+"nearfield_bad": false,
+"tile": "023",
+"pass": 4,
+"split": "train"
+},
+{
+"frame": 497,
+"reason": "rare:sidewalk",
+"nearfield_px": 22.7,
+"nearfield_bad": true,
+"tile": "023",
+"pass": 4,
+"split": "buffer"
+},
+{
+"frame": 502,
+"reason": "rare:sidewalk",
+"nearfield_px": 11.0,
+"nearfield_bad": false,
+"tile": "023",
+"pass": 4,
+"split": "test"
+},
+{
+"frame": 517,
+"reason": "tile:021",
+"nearfield_px": 39.0,
+"nearfield_bad": true,
+"tile": "021",
+"pass": 5,
+"split": "train"
+},
+{
+"frame": 521,
+"reason": "tile:027",
+"nearfield_px": 17.7,
+"nearfield_bad": false,
+"tile": "027",
+"pass": 5,
+"split": "train"
+},
+{
+"frame": 560,
+"reason": "tile:017",
+"nearfield_px": 19.1,
+"nearfield_bad": false,
+"tile": "017",
+"pass": 5,
+"split": "test"
+},
+{
+"frame": 570,
+"reason": "tile:017",
+"nearfield_px": 35.4,
+"nearfield_bad": true,
+"tile": "017",
+"pass": 5,
+"split": "train"
+},
+{
+"frame": 624,
+"reason": "tile:017",
+"nearfield_px": 16.8,
+"nearfield_bad": false,
+"tile": "017",
+"pass": 6,
+"split": "test"
+},
+{
+"frame": 646,
+"reason": "tile:015",
+"nearfield_px": 44.9,
+"nearfield_bad": true,
+"tile": "015",
+"pass": 6,
+"split": "train"
+},
+{
+"frame": 667,
+"reason": "tile:012",
+"nearfield_px": 47.2,
+"nearfield_bad": true,
+"tile": "012",
+"pass": 7,
+"split": "train"
+},
+{
+"frame": 679,
+"reason": "tile:012",
+"nearfield_px": 55.0,
+"nearfield_bad": true,
+"tile": "012",
+"pass": 7,
+"split": "test"
+},
+{
+"frame": 699,
+"reason": "tile:008",
+"nearfield_px": 37.8,
+"nearfield_bad": true,
+"tile": "008",
+"pass": 7,
+"split": "test"
+},
+{
+"frame": 713,
+"reason": "tile:008",
+"nearfield_px": 35.8,
+"nearfield_bad": true,
+"tile": "008",
+"pass": 9,
+"split": "test"
+},
+{
+"frame": 728,
+"reason": "tile:008",
+"nearfield_px": 47.0,
+"nearfield_bad": true,
+"tile": "008",
+"pass": 9,
+"split": "test"
+},
+{
+"frame": 742,
+"reason": "tile:012",
+"nearfield_px": 37.9,
+"nearfield_bad": true,
+"tile": "012",
+"pass": 9,
+"split": "test"
+},
+{
+"frame": 746,
+"reason": "tile:012",
+"nearfield_px": 43.3,
+"nearfield_bad": true,
+"tile": "012",
+"pass": 9,
+"split": "buffer"
+},
+{
+"frame": 756,
+"reason": "tile:015",
+"nearfield_px": 26.6,
+"nearfield_bad": true,
+"tile": "015",
+"pass": 9,
+"split": "train"
+},
+{
+"frame": 760,
+"reason": "tile:015",
+"nearfield_px": 19.5,
+"nearfield_bad": false,
+"tile": "015",
+"pass": 9,
+"split": "train"
+},
+{
+"frame": 795,
+"reason": "tile:005",
+"nearfield_px": 2.8,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 11,
+"split": "train"
+},
+{
+"frame": 801,
+"reason": "tile:005",
+"nearfield_px": 7.8,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 11,
+"split": "train"
+},
+{
+"frame": 804,
+"reason": "tile:005",
+"nearfield_px": 6.3,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 11,
+"split": "train"
+},
+{
+"frame": 807,
+"reason": "fill",
+"nearfield_px": 5.1,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 11,
+"split": "train"
+},
+{
+"frame": 811,
+"reason": "tile:005",
+"nearfield_px": 5.8,
+"nearfield_bad": false,
+"tile": "005",
+"pass": 11,
+"split": "buffer"
+},
+{
+"frame": 817,
+"reason": "fill",
+"nearfield_px": 7.1,
+"nearfield_bad": false,
+"tile": "009",
+"pass": 11,
+"split": "test"
+},
+{
+"frame": 1004,
+"reason": "tile:002",
+"nearfield_px": 30.5,
+"nearfield_bad": true,
+"tile": "002",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1031,
+"reason": "fill",
+"nearfield_px": 12.2,
+"nearfield_bad": false,
+"tile": "002",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1040,
+"reason": "tile:002",
+"nearfield_px": 8.0,
+"nearfield_bad": false,
+"tile": "002",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1044,
+"reason": "tile:002",
+"nearfield_px": 9.8,
+"nearfield_bad": false,
+"tile": "002",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1059,
+"reason": "rare:wall",
+"nearfield_px": 46.9,
+"nearfield_bad": true,
+"tile": "007",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1072,
+"reason": "fill",
+"nearfield_px": 15.3,
+"nearfield_bad": false,
+"tile": "004",
+"pass": 14,
+"split": "train"
+},
+{
+"frame": 1106,
+"reason": "tile:014",
+"nearfield_px": 4.0,
+"nearfield_bad": false,
+"tile": "014",
+"pass": 16,
+"split": "train"
+},
+{
+"frame": 1114,
+"reason": "tile:014",
+"nearfield_px": 47.1,
+"nearfield_bad": true,
+"tile": "014",
+"pass": 16,
+"split": "buffer"
+},
+{
+"frame": 1119,
+"reason": "tile:019",
+"nearfield_px": 36.9,
+"nearfield_bad": true,
+"tile": "019",
+"pass": 16,
+"split": "buffer"
+},
+{
+"frame": 1132,
+"reason": "tile:022",
+"nearfield_px": 43.0,
+"nearfield_bad": true,
+"tile": "022",
+"pass": 16,
+"split": "val"
+},
+{
+"frame": 1145,
+"reason": "tile:018",
+"nearfield_px": 8.1,
+"nearfield_bad": false,
+"tile": "018",
+"pass": 17,
+"split": "val"
+},
+{
+"frame": 1151,
+"reason": "tile:014",
+"nearfield_px": 26.4,
+"nearfield_bad": true,
+"tile": "014",
+"pass": 17,
+"split": "val"
+},
+{
+"frame": 1174,
+"reason": "tile:022",
+"nearfield_px": 2.2,
+"nearfield_bad": false,
+"tile": "022",
+"pass": 20,
+"split": "val"
+},
+{
+"frame": 1192,
+"reason": "tile:024",
+"nearfield_px": 20.2,
+"nearfield_bad": true,
+"tile": "024",
+"pass": 20,
+"split": "val"
+},
+{
+"frame": 1212,
+"reason": "tile:024",
+"nearfield_px": 21.1,
+"nearfield_bad": true,
+"tile": "024",
+"pass": 20,
+"split": "val"
+},
+{
+"frame": 1220,
+"reason": "tile:022",
+"nearfield_px": 13.0,
+"nearfield_bad": false,
+"tile": "022",
+"pass": 20,
+"split": "val"
+},
+{
+"frame": 1240,
+"reason": "tile:022",
+"nearfield_px": 22.8,
+"nearfield_bad": true,
+"tile": "022",
+"pass": 21,
+"split": "val"
+},
+{
+"frame": 1257,
+"reason": "tile:019",
+"nearfield_px": 26.9,
+"nearfield_bad": true,
+"tile": "019",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1263,
+"reason": "tile:025",
+"nearfield_px": 29.4,
+"nearfield_bad": true,
+"tile": "025",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1266,
+"reason": "tile:025",
+"nearfield_px": 43.9,
+"nearfield_bad": true,
+"tile": "025",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1271,
+"reason": "tile:026",
+"nearfield_px": 8.5,
+"nearfield_bad": false,
+"tile": "026",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1274,
+"reason": "tile:026",
+"nearfield_px": 29.0,
+"nearfield_bad": true,
+"tile": "026",
+"pass": 23,
+"split": "buffer"
+},
+{
+"frame": 1281,
+"reason": "rare:water",
+"nearfield_px": 32.0,
+"nearfield_bad": true,
+"tile": "031",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1296,
+"reason": "rare:water",
+"nearfield_px": 34.5,
+"nearfield_bad": true,
+"tile": "034",
+"pass": 23,
+"split": "val"
+},
+{
+"frame": 1306,
+"reason": "tile:035",
+"nearfield_px": 5.1,
+"nearfield_bad": false,
+"tile": "035",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1310,
+"reason": "tile:035",
+"nearfield_px": null,
+"nearfield_bad": null,
+"tile": "035",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1315,
+"reason": "tile:031",
+"nearfield_px": null,
+"nearfield_bad": null,
+"tile": "031",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1321,
+"reason": "tile:029",
+"nearfield_px": null,
+"nearfield_bad": null,
+"tile": "029",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1326,
+"reason": "tile:029",
+"nearfield_px": null,
+"nearfield_bad": null,
+"tile": "029",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1332,
+"reason": "tile:029",
+"nearfield_px": null,
+"nearfield_bad": null,
+"tile": "029",
+"pass": 24,
+"split": "val"
+},
+{
+"frame": 1341,
+"reason": "tile:034",
+"nearfield_px": 49.1,
+"nearfield_bad": true,
+"tile": "034",
+"pass": 25,
+"split": "val"
+},
+{
+"frame": 1345,
+"reason": "tile:031",
+"nearfield_px": 25.1,
+"nearfield_bad": true,
+"tile": "031",
+"pass": 25,
+"split": "val"
+},
+{
+"frame": 1349,
+"reason": "rare:water",
+"nearfield_px": 38.0,
+"nearfield_bad": true,
+"tile": "031",
+"pass": 25,
+"split": "val"
+},
+{
+"frame": 1363,
+"reason": "tile:026",
+"nearfield_px": 44.3,
+"nearfield_bad": true,
+"tile": "026",
+"pass": 25,
+"split": "train"
+},
+{
+"frame": 1379,
+"reason": "rare:sidewalk",
+"nearfield_px": 43.6,
+"nearfield_bad": true,
+"tile": "021",
+"pass": 25,
+"split": "train"
+},
+{
+"frame": 1399,
+"reason": "tile:032",
+"nearfield_px": 18.1,
+"nearfield_bad": false,
+"tile": "032",
+"pass": 27,
+"split": "buffer"
+},
+{
+"frame": 1409,
+"reason": "tile:032",
+"nearfield_px": 34.7,
+"nearfield_bad": true,
+"tile": "032",
+"pass": 27,
+"split": "train"
+},
+{
+"frame": 1419,
+"reason": "tile:032",
+"nearfield_px": 27.7,
+"nearfield_bad": true,
+"tile": "032",
+"pass": 27,
+"split": "train"
+},
+{
+"frame": 1425,
+"reason": "rare:wall",
+"nearfield_px": 14.0,
+"nearfield_bad": false,
+"tile": "031",
+"pass": 27,
+"split": "buffer"
+},
+{
+"frame": 1438,
+"reason": "tile:021",
+"nearfield_px": 54.6,
+"nearfield_bad": true,
+"tile": "021",
+"pass": 27,
+"split": "train"
+},
+{
+"frame": 1451,
+"reason": "tile:021",
+"nearfield_px": 58.3,
+"nearfield_bad": true,
+"tile": "021",
+"pass": 28,
+"split": "train"
+},
+{
+"frame": 1463,
+"reason": "tile:033",
+"nearfield_px": 27.9,
+"nearfield_bad": true,
+"tile": "033",
+"pass": 29,
+"split": "test"
+},
+{
+"frame": 1488,
+"reason": "tile:033",
+"nearfield_px": 43.2,
+"nearfield_bad": true,
+"tile": "033",
+"pass": 29,
+"split": "test"
+},
+{
+"frame": 1494,
+"reason": "tile:033",
+"nearfield_px": 62.1,
+"nearfield_bad": true,
+"tile": "033",
+"pass": 29,
+"split": "test"
+}
+],
+"band_rows": [
+250,
+806
+]
+}

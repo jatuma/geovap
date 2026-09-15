@@ -20,12 +20,16 @@ from ..config import ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from . import taxonomy as T
-from .areas import SEGDS_DIR
+from .areas import SEGDS_ROOT
 from .fusion import fuse, to_common
 from .models import SPECS, SegModel
 from .views import VIEWS, VIEW_SIZE, extract_image, level_rotation, view_to_pano_maps
 
-BENCH_DIR = SEGDS_DIR / "bench"
+# Pose-independent: a 2D prediction depends only on the photo (and the rig's fixed leveling
+# rotation), never on the panorama's position/pose-correction state, so bench predictions always
+# live under the export root (SEGDS_ROOT), not the pose-source-aware SEGDS_DIR (mapping.config.source_dir) -
+# unlike areas/point_labels/labels_erp/... which are derived from the pose-dependent point cloud.
+BENCH_DIR = SEGDS_ROOT / "bench"
 DATASET_SEG_DIR = Path(__file__).resolve().parents[2] / "dataset" / "seg"
 
 
@@ -51,9 +55,9 @@ def segment_frame(model: SegModel, photo_bgr: np.ndarray, R_cam: np.ndarray, R_l
     return native.cpu().numpy(), cmn.cpu().numpy(), conf.cpu().numpy(), cov.cpu().numpy()
 
 
-def run(tags: list[str], frames: list[int], out_root: Path = BENCH_DIR, amp: bool = True, skip_existing: bool = True) -> None:
+def run(tags: list[str], frames: list[int], out_root: Path = BENCH_DIR, amp: bool = True, skip_existing: bool = True, poses_source: str | None = None) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    poses = load_poses()
+    poses = load_poses(poses_source)
     fi = FrameIndex(poses)
     DATASET_SEG_DIR.mkdir(parents=True, exist_ok=True)
     for tag in tags:
