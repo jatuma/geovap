@@ -26,7 +26,9 @@ import numpy as np
 
 from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
-from .. import las_out, products
+from .. import las_out
+from geovap.runtime import manifest, settings
+from geovap.stages.prepare import products
 from ..cloud_store import CloudStore, TileInfo, open_store
 from ..config import CLEAN_FRAMES_JSON, OUT_DIR, PANO_H, PANO_W, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
 from geovap.domain.model.frames import FrameIndex
@@ -194,10 +196,12 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
     n_veh = 0
     vmask = None
     if opt.vehicle_mask:
-        from ..vehicle_mask import MASK_PATH, VehicleMask
+        from geovap.stages.prepare.masks import VehicleMask
 
-        if MASK_PATH.exists():
-            vmask = VehicleMask()
+        _s = settings.get()
+        _mask_path = _s.workspace.vehicle_mask
+        if _mask_path.exists():
+            vmask = VehicleMask(_mask_path, *_s.sensor.pano)
         else:
             log("WARNING: vehicle mask not built, continuing without it")
 
@@ -238,7 +242,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
         w = (cf[ok].astype(np.float32) / 255.0) * _score(r[ok]) * ef[cv[ok], cu[ok]]
         acc.update(sel[ok], lab[ok], w, k)
 
-    store.drop_cache((products.frames_dir(fi.poses),))
+    store.drop_cache((settings.get().workspace.frames_dir(fi.poses),))
     out = acc.finalize()
     label = out["label"]
     counts = np.bincount(label, minlength=256)
@@ -257,7 +261,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
                 "bench_tag": opt.bench_tag, "checkpoint": _checkpoint(opt.bench_tag),
                 "weights": f"conf/255 * 1/(1+(r/{SCORE_R0})^2) * min(1, d_edge/{opt.edge_px}px); sky votes dropped",
                 "r_max": opt.r_max, "occlusion": opt.occlusion, "vehicle_mask": vmask is not None, "rgb": opt.rgb,
-                "git": products.git_rev(), "frames": frames, "poses_source": fi.poses.source, "poses_hash": fi.poses.hash(),
+                "git": manifest.git_rev(), "frames": frames, "poses_source": fi.poses.source, "poses_hash": fi.poses.hash(),
             }
             las_out.write_tile(td, Path(opt.las_dir) / _out_name(tile.name, "_seg"), rgb, extras, prov,
                                extra_dims=las_out.SEG_EXTRA_DIMS, classification=label, description="semantic labels provenance")

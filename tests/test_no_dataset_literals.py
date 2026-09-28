@@ -40,13 +40,11 @@ ALLOWED = (
 KNOWN_LEGACY = frozenset({
     "experiments/common/class_map.py",       # Phase 2: superseded by io/adapters/reference/jvf_zps
     "experiments/common/io_data.py",         # Phase 2: superseded by io/adapters
-    "experiments/e0_data_sanity.py",         # Phase 1: becomes `geovap doctor`
     "mapping/cli/pipeline.py",               # Phase 1: becomes app/driver.py
     "mapping/config.py",                     # Phase 2: superseded by runtime/settings
     "mapping/panos.py",                      # Phase 1: stream E, reads [crs] from the descriptor
     "mapping/quality.py",                    # Phase 1: stream A, chart title from the dataset name
     "mapping/seg/dataset.py",                # Phase 1: stream B, chart title from the dataset name
-    "pointcloud-tools/clusters/batch.py",    # Phase 1: stream C, driver takes explicit paths
 })
 
 SCANNED = ("packages", "mapping", "pointcloud-tools", "experiments")

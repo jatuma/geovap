@@ -20,7 +20,7 @@ from ..cloud_store import CloudStore
 from ..config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from geovap.domain.model.frames import FrameIndex
 from ..poses import Poses
-from ..products import FrameProducts
+from geovap.stages.prepare.products import FrameProducts
 from geovap.domain.model.rig import RigModel
 from .objective import photo_luminance
 
@@ -121,10 +121,10 @@ def fine_edge_points(frame: int, store: CloudStore, fi: FrameIndex, vmask, el_mi
     z-buffer, so their projected position is exact (the coarse product's cell winners can come from a
     splat up to 8 cells away and jitter by ~1 deg). Returns (xyz [N,3], kind [N]: 1 depth edge, 2 sky)."""
     from geovap.domain.math import depth as zbuffer
-    from ..products import gather_candidates
+    from geovap.stages.prepare.products import gather_candidates
 
     R, C = fi.R[frame], fi.C[frame]
-    from ..products import TIME_WINDOW_S
+    from geovap.stages.prepare.products import TIME_WINDOW_S
 
     xyz, pid = gather_candidates(store, C, R_MAX, fi.t[frame], TIME_WINDOW_S)
     u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
@@ -173,7 +173,9 @@ def prepare_frame(frame: int, store: CloudStore, fi: FrameIndex, vmask, n_points
             xyz, kinds = xyz[sel], kinds[sel]
         dt, valid = photo_edge_dt(fi.poses, frame, vmask)
         return ChamferFrame(frame, xyz, kinds, dt, valid)
-    fp = FrameProducts.load(frame)
+    from geovap.runtime import settings
+
+    fp = FrameProducts.load(frame, root=settings.get().workspace.frames_dir(fi.poses))
     inten_img = None
     pid = fp.point_id
     fin = np.isfinite(fp.depth_m)

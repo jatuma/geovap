@@ -123,7 +123,7 @@ def main() -> None:
 from geovap.domain.model import geometry
 from .config import OUT_DIR, R_MAX  # noqa: E402
 from .poses import Poses, load_poses, read_pose_table  # noqa: E402
-from .products import TIME_WINDOW_S, gather_candidates  # noqa: E402
+from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates  # noqa: E402
 from .quality import _photo_edges, _residual, _silhouette_points  # noqa: E402
 
 YAW_RATE_TURNING_DEG_S = 8.0
@@ -211,11 +211,14 @@ _CG: dict = {}
 
 def _init_compare(a: str, b: str) -> None:
     from .cloud_store import CloudStore
-    from .vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     store = CloudStore()
     poses_a, poses_b = load_poses(a), load_poses(b)
-    vm = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vm = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _CG["store"], _CG["poses_a"], _CG["poses_b"], _CG["vm"] = store, poses_a, poses_b, vm
     for tag, poses in (("a", poses_a), ("b", poses_b)):
         t0, t1 = {}, {}
@@ -352,11 +355,14 @@ _DG: dict = {}
 def _init_colour(a: str, b: str) -> None:
     from .align import Aligner
     from .cloud_store import CloudStore
-    from .vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     store = CloudStore()
     poses_a, poses_b = load_poses(a), load_poses(b)
-    vm = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vm = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _DG["poses_a"], _DG["poses_b"] = poses_a, poses_b
     _DG["al_a"] = Aligner(store, poses_a, vm)
     _DG["al_b"] = Aligner(store, poses_b, vm)

@@ -22,7 +22,7 @@ from geovap.domain.math import depth as zbuffer
 from .cloud_store import CloudStore
 from .config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from .poses import Poses
-from .products import gather_candidates
+from geovap.stages.prepare.products import gather_candidates
 from geovap.io.images import load_pano_rgb
 
 W, H = 500, 250

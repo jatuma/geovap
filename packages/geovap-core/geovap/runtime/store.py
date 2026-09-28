@@ -406,7 +406,7 @@ def build_tile(laz_file: str, out_dir: str, cell_size: float, name: str) -> dict
 def build_store(s, workers: int = 8) -> None:
     """Build the columnar store for `s`'s tiles (`s.tiles.tiles()`, a `TileSource`) under
     `s.workspace.store`, at `s.sensor.cell_size`."""
-    from multiprocessing import Pool
+    from geovap.runtime.procs import pool_context
 
     root = Path(s.workspace.store)
     cell_size = s.sensor.cell_size
@@ -416,7 +416,7 @@ def build_store(s, workers: int = 8) -> None:
     rings = {ref.id.value: ref.ring for ref in refs}
     # largest first for better packing
     jobs.sort(key=lambda j: -Path(j[0]).stat().st_size)
-    with Pool(workers) as pool:
+    with pool_context().Pool(workers) as pool:
         metas = pool.starmap(build_tile, jobs)
     metas.sort(key=lambda m: m["name"])
     offset = 0

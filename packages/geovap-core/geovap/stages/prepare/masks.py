@@ -2,23 +2,29 @@
 
 Built once at a reduced resolution (default 1000x500) and looked up at full-res (u, v) by scaling.
 Restricted to the lower hemisphere (sky can be uniformly blue across frames too).
+
+Ported from `mapping/vehicle_mask.py`. A library of the `prepare` stage group, not a stage itself
+(there is no automated builder CLI for it upstream either -- it is built ad hoc and its path,
+`Settings.workspace.vehicle_mask`, is looked up wherever a stage wants to drop vehicle-body samples).
 """
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 
-from .config import CACHE_ROOT, PANO_H, PANO_W
-from .poses import Poses
+from geovap.domain.model.poses import Poses
 from geovap.io.images import load_pano_rgb
 
-MASK_PATH = CACHE_ROOT / "vehicle_mask.npz"
+if TYPE_CHECKING:
+    from geovap.runtime.settings import Settings
+
 MASK_W, MASK_H = 1000, 500
 
 
-def build(poses: Poses, n_frames: int = 200, coherence_thresh: float = 0.6, edge_thresh: float = 6.0, dilate_px: int = 4, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+def build(s: "Settings", poses: Poses, n_frames: int = 200, coherence_thresh: float = 0.6, edge_thresh: float = 6.0, dilate_px: int = 4, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """Static structure = edges whose SIGNED gradient is consistent across frames.
 
     coherence = |mean gradient vector| / mean |gradient| in [0,1]: ~1 on the vehicle, ~0 on the scene
@@ -33,7 +39,7 @@ def build(poses: Poses, n_frames: int = 200, coherence_thresh: float = 0.6, edge
     smag = np.zeros_like(sgx)
     tstd_acc = np.zeros((2, MASK_H, MASK_W), np.float64)
     for k in idx:
-        g = cv2.cvtColor(load_pano_rgb(poses.path(int(k))), cv2.COLOR_RGB2GRAY)
+        g = cv2.cvtColor(load_pano_rgb(s.panos.path(str(poses.filename[int(k)]))), cv2.COLOR_RGB2GRAY)
         g = cv2.resize(g, (MASK_W, MASK_H), interpolation=cv2.INTER_AREA).astype(np.float32)
         gx = cv2.Sobel(g, cv2.CV_32F, 1, 0, ksize=3) / 8
         gy = cv2.Sobel(g, cv2.CV_32F, 0, 1, ksize=3) / 8
@@ -69,7 +75,7 @@ def build(poses: Poses, n_frames: int = 200, coherence_thresh: float = 0.6, edge
     return mask, (coherence * mean_mag).astype(np.float32)
 
 
-def save(mask: np.ndarray, std: np.ndarray, path: Path = MASK_PATH) -> None:
+def save(mask: np.ndarray, std: np.ndarray, path: Path) -> None:
     np.savez_compressed(path, mask=mask, std=std.astype(np.float16))
 
 
@@ -78,7 +84,7 @@ MARGIN_PX = 10  # safety margin at lookup (3.6 deg at 1000x500): the automatic s
 
 
 class VehicleMask:
-    def __init__(self, path: Path = MASK_PATH, margin_px: int = MARGIN_PX):
+    def __init__(self, path: Path, pano_w: int, pano_h: int, margin_px: int = MARGIN_PX):
         with np.load(path) as z:
             mask = z["mask"]
         if margin_px > 0:
@@ -87,8 +93,8 @@ class VehicleMask:
             mask[: mask.shape[0] // 2] = False
         self.mask = mask
         self.h, self.w = self.mask.shape
-        self.sx = self.w / PANO_W
-        self.sy = self.h / PANO_H
+        self.sx = self.w / pano_w
+        self.sy = self.h / pano_h
 
     def __call__(self, u, v) -> np.ndarray:
         """True where (full-res) pixel is on the vehicle."""

@@ -12,13 +12,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .. import render
+from geovap.stages.prepare import render
 from ..cloud_store import CloudStore, open_store
 from ..config import NO_POINT, POTREE_OUTPUT_DIR
 from geovap.domain.model.frames import FrameIndex
+from geovap.runtime import settings
 from ..poses import load_poses
-from ..products import load_products
-from ..vehicle_mask import VehicleMask
+from geovap.stages.prepare.products import load_products
+from geovap.stages.prepare.masks import VehicleMask
 from geovap.domain.scheme import taxonomy as T
 from .bench import DATASET_SEG_DIR
 from .point_labels import LABEL_DIR as GT_LABEL_DIR
@@ -328,7 +329,8 @@ def render_all(frames: list[int] | None = None, tiles: list[str] | None = None, 
     store = open_store(poses)
     fi = FrameIndex(poses)
     sl = SegLabels(store, sl_root)
-    vm_cells = vehicle_cells(VehicleMask())
+    _s = settings.get()
+    vm_cells = vehicle_cells(VehicleMask(_s.workspace.vehicle_mask, *_s.sensor.pano))
     frames = frames or _pick_frames(tag)
     tiles = tiles or _pick_tiles(sl_root)
     made = {"erp": [], "bev": [], "oblique": []}

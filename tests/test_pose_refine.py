@@ -142,7 +142,8 @@ def test_recovers_perturbation_real_frame():
     from geovap.domain.model.frames import FrameIndex
     from mapping.poses import load_poses
     from mapping.quality import yaw_rates
-    from mapping.vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     poses = load_poses("export")
     fi = FrameIndex(poses)
@@ -162,7 +163,9 @@ def test_recovers_perturbation_real_frame():
         return R, o[0], t_q
 
     store = CloudStore()
-    vmask = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     icp_frames = []
     for k in frames:
         R_true, C_true, t_true = true_pose(k)

@@ -67,9 +67,10 @@ class _OwnPassGather:
     """Context manager that temporarily restricts `calib.chamfer.fine_edge_points`'s candidate
     gather to the photo's OWN pass (`Poses.pass_of_time` of each candidate's gps_time).
 
-    `chamfer.fine_edge_points` resolves `gather_candidates` via a local `from ..products import
-    gather_candidates` at call time, so patching the name on the `mapping.products` module (not
-    touched here otherwise -- out of scope for S4) is picked up without duplicating its ~40 lines
+    `chamfer.fine_edge_points` resolves `gather_candidates` via a local `from
+    geovap.stages.prepare.products import gather_candidates` at call time, so patching the name on
+    the `geovap.stages.prepare.products` module (not touched here otherwise -- out of scope for S4)
+    is picked up without duplicating its ~40 lines
     of zbuffer/edge-detection logic. S5 found 0.1-0.6 m offsets between passes; the plain ±45 s
     time window (`products.TIME_WINDOW_S`) also admits a neighbouring pass whenever two passes are
     < ~90 s apart in time (observed: pass 24's first frames pull 39-43% of candidates from pass 23,
@@ -95,7 +96,7 @@ class _OwnPassGather:
         return xyz[keep], pid[keep]
 
     def __enter__(self):
-        import mapping.products as _products
+        import geovap.stages.prepare.products as _products
 
         self._products = _products
         self._orig = _products.gather_candidates

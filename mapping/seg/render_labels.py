@@ -15,13 +15,15 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .. import render, vectors
+from .. import vectors
 from ..cloud_store import CloudStore, open_store
 from ..config import CLEAN_FRAMES_JSON, NO_POINT, PANO_H, PANO_W, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
+from geovap.runtime import settings
 from ..poses import load_poses
-from ..products import FrameProducts, load_products
-from ..vehicle_mask import VehicleMask
+from geovap.stages.prepare import render
+from geovap.stages.prepare.products import FrameProducts, load_products
+from geovap.stages.prepare.masks import VehicleMask
 from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR, load_objects
 from .point_labels import PointLabels
@@ -106,7 +108,8 @@ def _init(range_max, poses_source=None):
     _G["store"] = open_store(_G["poses"])  # registered cloud, consistent with the point_labels rasters
     _G["pl"] = PointLabels(_G["store"])
     _G["fi"] = FrameIndex(_G["poses"])
-    _G["vm"] = vehicle_cells(VehicleMask())
+    _s = settings.get()
+    _G["vm"] = vehicle_cells(VehicleMask(_s.workspace.vehicle_mask, *_s.sensor.pano))
     _G["objects"] = load_objects()
     _G["range_max"] = range_max
 

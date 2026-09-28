@@ -202,7 +202,8 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
     from geovap.domain.model.frames import FrameIndex
     from ..poses import load_poses
     from geovap.domain.model.rig import IDENTITY
-    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
     from . import icp as I
     from .fit import select_frames
 
@@ -211,7 +212,9 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
     store = CloudStore()
     poses = load_poses()
     fi = FrameIndex(poses, IDENTITY)
-    vmask = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     frames_idx = select_frames(poses, n_frames, seed)
     frames = [I.prepare_frame(int(f), store, fi, vmask, n_points) for f in frames_idx]
     frames = [f for f in frames if len(f.xyz) >= 200]

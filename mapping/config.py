@@ -98,7 +98,7 @@ def source_dir(base: Path, poses) -> Path:
     """Per-pose-source output root: `base` itself for the default "export" pose table (byte-identical
     paths, the regression anchor), a hash-suffixed sibling directory for any corrected one, so a
     corrected run's outputs never overwrite (or mix with) the export ones. `poses` is any object with
-    `.source` and `.hash()` (a `mapping.poses.Poses`); mirrors `mapping.products.frames_dir`."""
+    `.source` and `.hash()` (a `mapping.poses.Poses`); mirrors `geovap.runtime.workspace.Workspace.frames_dir`."""
     base = Path(base)
     if poses.source == "export":
         return base

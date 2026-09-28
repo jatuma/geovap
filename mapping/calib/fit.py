@@ -43,14 +43,17 @@ def _summ(icp: I.EdgeICP, theta) -> dict:
 
 
 def run(n_frames: int = 120, n_points: int = 30_000, free=("omega", "phi", "kappa", "dt", "lx", "ly", "lz"), do_cv: bool = True, out_dir: Path = OUT_DIR, tag: str = "calib", log=print) -> RigModel:
-    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     out = Path(out_dir) / tag
     out.mkdir(parents=True, exist_ok=True)
     store = CloudStore()
     poses = load_poses()
     fi = FrameIndex(poses, IDENTITY)
-    vmask = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     frames_idx = select_frames(poses, n_frames)
     t = time.time()
     frames = [I.prepare_frame(int(f), store, fi, vmask, n_points) for f in frames_idx]

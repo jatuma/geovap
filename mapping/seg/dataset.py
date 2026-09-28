@@ -15,7 +15,7 @@ from ..cloud_store import open_store
 from ..config import QUALITY_CSV as _QUALITY_CSV
 from ..config import ZB_H
 from ..poses import load_poses
-from ..products import git_rev
+from geovap.runtime.manifest import git_rev
 from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR
 from .render_labels import BANDS_DIR, LABELS_DIR, clean_frames

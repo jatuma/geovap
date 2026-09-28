@@ -54,7 +54,7 @@ from .cloud_store import CloudStore, STORE_DIR
 from .config import JVF_GEOJSON, OUT_DIR, PANO_H, PANO_W, POSES_DIR, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
 from .poses import Poses, load_poses
-from .products import FrameProducts
+from geovap.stages.prepare.products import FrameProducts
 
 PASS_REG_DIR = OUT_DIR / "pass_reg"
 
@@ -644,11 +644,14 @@ def jvf_offset_photometric(
     if len(near) > PHOTO_MAX_ROAD_PTS:
         near = near[np.random.default_rng(pass_id).choice(len(near), PHOTO_MAX_ROAD_PTS, replace=False)]
 
+    from geovap.runtime import settings
+
+    _frames_root = settings.get().workspace.frames_dir(poses)
     dist_maps, fps = {}, {}
     for k in frames:
         dist_maps[k] = _photo_edge_dist(poses, k, rows)
         try:
-            fps[k] = FrameProducts.load(k)
+            fps[k] = FrameProducts.load(k, root=_frames_root)
         except Exception:
             fps[k] = None
 

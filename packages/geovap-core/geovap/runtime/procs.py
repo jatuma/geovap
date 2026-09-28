@@ -94,3 +94,25 @@ def run(
     finally:
         for sink in sinks:
             sink.close()
+
+
+#: Start method for every worker pool in the project.
+#:
+#: NOT the default `fork`. A stage's parent process has, by the time it reaches its pool, imported
+#: OpenCV, laspy and sometimes torch -- libraries that hold their own threads and locks. Forking
+#: copies those locks in whatever state they were in, and a child that then touches one deadlocks:
+#: no error, no traceback, the run simply stops. It never bit the old code because the driver ran
+#: every stage as a fresh subprocess, so each pool forked from an almost-empty interpreter. As soon
+#: as two stages run in one process -- which is exactly what a test suite does -- it does.
+#:
+#: `spawn` costs a fresh interpreter per worker (a second or so, against jobs measured in minutes)
+#: and requires the worker function and its arguments to be picklable, which is why the pools here
+#: pass resolved values (`Settings.env()`, a rig vector) rather than live objects.
+POOL_START_METHOD = "spawn"
+
+
+def pool_context():
+    """The multiprocessing context every pool in the project must use. See POOL_START_METHOD."""
+    import multiprocessing
+
+    return multiprocessing.get_context(POOL_START_METHOD)

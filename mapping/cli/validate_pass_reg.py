@@ -6,7 +6,7 @@ step is actually for).
 Read-only user of `mapping.seg.nearfield` (the near-field metric definition), `mapping.quality` (the
 pass-conflict silhouette residual `_silhouette_points`/`_residual`/`_photo_edges` and its
 `GEO_MIN_POINTS`/`CONFLICT_PX` thresholds -- reused, not redefined, so "conflict" means the same thing
-here as in `dataset/frame_quality.csv`), and `mapping.render` (`overlay_on_photo`); does not modify any
+here as in `dataset/frame_quality.csv`), and `geovap.stages.prepare.render` (`overlay_on_photo`); does not modify any
 of them. Kept separate from `pass_reg.py` itself so that module stays free of QA/plotting concerns.
 
     uv run python -m mapping.cli.validate_pass_reg qa --passes 0,5 --n-frames 3
@@ -27,10 +27,11 @@ from geovap.domain.model import geometry
 from .. import compat, vectors
 from ..config import OUT_DIR, R_MAX, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
+from geovap.runtime import settings
 from ..pass_reg import PASS_REG_DIR, ROAD_BOUNDARY_CODE, CLS_CURB, Patches, apply_pass_transforms
 from ..poses import Poses, load_poses
-from ..products import FrameProducts
-from ..render import overlay_on_photo
+from geovap.stages.prepare.products import FrameProducts
+from geovap.stages.prepare.render import overlay_on_photo
 from ..seg.nearfield import ROWS, FLAG_PX
 
 QA_DIR = PASS_REG_DIR / "qa"
@@ -91,7 +92,7 @@ def render_qa(pass_ids: list[int] = (0, 5), n_frames: int = 3, rows: tuple[int, 
             photo = cv2.imread(poses.path(k))
             photo = cv2.resize(photo, (ZB_W, ZB_H), interpolation=cv2.INTER_AREA)
             try:
-                fp = FrameProducts.load(k)
+                fp = FrameProducts.load(k, root=settings.get().workspace.frames_dir(poses))
             except Exception:
                 fp = None
 
@@ -166,7 +167,7 @@ def run_metric(frames: list[int] | None = None, n_subset: int = 200, out: Path =
         photo = cv2.imread(poses.path(k))
         photo = cv2.resize(photo, (ZB_W, ZB_H), interpolation=cv2.INTER_AREA)
         try:
-            fp = FrameProducts.load(k)
+            fp = FrameProducts.load(k, root=settings.get().workspace.frames_dir(poses))
         except Exception:
             fp = None
         mask_before = _band_mask(objs, fi.R[k], fi.C[k], fp, scale)
@@ -247,7 +248,7 @@ _CG: dict = {}
 def _conflict_init(transforms_path: str) -> None:
     from ..cloud_store import CloudStore, PassRegistration
     from ..poses import load_poses as _lp
-    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.stages.prepare.masks import VehicleMask
 
     poses = _lp()
     transforms = json.loads(Path(transforms_path).read_text())
@@ -257,7 +258,9 @@ def _conflict_init(transforms_path: str) -> None:
     _CG["fi_corr"] = FrameIndex(poses_corr)
     _CG["store"] = CloudStore()
     _CG["reg"] = PassRegistration(transforms, poses=poses)
-    _CG["vm"] = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    _CG["vm"] = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     p = poses.pass_id
     _CG["pass_t0"] = np.array([poses.t[np.flatnonzero(p == q)].min() for q in range(int(p.max()) + 1)])
     _CG["pass_t1"] = np.array([poses.t[np.flatnonzero(p == q)].max() for q in range(int(p.max()) + 1)])
@@ -265,7 +268,7 @@ def _conflict_init(transforms_path: str) -> None:
 
 def _conflict_job(k: int) -> dict:
     from .. import quality as qmod
-    from ..products import TIME_WINDOW_S, gather_candidates
+    from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates
 
     poses, fi, fi_corr = _CG["poses"], _CG["fi"], _CG["fi_corr"]
     store, reg, vm = _CG["store"], _CG["reg"], _CG["vm"]

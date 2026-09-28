@@ -402,7 +402,7 @@ _stage(
 
 _stage(
     name="products",
-    commands=lambda ctx: [mod_cmd("mapping.cli.build_frames", "--workers", "16", "--poses", "corrected")],
+    commands=lambda ctx: [mod_cmd("geovap.stages.prepare.products", "--workers", "16", "--poses", "corrected")],
     inputs=lambda ctx: {"poses_corrected": POSES_DIR / "poses_corrected.csv"},
     outputs=lambda ctx: [_products_dir(ctx)],
     metrics=_safe(lambda ctx: _products_metrics(ctx)),
@@ -411,13 +411,13 @@ _stage(
 
 
 def _products_dir(ctx: Ctx) -> Path:
-    """Per-frame products use the SUBDIRECTORY convention (`products.frames_dir`: `frames/<hash6>`), not the
+    """Per-frame products use the SUBDIRECTORY convention (`Workspace.frames_dir`: `frames/<hash6>`), not the
     `_<hash6>` sibling that `config.source_dir` gives the other datasets."""
     try:
         from ..poses import load_poses
-        from ..products import frames_dir
+        from geovap.runtime import settings
 
-        return frames_dir(load_poses(ctx.poses))
+        return settings.get().workspace.frames_dir(load_poses(ctx.poses))
     except Exception:  # noqa: BLE001 - corrected table not assembled yet
         return FRAMES_DIR if ctx.poses == "export" else FRAMES_DIR / "pending"
 

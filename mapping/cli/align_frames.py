@@ -34,11 +34,14 @@ _G: dict = {}
 
 def _init() -> None:
     from ..cloud_store import CloudStore
-    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     _G["store"] = CloudStore()
     _G["poses"] = load_poses()
-    vmask = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _G["aligner"] = A.Aligner(_G["store"], _G["poses"], vmask)
 
 

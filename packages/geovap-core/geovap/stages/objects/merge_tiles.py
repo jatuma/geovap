@@ -9,17 +9,26 @@
 4. rewrite rgb_t*.laz (cluster_id = global) and objects_t*.laz (colours by global id)
 """
 import glob, os, time
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np, laspy
 from scipy.spatial import cKDTree
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
 
-HERE = os.path.dirname(os.path.abspath(__file__))                     # code: pointcloud-tools/clusters
-DATA = os.environ.get("CLUSTERS_DATA", os.path.normpath(f"{HERE}/../output/clusters/src"))  # rgb_t*/objects_t*.laz
+# Where the per-tile cluster products live. The driver (`cluster.py`) passes this explicitly from
+# the dataset's workspace; the environment variable stays as the fallback for running this module on
+# its own, which is the mode that keeps it free of project imports.
+DATA = os.environ.get("CLUSTERS_DATA", os.getcwd())
 EPS, VOXEL, HSPLIT = 0.3, 0.1, 2.5
+# spawn, not fork: laspy and scipy are already imported by the time these pools start, and forking
+# a process that holds their locks deadlocks silently. Stated here rather than imported from the
+# project, because this module must keep importing nothing but numpy/scipy/laspy.
+MP = multiprocessing.get_context("spawn")
 FILES = sorted(glob.glob(f"{DATA}/rgb_t*.laz"))
-TILES = [os.path.basename(f)[5:11] for f in FILES]
+# The label is only an identity for the union-find bookkeeping, but `[5:11]` assumed a
+# six-character tile id. Strip the known prefix and suffix instead, so any id width works.
+TILES = [os.path.basename(f)[len("rgb_t"):-len(".laz")] for f in FILES]
 
 def cell_key(x, y):
     return np.floor(x).astype(np.int64) * 10_000_000 + np.floor(y).astype(np.int64)
@@ -66,7 +75,7 @@ def rewrite(args):
 
 if __name__ == "__main__":
     t0 = time.time()
-    with ProcessPoolExecutor(8) as ex:
+    with ProcessPoolExecutor(8, mp_context=MP) as ex:
         occ = dict(zip(TILES, ex.map(occupancy, FILES)))
     all_cells = np.concatenate(list(occ.values()))
     uniq, cnt = np.unique(all_cells, return_counts=True)
@@ -76,7 +85,7 @@ if __name__ == "__main__":
         own_only = np.isin(uniq, occ[tile]) & (cnt == 1)
         return uniq[~own_only]
     jobs = [(tile, f, others_for(tile)) for tile, f in zip(TILES, FILES)]
-    with ProcessPoolExecutor(8) as ex:
+    with ProcessPoolExecutor(8, mp_context=MP) as ex:
         res = list(ex.map(border_voxels, jobs))
     bands = {t: v for t, v, _, _, _ in res}
     tall_t = {t: tl for t, _, tl, _, _ in res}
@@ -110,7 +119,7 @@ if __name__ == "__main__":
     rng = np.random.default_rng(11)
     pal = rng.integers(40, 255, (ncomp, 3)).astype(np.uint16) * 257
     jobs = [(f, tile, lab[offset[tile]:offset[tile] + n_cl[tile]], pal) for tile, f in zip(TILES, FILES)]
-    with ProcessPoolExecutor(6) as ex:
+    with ProcessPoolExecutor(6, mp_context=MP) as ex:
         list(ex.map(rewrite, jobs))
     np.save(f"{DATA}/global_labels.npy", lab)
     print(f"rewrote {len(FILES)*2} files ({time.time()-t0:.0f}s)")

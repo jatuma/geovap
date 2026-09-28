@@ -92,8 +92,27 @@ class StageRegistry:
     stages: dict[str, Stage] = field(default_factory=dict)
 
     def add(self, stage: Stage) -> Stage:
-        if stage.spec.name in self.stages:
-            raise ValueError(f"duplicate stage name {stage.spec.name!r}")
+        """Register a stage and return the registered instance.
+
+        Running a stage directly -- `python -m geovap.stages.objects.cluster`, which is the whole
+        point of every stage shipping its own CLI -- imports the module TWICE: once as
+        `geovap.stages.objects.cluster`, when runpy imports the parent package and its `__init__`
+        pulls the stage modules in to register them, and once more as `__main__` when runpy executes
+        it. Both copies call `add`. So a name already claimed by a class defined in the SAME source
+        file is that double import, and the already-registered instance is returned; the module-level
+        `STAGE = registry.add(...)` then refers to one object either way.
+
+        A name claimed by a class from a DIFFERENT file is a genuine collision -- two stages fighting
+        over one marker file and one `--only` selector -- and still raises.
+        """
+        existing = self.stages.get(stage.spec.name)
+        if existing is not None:
+            if _source_of(existing) == _source_of(stage):
+                return existing
+            raise ValueError(
+                f"duplicate stage name {stage.spec.name!r}: "
+                f"{_source_of(existing)} and {_source_of(stage)}"
+            )
         self.stages[stage.spec.name] = stage
         return stage
 
@@ -128,6 +147,17 @@ class StageRegistry:
             for deps in pending.values():
                 deps.difference_update(ready)
         return out
+
+
+def _source_of(stage: Stage) -> str:
+    """The file a stage's class is defined in. Identity that survives being imported under two
+    different module names, which `__module__` does not."""
+    import inspect
+
+    try:
+        return inspect.getfile(type(stage))
+    except TypeError:  # a dynamically created class in a test
+        return f"{type(stage).__module__}.{type(stage).__qualname__}"
 
 
 #: The process-wide registry. Stage groups call `registry.add(...)` at import time.

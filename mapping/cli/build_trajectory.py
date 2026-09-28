@@ -39,7 +39,7 @@ import numpy as np
 
 from ..config import CLEAN_FRAMES_JSON, POSES_DIR, R_MAX
 from ..poses import Poses, load_poses, write_pose_table
-from ..products import TIME_WINDOW_S, gather_candidates
+from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates
 from ..quality import _photo_edges, _residual, _silhouette_points, yaw_rates
 from ..trajectory import (
     CamSensorRig,
@@ -635,12 +635,15 @@ def _init_validate(rot_csv_str: str) -> None:
     from ..align import Aligner
     from ..cloud_store import CloudStore
     from ..poses import load_poses as _load_poses
-    from ..vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.runtime import settings
+    from geovap.stages.prepare.masks import VehicleMask
 
     store = CloudStore()
     poses_exp = _load_poses("export")
     poses_rot = _load_poses(rot_csv_str)
-    vm = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    vm = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _VG["store"] = store
     _VG["poses_exp"] = poses_exp
     _VG["poses_rot"] = poses_rot

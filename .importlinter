@@ -81,6 +81,11 @@ forbidden_modules =
 ;                 stage group.
 ; Neither is reachable from a core stage's import graph, so `uv pip install geovap-core` without the
 ; extra still imports and runs. The test below proves that; do not widen this exemption without it.
+; `stages.prepare.ingest` imports torch inside a try/except, purely to report whether CUDA is
+; importable (one of the `env-check` checks it absorbs) -- never at module scope, and it degrades
+; to "not importable" rather than failing when torch is absent, so `geovap-core` without the extra
+; still imports and runs `ingest` fine.
 ignore_imports =
     geovap.domain.math.camera_torch -> torch
     geovap.domain.math.reproject -> torch
+    geovap.stages.prepare.ingest -> torch

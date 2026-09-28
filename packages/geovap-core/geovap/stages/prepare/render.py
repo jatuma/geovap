@@ -2,6 +2,10 @@
 
 Everything is a gather over the frame's point_id panorama: attr[point_id]. Labels are copied
 (nearest cell), never interpolated. Hole filling copies the nearest valid cell within `fill_px`.
+
+Ported from `mapping/render.py`. A library of the `prepare` stage group, not a stage: there is
+nothing here to resume or mark done, only functions other stages import. The debug CLI at the
+bottom (ported from `mapping/cli/render_frame.py`) is a manual inspection tool, not part of any run.
 """
 from __future__ import annotations
 
@@ -11,8 +15,8 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from .cloud_store import CloudStore
-from .config import NO_POINT, PANO_H, PANO_W, RENDERS_DIR
+from geovap.domain.model.sensor import NO_POINT
+from geovap.runtime.store import CloudStore
 from .products import FrameProducts
 
 LAYERS = ("depth", "classification", "intensity", "rgb", "point_id")
@@ -125,3 +129,85 @@ def overlay_on_photo(photo_bgr: np.ndarray, layer_bgr: np.ndarray, valid: np.nda
     out = small.copy()
     out[valid] = (alpha * layer_bgr[valid] + (1 - alpha) * small[valid]).astype(np.uint8)
     return out
+
+
+# ============================================================================================ cli
+# DEBUG tool, ported from `mapping/cli/render_frame.py`; NOT a resumable stage (no StageSpec, no
+# marker, nothing for `geovap status` to report). Renders cloud attributes and, optionally, JVF
+# vectors into a panorama for one or more frames, for manual inspection.
+#
+#   uv run python -m geovap.stages.prepare.render 367 [--layers rgb depth classification intensity point_id]
+#                                                       [--jvf] [--overlay] [--out DIR]
+#
+# Writes DIR/f0367_<layer>.png (+ .npz with raw arrays), DIR/f0367_jvf.png (class-id mask, occluded
+# parts in a second channel) and DIR/f0367_overlay.jpg (photo with layers / vectors blended).
+def main(argv=None) -> int:
+    import argparse
+
+    import numpy as np
+
+    from geovap.domain.model.frames import FrameIndex
+    from geovap.domain.model.rig import IDENTITY, RigModel
+    from geovap.runtime import pose_tables
+    from geovap.runtime.store import open_store
+    from geovap.stages.base.cli import add_dataset_flags, configure_from
+    from .products import load_products
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    add_dataset_flags(ap)
+    ap.add_argument("frames", type=int, nargs="+")
+    ap.add_argument("--layers", nargs="*", default=["rgb", "depth", "classification"])
+    ap.add_argument("--jvf", action="store_true", help="also rasterise JVF vectors with occlusion (legacy mapping.vectors)")
+    ap.add_argument("--overlay", action="store_true", help="write photo overlays")
+    ap.add_argument("--rig", default=None)
+    ap.add_argument("--out", default=None, help="default: Settings.workspace.renders")
+    a = ap.parse_args(argv)
+    s = configure_from(a)
+
+    poses = pose_tables.load(s=s)
+    store = open_store(s, poses=poses)
+    rig = RigModel.from_json(a.rig) if a.rig else IDENTITY
+    fi = FrameIndex(poses, rig)
+    out = Path(a.out) if a.out else s.workspace.renders
+    out.mkdir(parents=True, exist_ok=True)
+
+    objects = None
+    class_ids = None
+    if a.jvf:
+        # Legacy-only feature: JVF reference vectors are rasterised by `mapping.vectors`, which this
+        # migration does not port (out of scope for the `prepare` group). Imported lazily, from the
+        # legacy top-level `mapping` package, only when `--jvf` is actually requested.
+        from mapping import compat, vectors
+
+        compat.ensure_experiments_on_path()
+        from common import io_data
+
+        objects = io_data.load_jvf_objects()
+        codes = sorted({o.jvfcode for o in objects})
+        class_ids = {c: i + 1 for i, c in enumerate(codes)}
+        (out / "jvf_class_ids.txt").write_text("\n".join(f"{i}\t{c}" for c, i in class_ids.items()))
+
+    for k in a.frames:
+        fp = load_products(k, poses, rig, s=s)
+        res = render_frame(store, fp, layers=a.layers, out_dir=out)
+        photo = None
+        if a.overlay:
+            photo = cv2.imread(str(s.panos.path(str(poses.filename[k]))))
+            for layer, (vals, valid) in res.items():
+                cv2.imwrite(str(out / f"f{k:04d}_{layer}_overlay.jpg"), overlay_on_photo(photo, to_png(layer, vals, valid), valid, 0.55), [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if objects is not None:
+            mask, occ = vectors.render_objects(objects, fi.R[k], fi.C[k], fp, class_ids, scale=0.25)
+            cv2.imwrite(str(out / f"f{k:04d}_jvf.png"), np.stack([mask, occ, np.zeros_like(mask)], -1))
+            if a.overlay:
+                photo_src = photo if photo is not None else cv2.imread(str(s.panos.path(str(poses.filename[k]))))
+                small = cv2.resize(photo_src, (2000, 1000), interpolation=cv2.INTER_AREA)
+                vis = small.copy()
+                vis[mask > 0] = (0.3 * vis[mask > 0] + np.array([0, 0, 178])).astype(np.uint8)
+                vis[(occ > 0) & (mask == 0)] = (0.5 * vis[(occ > 0) & (mask == 0)] + np.array([127, 0, 0])).astype(np.uint8)
+                cv2.imwrite(str(out / f"f{k:04d}_jvf_overlay.jpg"), vis, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        print(f"frame {k}: {', '.join(a.layers)}{' + jvf' if objects is not None else ''} -> {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

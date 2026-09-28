@@ -18,7 +18,9 @@ import numpy as np
 from geovap.domain.model import geometry
 from geovap.domain.math import colour_metrics as metrics
 from geovap.domain.math import depth as zbuffer
-from . import las_out, products
+from . import las_out
+from geovap.runtime import manifest, settings
+from geovap.stages.prepare import products
 from .accumulate import ColourTopK, NearestInTime
 from .cloud_store import CloudStore, TileInfo, open_store
 from .config import INCIDENCE_MAX_DEG, OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SCORE_R0, TOP_K
@@ -103,10 +105,12 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
     n_veh = 0
     vmask = None
     if opt.vehicle_mask:
-        from .vehicle_mask import MASK_PATH, VehicleMask
+        from geovap.stages.prepare.masks import VehicleMask
 
-        if MASK_PATH.exists():
-            vmask = VehicleMask()
+        _s = settings.get()
+        _mask_path = _s.workspace.vehicle_mask
+        if _mask_path.exists():
+            vmask = VehicleMask(_mask_path, *_s.sensor.pano)
         else:
             log("WARNING: vehicle mask not built, continuing without it")
 
@@ -162,7 +166,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
             v_nt = vis[is_nt]
             acc_nt.update(rows_nt[v_nt], rgb_n[v_nt], k, r[is_nt][v_nt], grad[v_nt])
 
-    store.drop_cache((products.frames_dir(fi.poses),))  # keep free memory high for the memory watchdog
+    store.drop_cache((settings.get().workspace.frames_dir(fi.poses),))  # keep free memory high for the memory watchdog
     fused = acc_top.finalize()
     variants = {
         "med": (fused["rgb"], fused["n_views"] > 0),
@@ -202,7 +206,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
         }
         if opt.subsample is None:
             prov = {"rig": {"boresight_deg": list(opt.rig.boresight_deg), "lever_arm_m": list(opt.rig.lever_arm_m), "dt_s": opt.rig.dt_s, "hash": opt.rig.hash()},
-                    "r_max": opt.r_max, "top_k": opt.top_k, "occlusion": opt.occlusion, "sampling": opt.sampling, "git": products.git_rev(),
+                    "r_max": opt.r_max, "top_k": opt.top_k, "occlusion": opt.occlusion, "sampling": opt.sampling, "git": manifest.git_rev(),
                     "rgb_scaling": "8bit*256", "frames": [int(f) for f in frames],
                     "poses_source": fi.poses.source, "poses_hash": fi.poses.hash()}
             las_out.write_tile(td, Path(opt.out_dir) / opt.tag / "tiles" / _out_name(tile.name, "_colored"), fused["rgb"], extras, prov)

@@ -13,7 +13,7 @@ import numpy as np
 
 from geovap.domain.model import geometry
 from .config import PANO_H, PANO_W, R_MAX, R_MIN, TOL_ABS, TOL_REL
-from .products import FrameProducts
+from geovap.stages.prepare.products import FrameProducts
 
 TOLERANCE_M = 0.14  # legal xy accuracy budget (03_semanticka_segmentace.md SS1.7)
 MAX_STEP_DEG = 0.25

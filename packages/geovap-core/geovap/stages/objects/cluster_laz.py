@@ -4,7 +4,12 @@ Pipeline: ground raster from class 2 -> height above ground -> drop low points
 -> voxelize -> connected components on voxel grid (26-neighbourhood, radius in
 voxels) -> optional height-band split -> write cluster_id extra dim.
 
-Usage: python cluster_laz.py in.laz out.laz [--voxel 0.1] [--eps 0.4] [--hmin 0.3] [--min-pts 50]
+Usage: python -m geovap.stages.objects.cluster_laz in.laz out.laz [--voxel 0.1] [--eps 0.4] ...
+
+This module imports NOTHING from the project -- numpy, laspy and scipy only -- and that is a
+requirement, not an accident. It is what lets clustering be developed in parallel by someone with no
+Geovap context, run on its own, or dropped from the pipeline entirely. Its driver (`cluster.py`)
+knows about datasets; the algorithm here only knows about a LAZ file in and a LAZ file out.
 """
 import argparse, time
 import numpy as np

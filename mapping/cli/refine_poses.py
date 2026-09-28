@@ -23,7 +23,8 @@ from geovap.domain.model.frames import FrameIndex
 from ..pose_refine import DEFAULT_FREE, default_prior, group_by_pass, load_align, plan_frames, refine_pass
 from ..poses import Poses, load_poses, write_pose_table
 from geovap.domain.model.rig import IDENTITY
-from ..vehicle_mask import MASK_PATH, VehicleMask
+from geovap.runtime import settings
+from geovap.stages.prepare.masks import VehicleMask
 
 _G: dict = {}
 
@@ -32,7 +33,9 @@ def _init_worker(poses_source, n_points, free, prior_kind, own_pass_only):
     _G["store"] = CloudStore()
     _G["poses"] = load_poses(poses_source)
     _G["fi"] = FrameIndex(_G["poses"], IDENTITY)
-    _G["vmask"] = VehicleMask() if MASK_PATH.exists() else None
+    _s = settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    _G["vmask"] = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _G["n_points"] = n_points
     _G["free"] = free
     _G["prior"] = default_prior(prior_kind)

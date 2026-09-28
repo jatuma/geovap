@@ -31,8 +31,9 @@ from geovap.domain.math import depth as zbuffer
 from .cloud_store import open_store
 from .config import OUT_DIR, PANO_H, PANO_W, REPO_ROOT, R_MAX, R_MIN, SENSOR, source_dir
 from geovap.domain.model.frames import FrameIndex
+from geovap.runtime import settings as _settings
 from .poses import Poses, load_poses
-from .products import TIME_WINDOW_S, frames_dir, gather_candidates
+from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates
 from geovap.io.images import load_pano_rgb
 
 FINE_W, FINE_H = 4000, 2000
@@ -128,12 +129,14 @@ _G: dict = {}
 def _init(poses_source=None):
     # explicit initarg (not just env inheritance via fork) so a poses_source given at call time is
     # honoured even if the pool start method is not "fork".
-    from .vehicle_mask import MASK_PATH, VehicleMask
+    from geovap.stages.prepare.masks import VehicleMask
 
     _G["poses"] = load_poses(poses_source)
     _G["store"] = open_store(_G["poses"])  # registered cloud when poses carries a "registration"
     _G["fi"] = FrameIndex(_G["poses"])
-    _G["vm"] = VehicleMask() if MASK_PATH.exists() else None
+    _s = _settings.get()
+    _mask_path = _s.workspace.vehicle_mask
+    _G["vm"] = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _G["yr"] = yaw_rates(_G["poses"])
     p = _G["poses"]
     _G["pass_t0"] = np.array([p.t[np.flatnonzero(p.pass_id == q)].min() for q in range(p.pass_id.max() + 1)])
@@ -229,7 +232,7 @@ def _job(args):
     k, de = args
     _G["n"] = _G.get("n", 0) + 1
     if _G["n"] % 60 == 0:  # keep the page cache small (see CloudStore.drop_cache)
-        _G["store"].drop_cache((frames_dir(_G["poses"]),))
+        _G["store"].drop_cache((_settings.get().workspace.frames_dir(_G["poses"]),))
     try:
         r = assess_frame(k, de)
         _G["store"].release()  # keep this worker's RSS small (memmap pages)
@@ -273,7 +276,7 @@ def run(workers: int = 10, run_tag: str | None = "tw45", out_dir: Path | None = 
     if limit is not None:
         jobs = jobs[:limit]
     if jobs:
-        open_store(poses).drop_cache((frames_dir(poses),))
+        open_store(poses).drop_cache((_settings.get().workspace.frames_dir(poses),))
         with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool, open(jl, "a") as f:
             for r in tqdm(pool.imap_unordered(_job, jobs, chunksize=2), total=len(jobs), desc="frames"):
                 done[r.frame] = r
