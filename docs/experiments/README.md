@@ -1,5 +1,12 @@
 # Experimenty nad daty Dražkov
 
+> **NOT MAINTAINED.** Přesunuto z `experiments/` do `docs/experiments/` po restrukturalizaci na
+> `packages/`: `e1`–`e3` importovaly `experiments/common/`, které bylo smazané beze náhrady na
+> stejném místě, ne přejmenované — jde o rewrite, ne repoint, takže skripty níže neběží. Jsou tu
+> jako historický záznam toho, co bylo naměřeno (`03_semanticka_segmentace.md` §12); hlava
+> každého souboru říká, která dnešní stage tu myšlenku nahradila (`segds`, `seg-eval` v
+> `packages/geovap-semantics`).
+
 Doprovodné skripty k `03_semanticka_segmentace.md` §12. Ověřují tvrzení dokumentu přímo na
 reálném vzorku od GEOVAP (`/home/jatuma/repos/Geovap/Geovap_data/DTM_Dražkov`), ne jen na
 proxy veřejných datasetech z rešerše.
