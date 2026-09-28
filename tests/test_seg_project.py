@@ -1,7 +1,7 @@
 import numpy as np
 
 from geovap.domain.scheme import taxonomy as T
-from mapping.seg.project import VoteHist, edge_factor
+from geovap.stages.semantics.label.project import VoteHist, edge_factor
 
 
 def test_votehist_weighted_argmax_and_unlabelled():

@@ -48,6 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--with-optional", action="store_true", help="include the optional branches")
     run.add_argument("--force", action="store_true", help="re-run stages whose marker is green")
     run.add_argument("--dry-run", action="store_true", help="print the plan and the commands, run nothing")
+    run.add_argument("--detach", action="store_true",
+                     help="run in the background and return; a full run takes most of a day")
+    run.add_argument("--force-detach", action="store_true",
+                     help="detach even though another run holds the pid file")
 
     cmp_ = add("compare", "this run's metrics against the dataset's tracked baseline")
     cmp_.add_argument("--baseline", metavar="DIR", help="override the dataset's baseline directory")
@@ -146,6 +150,9 @@ def _cmd_run(s, args) -> int:
     if args.with_optional:
         selection["with_optional"] = True
     selection["force"] = args.force
+    if args.detach:
+        argv = [a for a in sys.argv[1:] if a not in ("--detach", "--force-detach")]
+        return driver.detach(s, argv, force=args.force_detach)
     return driver.run(s, dry_run=args.dry_run, **selection)
 
 

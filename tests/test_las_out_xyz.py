@@ -1,4 +1,4 @@
-"""C1: `las_out.write_tile`'s `xyz=` override, `product_rgb` uint16 passthrough and
+"""C1: `las_writer.write_tile`'s `xyz=` override, `product_rgb` uint16 passthrough and
 `verify(xyz_mode=...)`. Fully synthetic (a tiny hand-built LAZ + `geovap.runtime.store.build_tile`);
 no dependency on the real store."""
 from __future__ import annotations
@@ -9,7 +9,8 @@ import laspy
 import numpy as np
 import pytest
 
-from mapping import las_out
+from geovap.io import las_writer
+from geovap.runtime import las_check
 from geovap.runtime.store import SCALE, PassRegistration, TileData, TileInfo, build_tile
 from geovap.domain.model.poses import Poses
 
@@ -70,9 +71,9 @@ def poses_and_registration():
 def test_write_tile_default_xyz_is_bit_exact(td, tmp_path):
     n = len(td)
     rgb = np.zeros((n, 3), np.uint8)
-    extras = {name: np.zeros(n, dt) for name, dt, _ in las_out.EXTRA_DIMS}
-    out = las_out.write_tile(td, tmp_path / "out.laz", rgb, extras, {"poses_hash": "abc"})
-    v = las_out.verify(out, td)
+    extras = {name: np.zeros(n, dt) for name, dt, _ in las_writer.COLOUR_DIMS}
+    out = las_writer.write_tile(td.info.laz, np.asarray(td.orig_index), tmp_path / "out.laz", rgb, extras, {"poses_hash": "abc"}, extra_dims=las_writer.COLOUR_DIMS)
+    v = las_check.verify_tile(out, td)
     assert v["xyz_exact"] is True
     assert v["provenance"] is True
 
@@ -80,24 +81,25 @@ def test_write_tile_default_xyz_is_bit_exact(td, tmp_path):
 def test_write_tile_xyz_override_writes_given_coordinates(td, tmp_path):
     n = len(td)
     rgb = np.zeros((n, 3), np.uint8)
-    extras = {name: np.zeros(n, dt) for name, dt, _ in las_out.EXTRA_DIMS}
+    extras = {name: np.zeros(n, dt) for name, dt, _ in las_writer.COLOUR_DIMS}
     xyz_override = (np.asarray(td.xyz) + np.array([1000, -2000, 500], np.int32)).astype(np.int32)  # +1 m, -2 m, +0.5 m
-    out = las_out.write_tile(td, tmp_path / "out.laz", rgb, extras, {}, xyz=xyz_override)
+    out = las_writer.write_tile(td.info.laz, np.asarray(td.orig_index), tmp_path / "out.laz", rgb, extras, {}, xyz=xyz_override, extra_dims=las_writer.COLOUR_DIMS)
     las = laspy.read(str(out))
     inv = np.asarray(td.orig_index)
     back = np.stack([np.asarray(las.X), np.asarray(las.Y), np.asarray(las.Z)], 1)
     store_order = back[inv]  # source order -> store order
     assert np.array_equal(store_order, xyz_override)
     # bit-exact verify must now fail (coordinates were deliberately shifted)
-    assert las_out.verify(out, td)["xyz_exact"] is False
+    assert las_check.verify_tile(out, td)["xyz_exact"] is False
 
 
 def test_product_rgb_uint16_passes_through_unscaled(td, tmp_path):
     n = len(td)
     rgb16 = np.zeros((n, 3), np.uint16)
     rgb16[:, 0] = np.arange(n) % 65535
-    extras = {"cluster_id": np.full(n, -1, np.int32), "obj_class": np.zeros(n, np.uint8)}
-    out = las_out.write_tile(td, tmp_path / "objects.laz", rgb16, extras, {}, extra_dims=las_out.OBJ_EXTRA_DIMS)
+    extras = {"cluster_id": np.full(n, -1, np.int32), "obj_class": np.zeros(n, np.uint8),
+              "hag": np.zeros(n, np.float32)}
+    out = las_writer.write_tile(td.info.laz, np.asarray(td.orig_index), tmp_path / "objects.laz", rgb16, extras, {}, extra_dims=las_writer.OBJECT_DIMS)
     las = laspy.read(str(out))
     inv = np.asarray(td.orig_index)
     red_store = np.asarray(las.red)[inv]  # source order -> store order
@@ -108,8 +110,8 @@ def test_product_rgb_uint8_is_scaled_to_16bit(td, tmp_path):
     n = len(td)
     rgb8 = np.zeros((n, 3), np.uint8)
     rgb8[:, 0] = np.arange(n) % 256
-    extras = {name: np.zeros(n, dt) for name, dt, _ in las_out.EXTRA_DIMS}
-    out = las_out.write_tile(td, tmp_path / "out.laz", rgb8, extras, {})
+    extras = {name: np.zeros(n, dt) for name, dt, _ in las_writer.COLOUR_DIMS}
+    out = las_writer.write_tile(td.info.laz, np.asarray(td.orig_index), tmp_path / "out.laz", rgb8, extras, {}, extra_dims=las_writer.COLOUR_DIMS)
     las = laspy.read(str(out))
     inv = np.asarray(td.orig_index)
     red_store = np.asarray(las.red)[inv]  # source order -> store order
@@ -122,14 +124,14 @@ def test_verify_registered_reports_shift_mm(td, tmp_path, poses_and_registration
     td_reg = TileData(td.info, registration=reg)
     n = len(td_reg)
     rgb = np.zeros((n, 3), np.uint8)
-    extras = {name: np.zeros(n, dt) for name, dt, _ in las_out.EXTRA_DIMS}
+    extras = {name: np.zeros(n, dt) for name, dt, _ in las_writer.COLOUR_DIMS}
     xyz_registered = np.round(td_reg.xyz_m() / SCALE).astype(np.int32)
-    out = las_out.write_tile(td_reg, tmp_path / "out.laz", rgb, extras, {}, xyz=xyz_registered)
+    out = las_writer.write_tile(td_reg.info.laz, np.asarray(td_reg.orig_index), tmp_path / "out.laz", rgb, extras, {}, xyz=xyz_registered, extra_dims=las_writer.COLOUR_DIMS)
 
-    v_exact = las_out.verify(out, td_reg, xyz_mode="exact")
+    v_exact = las_check.verify_tile(out, td_reg, xyz_mode="exact")
     assert v_exact["xyz_exact"] is False  # registered points differ from the raw source
 
-    v_reg = las_out.verify(out, td_reg, xyz_mode="registered")
+    v_reg = las_check.verify_tile(out, td_reg, xyz_mode="registered")
     assert v_reg["xyz_exact"] is True
     assert v_reg["n_moved"] == 0
     expected_shift_mm = 1000.0 * (shift["t"][0] ** 2 + shift["t"][1] ** 2 + shift["t"][2] ** 2) ** 0.5
@@ -149,10 +151,10 @@ def test_verify_registered_detects_unwritten_registration(td, tmp_path, poses_an
     td_reg = TileData(td.info, registration=reg)
     n = len(td_reg)
     rgb = np.zeros((n, 3), np.uint8)
-    extras = {name: np.zeros(n, dt) for name, dt, _ in las_out.EXTRA_DIMS}
-    out = las_out.write_tile(td_reg, tmp_path / "out.laz", rgb, extras, {})  # no xyz= -> bit-exact source copy
+    extras = {name: np.zeros(n, dt) for name, dt, _ in las_writer.COLOUR_DIMS}
+    out = las_writer.write_tile(td_reg.info.laz, np.asarray(td_reg.orig_index), tmp_path / "out.laz", rgb, extras, {}, extra_dims=las_writer.COLOUR_DIMS)  # no xyz= -> bit-exact source copy
 
-    v_reg = las_out.verify(out, td_reg, xyz_mode="registered", tol_mm=0.01)
+    v_reg = las_check.verify_tile(out, td_reg, xyz_mode="registered", tol_mm=0.01)
     assert v_reg["xyz_exact"] is False
     assert v_reg["n_moved"] == n
     assert v_reg["shift_mm"]["max"] > 50.0  # the pass shift is ~0.2 m

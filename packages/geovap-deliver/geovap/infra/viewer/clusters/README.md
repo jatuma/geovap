@@ -3,7 +3,7 @@
 Code for the per-tile object clustering and its Potree viewer page. Data (input copies with
 `cluster_id` / `hag` / `obj_class`, random-colour copies, logs, `global_labels.npy`) stays under
 `pointcloud-tools/output/clusters/src/` (12 GB, not versioned); override with `CLUSTERS_DATA=<dir>`.
-Input tiles come from `$GEOVAP_DATA/LAZ_Dražkov_ground` (default `Geovap_data/DTM_Dražkov`).
+Input tiles come from the active dataset descriptor's `[tiles]` adapter; run `geovap run --only cluster`.
 
 | file | purpose |
 |---|---|

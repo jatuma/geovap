@@ -13,17 +13,20 @@ import pytest
 from scipy.spatial.transform import Rotation
 
 from geovap.domain.model import geometry
-from mapping import config, pass_reg
-from mapping.cli.assemble_poses import META_COLS, assemble, overlay_refined, transform_trajectory
+from geovap.stages.register import passes as pass_reg
+from geovap.stages.register.passes import META_COLS, assemble, overlay_refined, transform_trajectory
 from geovap.domain.model.poses import Poses
 from geovap.runtime.pose_tables import load as load_poses, read as read_pose_table, write as write_pose_table
-from mapping.trajectory import CamSensorRig, Trajectory
-from mapping.config import PANO_H, PANO_W
+from geovap.stages.register.trajectory import CamSensorRig, Trajectory
+from geovap.runtime import settings
+
+PANO_W, PANO_H = settings.get().sensor.pano_w, settings.get().sensor.pano_h
 
 
 @pytest.fixture(scope="module")
 def export_poses():
-    if not config.EXPORT_CSV.exists():
+    src = settings.get().poses.source_file()
+    if src is None or not src.exists():
         pytest.skip("export.csv not found")
     return load_poses("export")
 
@@ -319,7 +322,8 @@ def test_assemble_end_to_end(tmp_path: Path, monkeypatch):
     through, provenance chaining, and that the corrected table round-trips through `load_poses`."""
     # keep write_pose_table's sha1 lookup a harmless no-op: `s.poses.source_file()` (the vendor
     # export path) is made to point at a file that does not exist, same intent as the old
-    # `monkeypatch.setattr(config, "EXPORT_CSV", ...)` against the pre-refactor global.
+    # `monkeypatch.setattr(config, "EXPORT_CSV", ...)` against the pre-refactor global; the pose
+    # source is now the descriptor's adapter, and its file comes from `source_file()`.
     from geovap.runtime import settings
 
     monkeypatch.setattr(type(settings.get().poses), "source_file", lambda self: tmp_path / "no_such_export.csv")

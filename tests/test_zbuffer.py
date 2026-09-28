@@ -3,7 +3,20 @@ import numpy as np
 
 from geovap.domain.math import depth as zbuffer
 from geovap.domain.model import geometry
-from mapping.config import NO_POINT, PANO_H, PANO_W, SENSOR, TOL_ABS, TOL_REL, ZB_H, ZB_W
+from geovap.runtime import settings
+from geovap.domain.model.sensor import NO_POINT
+
+# The sensor of whichever dataset the suite is pointed at, resolved once here rather than
+# imported as a frozen constant -- which is what `mapping/config.py` used to be.
+SENSOR = settings.get().sensor
+PANO_H = SENSOR.pano_h
+PANO_W = SENSOR.pano_w
+TOL_ABS = SENSOR.tol_abs
+TOL_REL = SENSOR.tol_rel
+ZB_H = SENSOR.zb_h
+ZB_W = SENSOR.zb_w
+
+
 
 
 def _wall(x0, y_range, z_range, spacing=0.05):

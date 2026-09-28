@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation
 
 from geovap.domain.model import geometry
 from geovap.domain.model.poses import Poses
-from mapping.trajectory import (
+from geovap.stages.register.trajectory import (
     CamSensorRig,
     Trajectory,
     _reject_position_outliers,

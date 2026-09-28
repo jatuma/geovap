@@ -13,13 +13,14 @@ import pytest
 from scipy import ndimage
 
 from geovap.domain.model import geometry
-from mapping.calib import chamfer as Ch
-from mapping.calib.icp import EdgeICP, IcpFrame
-from mapping.config import PANO_H, PANO_W, R_MAX
-from mapping.pose_refine import DEFAULT_FREE, PARAM_NAMES, Prior, PassRefiner
+from geovap.runtime import settings
+from geovap.stages.register.calib import chamfer as Ch
+from geovap.stages.register.calib.icp import EdgeICP, IcpFrame
+from geovap.stages.register.refine import DEFAULT_FREE, PARAM_NAMES, Prior, PassRefiner
 from geovap.domain.model.poses import Poses
 
 RNG = np.random.default_rng(0)
+PANO_W, PANO_H = settings.get().sensor.pano_w, settings.get().sensor.pano_h
 S = Ch.CHAM_W / PANO_W
 
 
@@ -137,11 +138,11 @@ def test_recovers_perturbation_real_frame():
     enough points to pull theta the full distance. This is a real limitation of the per-window
     nearest-edge correspondence on real (not synthetic-sparse) data, not a bug in this refactor --
     flagged here as an open issue rather than silently asserted away."""
-    from mapping.calib import icp as I
+    from geovap.stages.register.calib import icp as I
     from geovap.runtime.store import open_store
     from geovap.domain.model.frames import FrameIndex
     from geovap.runtime.pose_tables import load as load_poses
-    from mapping.quality import yaw_rates
+    from geovap.stages.register.screen import yaw_rates
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
 

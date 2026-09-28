@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from mapping.align import Aligner, H, W
+from geovap.stages.register.align import Aligner, H, W
 
 
 def _synthetic_edge_image(seed: int = 0) -> np.ndarray:

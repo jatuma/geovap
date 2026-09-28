@@ -6,10 +6,12 @@ import numpy as np
 import pytest
 
 from geovap.domain.model import geometry
-from mapping import config, pass_reg as pr
+from geovap.stages.register import passes as pr
 from geovap.domain.model.poses import Poses
 from geovap.runtime.pose_tables import load as load_poses
-from mapping.config import PANO_H, PANO_W
+from geovap.runtime import settings
+
+PANO_W, PANO_H = settings.get().sensor.pano_w, settings.get().sensor.pano_h
 
 
 # --------------------------------------------------------------------------------- register_pair

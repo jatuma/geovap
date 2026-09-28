@@ -20,10 +20,10 @@ _ENV_DEFAULTS = {
 
 
 # Ensure the three dataset roots are set for the whole session -- at IMPORT time, not inside a
-# fixture. A few `mapping/seg` modules still resolve `geovap.runtime.settings.get()` at their own
-# import time (a pre-existing anti-pattern, e.g. `mapping.seg.areas.segds_dir()`), and pytest imports
-# every test module during collection, before any fixture -- even an autouse, session-scoped one --
-# has run. Without this, importing such a module during collection raises `DescriptorError:
+# fixture. A few stage modules still resolve `geovap.runtime.settings.get()` as soon as something
+# calls one of their lazy path accessors (e.g. `geovap.stages.semantics.pseudogt.areas.segds_dir()`),
+# and pytest imports every test module during collection, before any fixture -- even an autouse,
+# session-scoped one -- has run. Without this, importing such a module during collection raises `DescriptorError:
 # ${GEOVAP_DATA} is not set` -- correct behaviour for a product, unhelpful for a unit test that only
 # wanted a filename template. Values already exported by the developer (pointing at the real
 # dataset) are left alone, so `-m slow` still runs against it.

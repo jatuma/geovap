@@ -32,6 +32,12 @@ class LazDirTileSource:
         except KeyError as exc:
             raise ValueError(f"[tiles] table is missing {exc}") from exc
         self._glob = table.get("glob", "*.laz")
+        # Read each tile's extent from its LAZ header when the dataset has no tile-grid geojson.
+        # Headers are cheap (no points are decoded) and every LAZ carries mins/maxs, so a dataset
+        # without a grid still knows where its tiles are -- found by running `doctor` against a
+        # second dataset, where every extent-based check failed for want of a file that is genuinely
+        # optional. Set `bbox_from_header = false` to skip it if opening 38 headers is ever too slow.
+        self._bbox_from_header = bool(table.get("bbox_from_header", True))
         self._id_regex = re.compile(pattern)
         if "id" not in self._id_regex.groupindex:
             raise ValueError(f"[tiles].id_regex {pattern!r} has no named group 'id'")
@@ -47,10 +53,12 @@ class LazDirTileSource:
             if match is None:
                 raise ValueError(f"{path}: filename does not match [tiles].id_regex {self._id_regex.pattern!r}")
             tile_id = TileId(match.group("id"))
+            ring = rings.get(_normalize_id(tile_id.value))
+            bbox = None if ring is not None else self._header_bbox(path)
             # `_load_grid` keys by normalised id, so normalise this side too -- looking up the raw
             # id only happens to work when `id_regex` already strips padding, and fails silently
             # (every bbox None) as soon as it does not.
-            refs.append(TileRef(id=tile_id, path=path, ring=rings.get(_normalize_id(tile_id.value))))
+            refs.append(TileRef(id=tile_id, path=path, ring=ring, bbox=bbox))
         return refs
 
     def out_name(self, tile: TileId, kind: str = "", *, variant: str | None = None) -> str:
@@ -71,6 +79,19 @@ class LazDirTileSource:
             "ids": [t.id.value for t in refs],
             "grid": str(self._grid_path) if self._grid_path else None,
         }
+
+    @staticmethod
+    def _header_bbox(path: Path) -> tuple[float, float, float, float] | None:
+        """(min_e, min_n, max_e, max_n) from the LAZ header. `None` if it cannot be read -- a tile
+        with no extent is a reportable condition, not a crash."""
+        try:
+            import laspy
+
+            with laspy.open(path) as reader:
+                mins, maxs = reader.header.mins, reader.header.maxs
+            return (float(mins[0]), float(mins[1]), float(maxs[0]), float(maxs[1]))
+        except Exception:  # noqa: BLE001
+            return None
 
     def _load_grid(self) -> dict[str, "np.ndarray"]:
         """[id -> ring[K,2]] from a tile-grid GeoJSON: tile outlines as LineString rings, each tile's id

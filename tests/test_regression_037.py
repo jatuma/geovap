@@ -6,10 +6,9 @@ import numpy as np
 import pytest
 
 from geovap.domain.math import colour_metrics as metrics
-from mapping import config
 from geovap.runtime import settings
 from geovap.runtime.store import CloudStore, open_store
-from mapping.colorize import Options, colorize_tile
+from geovap.stages.colour.colorize import Options, colorize_tile
 from geovap.domain.model.frames import FrameIndex
 
 pytestmark = pytest.mark.slow
@@ -70,7 +69,7 @@ def test_mirrored_is_much_worse(env):
 
 
 # ------------------------------------------------------------------------------- S7: corrected poses
-CORRECTED_TRANSFORMS = config.OUT_DIR / "pass_reg" / "pass_transforms.json"
+CORRECTED_TRANSFORMS = settings.get().workspace.out / "pass_reg" / "pass_transforms.json"
 
 
 @pytest.fixture(scope="module")

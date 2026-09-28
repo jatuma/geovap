@@ -2,8 +2,15 @@ import numpy as np
 import pytest
 
 from geovap.domain.model import geometry
-from mapping.config import PANO_H, PANO_W
-from mapping.seg import views
+from geovap.runtime import settings
+from geovap.stages.semantics.pseudogt import views
+
+# The sensor of whichever dataset the suite is pointed at, resolved once here rather than
+# imported as a frozen constant -- which is what `mapping/config.py` used to be.
+SENSOR = settings.get().sensor
+PANO_H = SENSOR.pano_h
+PANO_W = SENSOR.pano_w
+
 
 
 def _frame(yaw=37.0, roll=6.0, pitch=-4.0):
@@ -16,7 +23,7 @@ def _frame(yaw=37.0, roll=6.0, pitch=-4.0):
 def test_round_trip_off_centre_both_axes(view):
     R_cam, R_lev = _frame()
     size = 512
-    mu, mv = views.view_to_pano_maps(R_cam, R_lev, view, size)
+    mu, mv = views.view_to_pano_maps(R_cam, R_lev, view, PANO_W, PANO_H, size)
     # pick off-centre pixels in both axes and map them back
     ys = np.array([50, 100, 400, 460])
     xs = np.array([60, 450, 120, 500])
@@ -43,7 +50,7 @@ def test_view_centre_direction():
     """Centre pixel of view (yaw, pitch) looks along yaw_frame+yaw at elevation pitch in the world."""
     R_cam, R_lev = _frame(yaw=30.0, roll=3.0, pitch=2.0)
     for yaw, pitch in [(0.0, 0.0), (90.0, 0.0), (180.0, -45.0)]:
-        mu, mv = views.view_to_pano_maps(R_cam, R_lev, (yaw, pitch, 90.0), 64)
+        mu, mv = views.view_to_pano_maps(R_cam, R_lev, (yaw, pitch, 90.0), PANO_W, PANO_H, 64)
         d_cam = geometry.pano_rays(mu[31:33, 31:33].ravel(), mv[31:33, 31:33].ravel(), PANO_W, PANO_H).mean(0)  # average directions, not seam-crossing pixels
         d_world = d_cam @ R_cam
         az = np.degrees(np.arctan2(d_world[1], d_world[0])) % 360
@@ -71,5 +78,5 @@ def test_extract_image_wraps_seam():
     pano[:, :5] = 255  # bright stripe at the seam
     mu = np.array([[199.5, 0.5]], np.float32) * (8000 / 200)
     mv = np.array([[50.0, 50.0]], np.float32) * (4000 / 100)
-    out = views.extract_image(pano, mu, mv, views.cv2.INTER_NEAREST)
+    out = views.extract_image(pano, mu, mv, PANO_W, views.cv2.INTER_NEAREST)
     assert out[0, 1, 0] == 255 and out[0, 0, 0] == 0

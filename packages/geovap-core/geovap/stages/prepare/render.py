@@ -174,16 +174,16 @@ def main(argv=None) -> int:
     objects = None
     class_ids = None
     if a.jvf:
-        # Legacy-only feature: JVF reference vectors are rasterised by `mapping.vectors`, which this
-        # migration does not port (out of scope for the `prepare` group). Imported lazily, from the
-        # legacy top-level `mapping` package, only when `--jvf` is actually requested.
-        from mapping import compat, vectors
+        # Reference vectors come from whichever adapter the descriptor names, not from a
+        # sys.path shim into `experiments/common`. A dataset without a `[reference]` table simply
+        # has none, and this option then has nothing to draw.
+        from geovap.runtime import settings
 
-        compat.ensure_experiments_on_path()
-        from common import io_data
-
-        objects = io_data.load_jvf_objects()
-        codes = sorted({o.jvfcode for o in objects})
+        reference = settings.get().reference
+        if reference is None:
+            raise SystemExit("--jvf: this dataset's descriptor has no [reference] adapter configured")
+        objects = reference.objects()
+        codes = sorted({o.code for o in objects})
         class_ids = {c: i + 1 for i, c in enumerate(codes)}
         (out / "jvf_class_ids.txt").write_text("\n".join(f"{i}\t{c}" for c, i in class_ids.items()))
 

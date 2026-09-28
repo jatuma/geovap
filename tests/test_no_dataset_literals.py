@@ -38,16 +38,12 @@ ALLOWED = (
 #: Legacy modules still holding dataset literals, each deleted by the phase named. This set may only
 #: SHRINK -- a new entry means a literal was reintroduced somewhere the refactor had already left.
 KNOWN_LEGACY = frozenset({
-    "experiments/common/class_map.py",       # Phase 2: superseded by io/adapters/reference/jvf_zps
-    "experiments/common/io_data.py",         # Phase 2: superseded by io/adapters
-    "mapping/cli/pipeline.py",               # Phase 1: becomes app/driver.py
-    "mapping/config.py",                     # Phase 2: superseded by runtime/settings
-    "mapping/panos.py",                      # Phase 1: stream E, reads [crs] from the descriptor
-    "mapping/quality.py",                    # Phase 1: stream A, chart title from the dataset name
-    "mapping/seg/dataset.py",                # Phase 1: stream B, chart title from the dataset name
+    # Empty. Every module that held a dataset literal has been migrated or deleted; the list is
+    # kept, with its shrink-only test, so that reintroducing one is a visible act rather than a
+    # silent addition.
 })
 
-SCANNED = ("packages", "mapping", "pointcloud-tools", "experiments")
+SCANNED = ("packages", "experiments")
 
 
 def _string_constants(path: Path) -> list[tuple[int, str]]:

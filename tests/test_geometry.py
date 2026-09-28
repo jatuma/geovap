@@ -3,9 +3,16 @@ import numpy as np
 import pytest
 
 from geovap.domain.model import geometry
-from mapping.config import PANO_H, PANO_W
+from geovap.runtime import settings
 from geovap.domain.model.poses import Poses
 from geovap.domain.model.rig import IDENTITY, RigModel
+
+# The sensor of whichever dataset the suite is pointed at, resolved once here rather than
+# imported as a frozen constant -- which is what `mapping/config.py` used to be.
+SENSOR = settings.get().sensor
+PANO_H = SENSOR.pano_h
+PANO_W = SENSOR.pano_w
+
 
 
 def _synthetic_poses(m: int, seed: int = 0) -> Poses:

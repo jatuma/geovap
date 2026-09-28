@@ -1,7 +1,7 @@
-"""S7: unit tests for `mapping.pose_report`'s pure/synthetic pieces -- no CloudStore, no real cache
-data, so these run in the fast (non-slow) suite. The Pool-based pieces that need the real cache
+"""S7: unit tests for `geovap.stages.register.report`'s pure/synthetic pieces -- no CloudStore, no real
+cache data, so these run in the fast (non-slow) suite. The Pool-based pieces that need the real cache
 (`compare_pose_sources`, `colour_de_comparison`, `interpolation_benefit`, `invariance_check`) are
-exercised for real by `uv run python -m mapping.cli.pose_report run` (see `mapping/README.md`), not
+exercised for real by `uv run python -m geovap.stages.register.report run` (see `mapping/README.md`), not
 re-tested here against a mocked store.
 """
 from __future__ import annotations
@@ -12,7 +12,7 @@ import json
 import numpy as np
 import pytest
 
-from mapping import pose_report as pr
+from geovap.stages.register import report as pr
 from geovap.domain.model.poses import Poses
 
 
@@ -238,9 +238,13 @@ def test_final_markdown_invariance_wording_reflects_target_miss():
 
 
 # ------------------------------------------------------------------------ S7 task 5/6 (slow regression)
-def test_slow_regression_037_skips_when_store_missing(tmp_path):
-    out = pr.slow_regression_037(transforms_path=tmp_path / "no_such.json")
-    assert "skipped" in out
+def test_the_tile_037_regression_is_cited_not_duplicated():
+    """It used to run here, colourising tile 037 under two pose tables -- which made the
+    registration group call into the colour group, the cross-group edge `stage-independence` exists
+    to prevent. `tests/test_regression_037.py` already is that regression test, so the report cites
+    it."""
+    out = pr.slow_regression_037_hint()
+    assert "test_regression_037" in out["see"]
 
 
 def test_lever_arm_example_missing_pass(tmp_path):

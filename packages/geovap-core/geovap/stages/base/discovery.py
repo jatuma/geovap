@@ -23,7 +23,17 @@ if TYPE_CHECKING:
 
 #: Groups to look in, in the order they appear in a run. A group that is not installed is skipped
 #: silently -- that is the normal state of a core-only install, not an error.
-GROUPS = ("prepare", "register", "colour", "semantics", "objects", "deliver", "verify")
+#:
+#: `semantics` is listed as its three SUB-packages rather than itself: `pkgutil.iter_modules`
+#: below only walks one package's own top-level modules, and `geovap.stages.semantics` itself has
+#: none -- its stage modules live one level down, in `semantics/pseudogt`, `semantics/segment` and
+#: `semantics/label` (see that package's docstring for why the split). Listing each sub-package
+#: here makes it walked exactly like a single-level group, with no special-casing in `discover()`.
+GROUPS = (
+    "prepare", "register", "colour",
+    "semantics.pseudogt", "semantics.segment", "semantics.label",
+    "objects", "deliver", "verify",
+)
 
 #: Modules inside a group that are libraries rather than stages. Importing them is harmless but
 #: pointless, and some pull heavy dependencies (torch) that a core-only install does not have.

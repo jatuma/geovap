@@ -1,8 +1,8 @@
 import numpy as np
 
 from geovap.domain.scheme import classes as C
-from mapping.seg.point_labels import label_points
-from mapping.seg.rasters import Grid
+from geovap.stages.semantics.pseudogt.points import label_points
+from geovap.stages.semantics.pseudogt.rasters import Grid
 
 
 class FakeRasters:

@@ -7,8 +7,8 @@ members = [
     "geovap-app",
     "geovap-core",
     "geovap-deliver",
-    "geovap-legacy",
     "geovap-semantics",
+    "geovap-workspace",
 ]
 
 [[package]]
@@ -252,68 +252,6 @@ dependencies = [
 requires-dist = [{ name = "geovap-core", editable = "packages/geovap-core" }]
 
 [[package]]
-name = "geovap-legacy"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "geovap-app" },
-    { name = "geovap-core" },
-    { name = "geovap-deliver" },
-    { name = "geovap-semantics" },
-    { name = "huggingface-hub" },
-    { name = "laspy", extra = ["lazrs"] },
-    { name = "matplotlib" },
-    { name = "numba" },
-    { name = "numpy" },
-    { name = "opencv-python-headless" },
-    { name = "scikit-image" },
-    { name = "scipy" },
-    { name = "shapely" },
-    { name = "torch" },
-    { name = "tqdm" },
-    { name = "transformers" },
-]
-
-[package.optional-dependencies]
-turbo = [
-    { name = "pyturbojpeg" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "import-linter" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "geovap-app", editable = "packages/geovap-app" },
-    { name = "geovap-core", editable = "packages/geovap-core" },
-    { name = "geovap-deliver", editable = "packages/geovap-deliver" },
-    { name = "geovap-semantics", editable = "packages/geovap-semantics" },
-    { name = "huggingface-hub", specifier = ">=0.25" },
-    { name = "laspy", extras = ["lazrs"], specifier = ">=2.5" },
-    { name = "matplotlib", specifier = ">=3.8" },
-    { name = "numba", specifier = ">=0.60" },
-    { name = "numpy", specifier = ">=2.0,<2.3" },
-    { name = "opencv-python-headless", specifier = ">=4.9" },
-    { name = "pyturbojpeg", marker = "extra == 'turbo'", specifier = ">=1.7" },
-    { name = "scikit-image", specifier = ">=0.24" },
-    { name = "scipy", specifier = ">=1.13" },
-    { name = "shapely", specifier = ">=2.0" },
-    { name = "torch", specifier = ">=2.6", index = "https://download.pytorch.org/whl/cu126" },
-    { name = "tqdm", specifier = ">=4.66" },
-    { name = "transformers", specifier = ">=5.0" },
-]
-provides-extras = ["turbo"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "import-linter", specifier = ">=2.0" },
-    { name = "pytest", specifier = ">=8" },
-]
-
-[[package]]
 name = "geovap-semantics"
 version = "0.1.0"
 source = { editable = "packages/geovap-semantics" }
@@ -332,6 +270,44 @@ requires-dist = [
     { name = "shapely", specifier = ">=2.0" },
     { name = "torch", specifier = ">=2.6", index = "https://download.pytorch.org/whl/cu126" },
     { name = "transformers", specifier = ">=5.0" },
+]
+
+[[package]]
+name = "geovap-workspace"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "geovap-app" },
+    { name = "geovap-core" },
+    { name = "geovap-deliver" },
+    { name = "geovap-semantics" },
+]
+
+[package.optional-dependencies]
+turbo = [
+    { name = "geovap-core", extra = ["turbo"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "import-linter" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "geovap-app", editable = "packages/geovap-app" },
+    { name = "geovap-core", editable = "packages/geovap-core" },
+    { name = "geovap-core", extras = ["turbo"], marker = "extra == 'turbo'", editable = "packages/geovap-core" },
+    { name = "geovap-deliver", editable = "packages/geovap-deliver" },
+    { name = "geovap-semantics", editable = "packages/geovap-semantics" },
+]
+provides-extras = ["turbo"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "import-linter", specifier = ">=2.0" },
+    { name = "pytest", specifier = ">=8" },
 ]
 
 [[package]]

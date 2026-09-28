@@ -153,3 +153,47 @@ def test_profiles_resolve_to_selections():
         assert set(sel) <= {"skip", "with_optional", "end", "only", "start"}
     with pytest.raises(KeyError, match="unknown profile"):
         profiles.get("nope")
+
+
+# --------------------------------------------------------------------------------- detached runs
+def test_a_second_detached_run_is_refused(s, monkeypatch, capsys):
+    """Two runs sharing one workspace interleave their markers and logs and overwrite each other's
+    outputs mid-write. The guard is the only thing that stops it, since a full run is normally
+    started detached and the terminal closed."""
+    import os
+    import subprocess
+
+    s.workspace.mkdirs()
+    driver.pid_file(s).write_text(str(os.getpid()))  # our own pid is certainly alive
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: pytest.fail("spawned a second run"))
+    assert driver.detach(s, ["run"]) != 0
+    assert "already in progress" in capsys.readouterr().out
+
+
+def test_a_stale_pid_file_does_not_block_a_run(s, monkeypatch):
+    """A run that was killed leaves its pid file behind; that must not wedge the workspace."""
+    import subprocess
+
+    s.workspace.mkdirs()
+    driver.pid_file(s).write_text("999999999")  # almost certainly not a live process
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: type("P", (), {"pid": 4242})())
+    assert driver.detach(s, ["run"]) == 0
+    assert driver.pid_file(s).read_text().strip() == "4242"
+
+
+def test_force_detach_overrides_a_live_run(s, monkeypatch):
+    import os
+    import subprocess
+
+    s.workspace.mkdirs()
+    driver.pid_file(s).write_text(str(os.getpid()))
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: type("P", (), {"pid": 777})())
+    assert driver.detach(s, ["run"], force=True) == 0
+
+
+def test_every_installed_stage_declares_a_cost():
+    """`geovap run` prints an estimate before a multi-hour run; a stage with no estimate makes that
+    number quietly wrong."""
+    registry = driver.build_registry()
+    missing = [n for n in registry.order() if registry[n].spec.est_min <= 0]
+    assert not missing, f"stages with no time estimate: {missing}"

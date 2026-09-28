@@ -1,7 +1,7 @@
 import numpy as np
 from shapely.geometry import LineString, Point
 
-from mapping.seg import areas
+from geovap.stages.semantics.pseudogt import areas
 from geovap.domain.scheme import classes as C
 
 

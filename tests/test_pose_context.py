@@ -1,4 +1,4 @@
-"""WIRE: pose-source-aware output paths and registration wiring (config.source_dir,
+"""WIRE: pose-source-aware output paths and registration wiring (Workspace.source_dir,
 geovap.stages.prepare.products.load_products, geovap.runtime.store.open_store).
 
 Synthetic poses only -- no cache dependency (no export.csv, no store, no frame products on disk).
@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mapping import config
+from geovap.runtime import settings
 from geovap.runtime import store as store_mod
 from geovap.stages.prepare import products
 from geovap.domain.model.poses import Poses
@@ -59,12 +59,12 @@ class _FakeSettings:
 # ------------------------------------------------------------------------------------- config.source_dir
 def test_source_dir_export_is_identity():
     base = Path("/fake/cache/out/dataset")
-    assert config.source_dir(base, EXPORT) == base
+    assert settings.get().workspace.source_dir(base, EXPORT) == base
 
 
 def test_source_dir_corrected_hash_suffix():
     base = Path("/fake/cache/segds")
-    out = config.source_dir(base, CORRECTED)
+    out = settings.get().workspace.source_dir(base, CORRECTED)
     assert out != base
     assert out.parent == base.parent
     assert out.name == f"segds_{CORRECTED.hash()[:6]}"
@@ -74,7 +74,7 @@ def test_source_dir_corrected_hash_matches_frames_dir_scheme():
     """source_dir and Workspace.frames_dir must key on the same 6 hex chars, so a corrected run's
     segds tree and its frame products land under matching-looking siblings."""
     base = Path("/fake/cache/out/dataset")
-    assert config.source_dir(base, CORRECTED).name.endswith(CORRECTED.hash()[:6])
+    assert settings.get().workspace.source_dir(base, CORRECTED).name.endswith(CORRECTED.hash()[:6])
     ws = _fake_workspace(Path("/fake/cache"))
     assert ws.frames_dir(CORRECTED).name == CORRECTED.hash()[:6]
 

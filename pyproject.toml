@@ -1,30 +1,28 @@
+# The workspace root. It is NOT a package: `mapping/` is gone and nothing lives here but the
+# workspace definition, the shared dev dependencies and the tool configuration. Everything that
+# ships is under `packages/`.
+#
+#   geovap-core       domain, io, runtime, and the stages that need no GPU
+#   geovap-semantics  the segmentation stages (torch, transformers)
+#   geovap-deliver    the consolidated product, the octree and the viewer infrastructure
+#   geovap-app        the `geovap` command
+#
+# Install just what you need: `uv pip install geovap-core` gives a working doctor, store, products
+# and colourisation with no torch anywhere in the tree.
 [project]
-name = "geovap-legacy"
+name = "geovap-workspace"
 version = "0.1.0"
-description = "Transitional home for `mapping/` while it is split into packages/geovap-*. Deleted in Phase 2."
+description = "Development workspace for the geovap distributions. Installs all four, editable."
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "geovap-core",
     "geovap-semantics",
     "geovap-deliver",
     "geovap-app",
-    # still used by the not-yet-migrated modules under mapping/
-    "numpy>=2.0,<2.3",
-    "numba>=0.60",
-    "scipy>=1.13",
-    "laspy[lazrs]>=2.5",
-    "scikit-image>=0.24",
-    "opencv-python-headless>=4.9",
-    "matplotlib>=3.8",
-    "tqdm>=4.66",
-    "torch>=2.6",
-    "transformers>=5.0",
-    "shapely>=2.0",
-    "huggingface-hub>=0.25",
 ]
 
 [project.optional-dependencies]
-turbo = ["PyTurboJPEG>=1.7"]
+turbo = ["geovap-core[turbo]"]
 
 [dependency-groups]
 dev = ["pytest>=8", "import-linter>=2.0"]
@@ -51,11 +49,16 @@ explicit = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Nothing to build here: the root is a workspace, not a distribution.
 [tool.hatch.build.targets.wheel]
-packages = ["mapping"]
+bypass-selection = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The repository root on sys.path, so `tests.io.conftest`'s synthetic-dataset fixtures can be
+# imported by the other test packages. It used to arrive by accident, via the editable install of
+# the root `mapping` package; the root is a workspace now and installs nothing.
+pythonpath = ["."]
 markers = ["slow: needs the full dataset / long runtime"]
 addopts = "-m 'not slow'"
 

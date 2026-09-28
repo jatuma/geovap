@@ -1,7 +1,13 @@
 import numpy as np
 
-from mapping import vectors
-from mapping.config import PANO_W
+from geovap.stages.prepare import vectors
+from geovap.runtime import settings
+
+# The sensor of whichever dataset the suite is pointed at, resolved once here rather than
+# imported as a frozen constant -- which is what `mapping/config.py` used to be.
+SENSOR = settings.get().sensor
+PANO_W = SENSOR.pano_w
+
 
 
 def test_subdivision_limits_angular_step():

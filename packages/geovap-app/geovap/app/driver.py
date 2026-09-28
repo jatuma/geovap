@@ -245,3 +245,55 @@ def _safe_poses_hash(s: "Settings") -> str | None:
         return pose_tables.load(s.pose_table, s=s).hash()
     except Exception:  # noqa: BLE001 - provenance is best-effort
         return None
+
+
+# --------------------------------------------------------------------------------- detached runs
+def pid_file(s: "Settings") -> Path:
+    return s.workspace.pipeline / "pipeline.pid"
+
+
+def running_pid(s: "Settings") -> int | None:
+    """The pid of a detached run that is still alive, or None.
+
+    A full run takes most of a day, so it is normally started detached and the terminal closed. The
+    guard exists because two concurrent runs share one workspace: they would interleave their stage
+    markers and their logs, and the second would overwrite the first's outputs mid-write.
+    """
+    import os
+
+    p = pid_file(s)
+    if not p.exists():
+        return None
+    try:
+        pid = int(p.read_text().strip())
+    except ValueError:
+        return None
+    try:
+        os.kill(pid, 0)  # signal 0: existence check only
+    except OSError:
+        return None  # stale file from a run that died; not an error
+    return pid
+
+
+def detach(s: "Settings", argv: list[str], *, force: bool = False) -> int:
+    """Re-launch this command in the background and return immediately."""
+    import subprocess
+    import sys
+
+    alive = running_pid(s)
+    if alive is not None and not force:
+        print(f"a run is already in progress (pid {alive}); use --force-detach to start anyway")
+        return 1
+
+    ws = s.workspace
+    ws.mkdirs()
+    log = ws.pipeline / "pipeline.log"
+    with open(log, "a", encoding="utf-8") as f:
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "geovap.app.cli", *argv],
+            stdout=f, stderr=subprocess.STDOUT, start_new_session=True,
+            env=procs.env_for(s), cwd=str(_repo_root() or Path.cwd()),
+        )
+    pid_file(s).write_text(str(proc.pid))
+    print(f"detached: pid {proc.pid}, log {log}")
+    return 0
