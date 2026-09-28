@@ -1,0 +1,206 @@
+# JVF/ZPS Czech taxonomy code -> class info, ported from experiments/common/class_map.py.
+# `public` is an orientation-only public-taxonomy name (Cityscapes/ADE20k/Mapillary Vistas);
+# absent means no good public equivalent (own class). See that module's docstring for context.
+
+[codes."0100000304"]
+name_cz = "hranice dopravní stavby nebo plochy"
+public = "road|sidewalk|curb"
+note = "nejcetnejsi trida v Drazkove"
+
+[codes."0100000162"]
+name_cz = "plot"
+note = "vlastni trida, 5 materialu; nejblizsi obecny Fence"
+
+[codes."0100000300"]
+name_cz = "hranice stavby"
+public = "building"
+
+[codes."0100000299"]
+name_cz = "hranice budovy"
+public = "building"
+
+[codes."0100000165"]
+name_cz = "stavebně upravený vjezd na pozemek"
+public = "driveway"
+note = "jen Vistas, licencne blokovane"
+
+[codes."0100000215"]
+name_cz = "udržovaná plocha zeleně"
+public = "vegetation"
+
+[codes."0100000001"]
+name_cz = "budova"
+public = "building"
+
+[codes."0100000051"]
+name_cz = "příkop, násep, zářez dopravní stavby"
+note = "geometricky jev, ne fotometricky"
+
+[codes."0100000305"]
+name_cz = "hranice přírodního a polopřírodního objektu"
+public = "terrain|vegetation"
+
+[codes."0100000308"]
+name_cz = "hranice udržované zeleně"
+public = "vegetation"
+
+[codes."0100000320"]
+name_cz = "přidružená plocha pozemní komunikace"
+public = "road"
+
+[codes."0100000202"]
+name_cz = "neidentifikovaný objekt"
+note = "unikovy poklop, nelze mapovat"
+
+[codes."0100000209"]
+name_cz = "zahrada"
+note = "vyuziti uzemi, ne vzhled - nesegmentovat z obrazu"
+
+[codes."0100000183"]
+name_cz = "patka, deska, monolit, pilíř"
+
+[codes."0100000017"]
+name_cz = "nájezd"
+public = "driveway"
+
+[codes."0100000306"]
+name_cz = "hranice vodního díla"
+public = "water"
+
+[codes."0100000187"]
+name_cz = "stavba pro zpevnění povrchu"
+
+[codes."0100000302"]
+name_cz = "hranice zdi"
+public = "wall"
+
+[codes."0100000314"]
+name_cz = "ostatní zastřešená stavba"
+public = "building"
+
+[codes."0100000193"]
+name_cz = "čelo propustku"
+note = "vzacna trida, jen ~56 instanci"
+
+[codes."0100000323"]
+name_cz = "vnitřní členění dopravní plochy"
+public = "road"
+
+[codes."0100000189"]
+name_cz = "dvůr, nádvoří"
+public = "ground"
+
+[codes."0100000084"]
+name_cz = "studna na veřejném prostranství"
+note = "vlastni trida, vzacna"
+
+[codes."0100000195"]
+name_cz = "průběh propustku"
+
+[codes."0100000007"]
+name_cz = "chodník"
+public = "sidewalk"
+
+[codes."0100000217"]
+name_cz = "terénní hrana"
+note = "geometricky jev"
+
+[codes."0100000207"]
+name_cz = "zemědělská plocha"
+note = "fuzovat s LPIS, nesegmentovat"
+
+[codes."0100000078"]
+name_cz = "stavebně upravené koryto"
+public = "water"
+
+[codes."0100000203"]
+name_cz = "vodní tok"
+public = "water"
+
+[codes."0100000055"]
+name_cz = "manipulační plocha"
+public = "ground"
+
+[codes."0100000199"]
+name_cz = "zábradlí"
+public = "guard_rail"
+note = "vzacna trida, jen ~8 instanci; pozor - verejny guard_rail je spis svodidlo"
+
+[codes."0100000168"]
+name_cz = "zeď"
+public = "wall"
+
+[codes."0100000080"]
+name_cz = "meliorační příkop, žlab"
+
+[codes."0100000301"]
+name_cz = "hranice schodiště"
+public = "stairs"
+
+[codes."0100000166"]
+name_cz = "schodiště"
+public = "stairs"
+
+[codes."0100000213"]
+name_cz = "hospodářsky nevyužívaná plocha"
+
+[codes."0100000179"]
+name_cz = "skleník"
+public = "building"
+
+[codes."0100000201"]
+name_cz = "nosič technického zařízení"
+public = "utility_pole"
+
+[codes."0100000011"]
+name_cz = "parkoviště, odstavná plocha"
+public = "parking"
+
+[codes."0100000083"]
+name_cz = "meliorační šachta"
+public = "manhole"
+note = "jen Vistas, licencne blokovane"
+
+[codes."0100000307"]
+name_cz = "hranice ostatní plochy"
+public = "ground"
+
+[codes."0100000310"]
+name_cz = "vnitřní členění budov a staveb"
+public = "building"
+
+[codes."0100000005"]
+name_cz = "provozní plocha pozemní komunikace"
+public = "road"
+
+[codes."0100000058"]
+name_cz = "plocha mostní konstrukce"
+public = "bridge"
+
+[codes."0100000330"]
+name_cz = "nádrž bez vzdouvacího objektu"
+public = "water"
+
+[codes."0100000159"]
+name_cz = "drobná kulturní stavba"
+public = "building"
+
+[codes."0100000154"]
+name_cz = "drobná sakrální stavba"
+public = "building"
+
+[codes."0100000152"]
+name_cz = "hřiště"
+public = "ground"
+
+[codes."0100000218"]
+name_cz = "podrobný bod ZPS"
+note = "geodeticky bod, nema vizualni pritomnost"
+
+[codes."0100000219"]
+name_cz = "výškový bod na terénu"
+note = "geodeticky bod"
+
+[codes."0100000220"]
+name_cz = "identický bod"
+note = "geodeticky bod"

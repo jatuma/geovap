@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 
 @dataclass(frozen=True, order=True)
 class TileId:
@@ -25,11 +27,27 @@ class TileId:
 
 @dataclass(frozen=True)
 class TileRef:
-    """A tile as the dataset presents it: its id, its source file, and its extent if known."""
+    """A tile as the dataset presents it: its id, its source file, and its extent if known.
+
+    `ring` is the tile's outline as the dataset's grid defines it, NOT a bounding box: Drazkov's
+    tiles are skewed parallelograms, and the store build tests each tile's centre for containment in
+    its own ring and persists the polygon alongside the tile. Reducing that to a bbox would
+    over-cover neighbouring tiles. `bbox` is derived from the ring when not supplied, for the cheap
+    rejection tests that only need an extent.
+    """
 
     id: TileId
     path: Path
+    ring: np.ndarray | None = None  # [K,2] float64, world coordinates, first point repeated last
     bbox: tuple[float, float, float, float] | None = None  # (min_e, min_n, max_e, max_n)
+
+    def __post_init__(self) -> None:
+        if self.bbox is None and self.ring is not None:
+            r = np.asarray(self.ring, dtype=np.float64)
+            object.__setattr__(
+                self, "bbox", (float(r[:, 0].min()), float(r[:, 1].min()),
+                               float(r[:, 0].max()), float(r[:, 1].max())),
+            )
 
 
 @dataclass(frozen=True)
