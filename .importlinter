@@ -1,0 +1,86 @@
+; Architectural contracts for the geovap workspace.
+;
+; These are the boundaries the four distributions are built around. They are checked in CI because
+; nothing else stops an upward import: every package installs into the same virtualenv, so a stray
+; `from geovap.runtime import settings` inside `geovap.domain` would work perfectly at runtime and
+; silently undo the layering.
+;
+; Run with:  uv run lint-imports
+
+[importlinter]
+root_packages =
+    geovap
+include_external_packages = True
+
+; ----------------------------------------------------------------------------------------- layers
+; domain is pure (no I/O, no paths, no settings); io reads foreign formats; runtime owns our own
+; artifacts; stages are the pipeline steps; app is the entry point. Imports may only point down.
+[importlinter:contract:layers]
+name = geovap layers: app -> stages -> runtime -> io -> domain
+type = layers
+layers =
+    geovap.app
+    geovap.stages
+    geovap.runtime
+    geovap.io
+    geovap.domain
+
+; -------------------------------------------------------------------------------- domain is pure
+; The single most load-bearing rule: `geovap.domain` must be importable and testable with nothing
+; but numpy and a few arrays. If this breaks, the synthetic-fixture tests stop meaning anything.
+[importlinter:contract:domain-purity]
+name = geovap.domain imports nothing from the layers above it
+type = forbidden
+source_modules =
+    geovap.domain
+forbidden_modules =
+    geovap.io
+    geovap.runtime
+    geovap.stages
+    geovap.app
+
+; --------------------------------------------------------------------------- stream independence
+; Team streams own whole stage directories and talk to each other through artifacts on disk, never
+; through each other's Python. `semantics` is the one legitimate internal chain (segment builds on
+; pseudogt, label builds on segment), so it is not split here.
+[importlinter:contract:stage-independence]
+name = pipeline stages do not import sibling stage groups
+type = independence
+modules =
+    geovap.stages.register
+    geovap.stages.colour
+    geovap.stages.semantics
+    geovap.stages.objects
+    geovap.stages.deliver
+    geovap.stages.verify
+
+; ------------------------------------------------------------------------------- install boundary
+; geovap-core must stay installable and runnable without the torch/transformers stack, so nothing
+; below `geovap.stages.semantics` may be imported by the core stages.
+[importlinter:contract:core-without-torch]
+name = core stages do not import the semantics stage group
+type = forbidden
+source_modules =
+    geovap.domain
+    geovap.io
+    geovap.runtime
+    geovap.stages.prepare
+    geovap.stages.register
+    geovap.stages.colour
+    geovap.stages.objects
+    geovap.stages.verify
+forbidden_modules =
+    geovap.stages.semantics
+    torch
+    transformers
+; Two domain modules are torch-based by nature and ship behind the `geovap-core[torch]` extra:
+;   camera_torch  an independent reference implementation of the camera model, used only by
+;                 tests/test_geometry.py to cross-check geometry.py, and imported inside the test
+;                 function rather than at module scope.
+;   reproject     ERP <-> gnomonic view extraction, used by the view-tiling code in the semantics
+;                 stage group.
+; Neither is reachable from a core stage's import graph, so `uv pip install geovap-core` without the
+; extra still imports and runs. The test below proves that; do not widen this exemption without it.
+ignore_imports =
+    geovap.domain.math.camera_torch -> torch
+    geovap.domain.math.reproject -> torch
