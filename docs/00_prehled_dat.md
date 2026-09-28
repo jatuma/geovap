@@ -2,7 +2,7 @@
 
 Souhrn napříč dokumenty `01`–`09`: co bylo naměřeno/dodáno, jaký experiment z toho co vyrobil, kam
 výstup putuje dál. **Aktuální stav (2026-09-16) je v `09_konsolidace.md`**: celý řetězec `02`–`08` běží
-jedním driverem `mapping.cli.pipeline`, korigované pózy mají hash `34bca9ff23`, výstupem je jedno
+jedním driverem `mapping.cli.pipeline` (dnes `geovap run`), korigované pózy mají hash `34bca9ff23`, výstupem je jedno
 registrované mračno s RGB, segmentací, clustery a panoramaty (`/pointclouds/consolidated/`). Řazeno chronologicky; `07`/`08` zpětně opravují vstupy pro `04`/`05`/`06` — tato
 revize je vyznačena samostatně na konci.
 
@@ -27,7 +27,7 @@ rozděluje práci do `02`/`03`. Uvedeno pro úplnost pořadí.
 - **Výstupy**: LAS 1.4 PF7 s extra dimenzemi (`sem_class`, `src_image`, `col_conf`, `inc_angle`, `dE00`, `n_views`…) v `Geovap_cache/out/{identity,tw45}/`; `out/calib/fit.json`.
 - **Metodika**: Validace probíhá proti existujícímu RGB od TerraScanu (obarvenému ze stejných panoramat) — pokud se model kamery/okluze/kalibrace shoduje s TerraScanem, je správný. Kalibrace edge-ICP vyšla prakticky identita (boresight 0,07°/−0,01°/−0,03°, lever-arm ≤2 cm).
 - **Klíčový výsledek**: medián ΔE00 = 4,93 při pokrytí 94,1 % (běh `tw45`, celé mračno).
-- **Navazuje**: `identity`/`tw45` obarvené mračno a `dataset/frame_quality.csv` (níže, `04`) používá právě tento ΔE jako informativní (ne rozhodující) signál.
+- **Navazuje**: `identity`/`tw45` obarvené mračno a `datasets/drazkov/baseline/frame_quality.csv` (níže, `04`) používá právě tento ΔE jako informativní (ne rozhodující) signál.
 
 ## 3. `03_semanticka_segmentace.md` — Studie proveditelnosti segmentace (§12 experimenty na Dražkově)
 
@@ -41,17 +41,17 @@ rozděluje práci do `02`/`03`. Uvedeno pro úplnost pořadí.
 ## 4. `04_cisty_dataset.md` — Výběr čistého datasetu (klasifikace kvality snímků)
 
 - **Vstupy**: `export.csv`, panoramata, mračno/trajektorie, per-snímkové ΔE00 z běhu `tw45` (`02`).
-- **Metoda**: `mapping/quality.py` (`uv run python -m mapping.quality`) — geometrická rezidua siluet mračna vůči hraně fotky (jemný z-buffer 4000×2000, distanční transformace), konflikt sousedních průjezdů (±45 s okno), rychlost/yaw-rate z trajektorie, ostrost (rozptyl Laplaciánu).
-- **Výstupy**: `dataset/frame_quality.csv` (1 503 řádků), `dataset/clean_frames.json` (indexy po třídách), `dataset/tile_summary.json`, `dataset/frame_quality_map.png`, `dataset/frame_quality_stats.png`.
+- **Metoda**: `mapping/quality.py` (`uv run python -m mapping.quality`, today `uv run python -m geovap.stages.register.screen --dataset drazkov`) — geometrická rezidua siluet mračna vůči hraně fotky (jemný z-buffer 4000×2000, distanční transformace), konflikt sousedních průjezdů (±45 s okno), rychlost/yaw-rate z trajektorie, ostrost (rozptyl Laplaciánu).
+- **Výstupy**: `datasets/drazkov/baseline/frame_quality.csv` (1 503 řádků), `datasets/drazkov/baseline/clean_frames.json` (indexy po třídách), `datasets/drazkov/baseline/tile_summary.json`, `datasets/drazkov/baseline/frame_quality_map.png`, `datasets/drazkov/baseline/frame_quality_stats.png`.
 - **Metodika**: Zamítá ΔE vůči TerraScanu jako kritérium (odráží volbu zdrojového snímku TerraScanem, ne geometrii). Místo toho čtyři třídy (`clean`/`unverified`/`usable`/`reject`) podle geometrického rezidua siluet, konfliktu průjezdů, pohybu a ostrosti.
 - **Klíčový výsledek (na exportních pózách)**: clean 825, unverified 163, usable 295, reject 220 z 1 503.
 - **Navazuje**: `clean_frames.json` je vstupní filtr pro pseudo-GT v `05` a pro render/kalibrační experimenty; později (viz `08`) je celá tato klasifikace přepočtena na korigované pózy a **promotována** jako produkční sada.
 
 ## 5. `05_benchmark_segmentace.md` — Dataset a benchmark segmentace (JVF pseudo-GT v ploše)
 
-- **Vstupy**: `dataset/clean_frames.json` (`04`, 825 čistých snímků), JVF (`1_ZPS_GAD.geojson`), mračno, `dataset/seg/classes.json` (taxonomie).
+- **Vstupy**: `datasets/drazkov/baseline/clean_frames.json` (`04`, 825 čistých snímků), JVF (`1_ZPS_GAD.geojson`), mračno, `datasets/drazkov/baseline/seg/classes.json` (taxonomie).
 - **Metoda**: `mapping/seg/areas.py` (polygonizace JVF linií na plochy tříd), `mapping/seg/point_labels.py` (pravidlová klasifikace bodů mračna), `mapping/seg/rasters.py`, `mapping/seg/views.py` (16 horizont-zarovnaných gnómonických dlaždic 1024² na snímek), `mapping/seg/dataset.py` (rozdělení train/val/test k-means(10) na pozicích kamery), `mapping/cli/seg_build.py` + `mapping/cli/seg_bench.py` (zero-shot inference 6 modelů: EoMT-L/Cityscapes, Mask2Former-Vistas, Mask2Former-Cityscapes, EoMT-DINOv3/ADE20K, OneFormer-Cityscapes, SegFormer-B5), `mapping/seg/fusion.py`, `mapping/seg/taxonomy.py` (společná taxonomie pro srovnání modelů).
-- **Výstupy**: `Geovap_cache/segds/` (areas/rasters/points/labels/views), `dataset/seg/classes.json`, `dataset/seg/splits.json`, `dataset/seg/bench_frames.json` (100 benchmarkových snímků), `dataset/seg/bench/{results.json, summary.csv, per_class_iou.csv, boundary.csv, bands.csv, tables.md}`.
+- **Výstupy**: `Geovap_cache/segds/` (areas/rasters/points/labels/views), `datasets/drazkov/baseline/seg/classes.json`, `datasets/drazkov/baseline/seg/splits.json`, `datasets/drazkov/baseline/seg/bench_frames.json` (100 benchmarkových snímků), `datasets/drazkov/baseline/seg/bench/{results.json, summary.csv, per_class_iou.csv, boundary.csv, bands.csv, tables.md}`.
 - **Metodika**: JVF nemá polygony, jen hraniční linie a jeden definiční bod na plochu — plochy se rekonstruují polygonizací (shapely) a přiřazením třídy z definičního bodu (95 % plochy vyřešeno). Každý bod mračna dostane třídu podle vzdálenosti/výšky k nejbližší linii (plot, zeď, zábradlí, půdorys budovy, vegetace nad DTM). Šest veřejných modelů se testuje zero-shot na 16 gnómonických výřezech fúzovaných zpět do ERP, hodnocení v pásu φ∈[−55°,45°] proti tomuto pseudo-GT.
 - **Klíčový výsledek**: EoMT-L (DINOv2, Cityscapes) vítězí — mIoU_core 0,358 (100 snímků) / 0,330 (čistá blízká zóna), nejrychlejší (4,7 s/panorama, 3,8 GB) → doporučen jako výchozí model pro fázi 2. Zjištěna chyba: 328/755 měřitelných čistých snímků má posun JVF↔fotka > 20 px (`nearfield_bad`), přisouzeno driftu průjezdu vůči JVF ~0,3–0,6 m — **tento nález je motivací pro `08`**.
 - **Navazuje**: EoMT-L a tato benchmarková infrastruktura se používají v `pointcloud-tools`/`mapping.cli.seg_build` k promítnutí segmentace zpět do mračna (commit „Project EoMT-L segmentation into the point cloud, serve in Potree").
@@ -77,7 +77,7 @@ rozděluje práci do `02`/`03`. Uvedeno pro úplnost pořadí.
 **Klíčový bod celého přehledu**: tento dokument **přepočítává vstup pro `04`, `05`, `06`, `07`** a
 vytváří `poses_corrected` — druhý, korigovaný zdroj póz vedle `export.csv`.
 
-- **Vstupy**: `export.csv` (zachován jako regresní kotva), mračno rozšířené o `EXTRA_COLUMNS` (`user_data`, `scan_angle_rank`, `return_number`) přes `mapping/cli/store_add_columns.py`, `dataset/frame_quality.csv` (`04`), JVF hraniční linie (pokus o absolutní datum).
+- **Vstupy**: `export.csv` (zachován jako regresní kotva), mračno rozšířené o `EXTRA_COLUMNS` (`user_data`, `scan_angle_rank`, `return_number`) přes `mapping/cli/store_add_columns.py`, `datasets/drazkov/baseline/frame_quality.csv` (`04`), JVF hraniční linie (pokus o absolutní datum).
 - **Metoda (CLI řetězec v `mapping/cli/`)**:
   1. `store_add_columns.py` + `pass_psid.py` — rozšíření store, křížová tabulka `point_source_id`.
   2. `align_frames.py` — diagnostika.
@@ -86,7 +86,7 @@ vytváří `poses_corrected` — druhý, korigovaný zdroj póz vedle `export.cs
   5. `register_passes.py` — párové ICP (bod-k-rovině) registrace 30 průjezdů navzájem + pokus o absolutní JVF datum (`mapping/pass_reg.py`).
   6. `assemble_poses.py` — sestavení finálních `poses_corrected`.
   7. `pose_report.py` — validace (`compare_pose_sources`), 6 nezávislých metrik.
-- **Výstupy**: `Geovap_cache/out/poses/poses_corrected.{csv,json}` (json = provenience: S3b+S4+S5b, git rev, hash `export.csv`), `out/pass_reg/{pass_transforms.json, conflict_reg.json, jvf_offsets.json}`, `out/poses/traj_diag/`, `out/poses/report_final.{md,json}`; downstream přestavěné `Geovap_cache/out/dataset_e8f3e1/` (nová `04`) a `Geovap_cache/segds_e8f3e1/` (nová `05` pseudo-GT), `dataset/seg/project_eomt_city.{json,md}` (přeprojektovaná segmentace do mračna), export-baseline zálohy v `dataset/export_baseline/` a `dataset/seg/export_baseline/`.
+- **Výstupy**: `Geovap_cache/out/poses/poses_corrected.{csv,json}` (json = provenience: S3b+S4+S5b, git rev, hash `export.csv`), `out/pass_reg/{pass_transforms.json, conflict_reg.json, jvf_offsets.json}`, `out/poses/traj_diag/`, `out/poses/report_final.{md,json}`; downstream přestavěné `Geovap_cache/out/dataset_e8f3e1/` (nová `04`) a `Geovap_cache/segds_e8f3e1/` (nová `05` pseudo-GT), `datasets/drazkov/baseline/seg/project_eomt_city.{json,md}` (přeprojektovaná segmentace do mračna), export-baseline zálohy v `datasets/drazkov/baseline/export_baseline/` a `datasets/drazkov/baseline/seg/export_baseline/`.
 - **Metodika**: (a) S3b — hustá orientace ~200 Hz z rovin obou skenovacích hlav; (b) S4 — per-snímkové edge-ICP zpřesnění proti hranám fotek; (c) S5 — párové ICP mezi 30 průjezdy (řízené `point_source_id`), pokus o absolutní JVF datum **zamítnut** (detektor obrubníku na tomto venkovském datasetu příliš šumí, předpokládané rozdělení „dobré/špatné" průjezdy z `05` empiricky vyvráceno); (d) S7 — validace `export` vs. `poses_corrected` na šesti metrikách.
 - **Klíčové výsledky**:
   - Párová registrace průjezdů: RMS 0,102 m → 0,035 m (66/72 párů konvergovalo); konflikty průjezdů 17→16/309.
@@ -95,9 +95,9 @@ vytváří `poses_corrected` — druhý, korigovaný zdroj póz vedle `export.cs
   - Parallax (S6): neověřitelné — žádné edge-ICP asociace blíž než 19,5 m.
   - Nový otevřený problém: azimutálně strukturované, znaménko-měnící se reziduum v zatáčkách, nevysvětlitelné žádnou tuhou pózou jednoho snímku (možný artefakt nesimultánního sešívání Ladybug).
 - **Dopad na navazující data** (přepočet `04`/`05`/`06`/`07`):
-  - `dataset/clean_frames.json`: 825→**830** clean (viz `04 §5`, detailní rozpad turnoveru).
+  - `datasets/drazkov/baseline/clean_frames.json`: 825→**830** clean (viz `04 §5`, detailní rozpad turnoveru).
   - Segmentační pseudo-GT metrika `fence` klesla 13,4 %→11,1 % (citlivost na S5b posun).
-  - Projekce segmentace do mračna (`dataset/seg/project_eomt_city.json`): pokrytí +0,8 pb, ale mIoU_core −2,4 pb (zavlečeno souběžným přestavěním pseudo-GT) — a odhalena/opravena reálná chyba, kde `BENCH_DIR` byl nesprávně citlivý na zdroj pózy (první běh měl `n_frames=0`/`coverage=0.0` na všech 38 dlaždicích).
+  - Projekce segmentace do mračna (`datasets/drazkov/baseline/seg/project_eomt_city.json`): pokrytí +0,8 pb, ale mIoU_core −2,4 pb (zavlečeno souběžným přestavěním pseudo-GT) — a odhalena/opravena reálná chyba, kde `BENCH_DIR` byl nesprávně citlivý na zdroj pózy (první běh měl `n_frames=0`/`coverage=0.0` na všech 38 dlaždicích).
   - **Kritické upozornění pro každého spotřebitele**: `poses_corrected` rotuje kameru kolem těžiště každého průjezdu, takže každý produkt kotvený ve světovém rámci (obarvení, export LAS, segmentační rastery) **musí** navíc použít `CloudStore(registration=pass_transforms.json)`, jinak vznikne až ~1–2 m falešný posun kamera↔mračno (např. dlaždice 037: ΔCIE76 +0,012 s registrací vs. +1,724 bez ní).
 
 ## 9. Souhrnný diagram závislostí
@@ -132,8 +132,8 @@ JVF (1_ZPS_GAD.geojson) ──────────────────�
 ## 10. Kde co leží (verzované vs. cache) — stav po `09`
 
 - Cache je `/mnt/Geovap_cache` (symlink `/home/jatuma/repos/Geovap/Geovap_cache`, env `GEOVAP_CACHE`); Potree výstupy `/mnt/Geovap_cache/TestOutput/output` (env `POTREE_OUTPUT`, `pointcloud-tools/.env`).
-- Verzované v `dataset/`: `frame_quality.csv`, `clean_frames.json` (**835 clean**, hash `34bca9`), `tile_summary.json`, mapy/statistiky, `seg/{classes,splits,bench_frames,stats,project_eomt_city}.json`, `seg/bench/` (nové pseudo-GT) + `seg/bench/export_frames/` (stejné snímky jako `05`), `seg/project_eomt_city.md`.
-- Regresní baseline (export pózy, ne živá data): `dataset/export_baseline/`, `dataset/seg/export_baseline/`; snapshot stavu před `09`: `Geovap_cache/out/pipeline/baseline/`.
+- Verzované v `datasets/drazkov/baseline/`: `frame_quality.csv`, `clean_frames.json` (**835 clean**, hash `34bca9`), `tile_summary.json`, mapy/statistiky, `seg/{classes,splits,bench_frames,stats,project_eomt_city}.json`, `seg/bench/` (nové pseudo-GT) + `seg/bench/export_frames/` (stejné snímky jako `05`), `seg/project_eomt_city.md`.
+- Regresní baseline (export pózy, ne živá data): `datasets/drazkov/baseline/export_baseline/`, `datasets/drazkov/baseline/seg/export_baseline/`; snapshot stavu před `09`: `Geovap_cache/out/pipeline/baseline/`.
 - Necachované originály / velké produkty: `out/poses/` (`poses_corrected`, `report_final`), `out/pass_reg/`, `frames/34bca9/`, `out/tw45/`, `out/dataset_34bca9/`, `segds_34bca9/`, `out/seg_eomt_34bca9/`, `out/consolidated/` (LAZ + `validation/`), `out/pipeline/` (markery, `comparison.md`).
 - Vizualizace v Potree: `TestOutput/output/consolidated/{cloud,objects,panos_*,index.html}` → `http://localhost:8080/pointclouds/consolidated/index.html`; staré `clusters/`, `eomt_city_seg/` zůstávají pro porovnání.
 
@@ -148,8 +148,18 @@ detail `09_konsolidace.md §7`). Neplatná data archivována (`mv`):
   `seg_eomt`, `seg_eomt_34bca9`, `test_drazkov`, `clusters/{colored,index.html,objects,rgb}`.
 
 Ponecháno beze změny (nezávislé na kamerovém modelu): `store`, `gray`, `vehicle_mask.npz`,
-`segds/bench`, `clusters/src`. Rerun (`uv run python -m mapping.cli.pipeline run --from align --force
+`segds/bench`, `clusters/src`. Rerun (dnes: `uv run geovap run --from align --force
 --detach`) spuštěn 2026-09-16 11:30 UTC (~5–6 h); archiv se smaže až po ověření nového běhu uživatelem.
+
+> **Poznámka (po restrukturalizaci na `packages/`, nemění žádné z čísel výše): staré `mapping/config.py`
+> konstanty a `GEOVAP_CACHE` už neexistují.** Dnešní ekvivalent je tříkořenový popis v
+> `packages/geovap-core/geovap/runtime/settings.py` (`Paths.data_root`/`workspace`/`publish`, env
+> `$GEOVAP_DATA`/`$GEOVAP_WORKSPACE`/`$GEOVAP_PUBLISH` — pro Dražkov konkrétně, protože `datasets/drazkov.toml`
+> tyto proměnné jmenuje ve svém `[paths]`; jiný dataset může chtít jiné jméno) a `$GEOVAP_DATASETS`/`$GEOVAP_DATASET`
+> (který popisovač se použije) / `$GEOVAP_POSES` (export vs. korigovaná tabulka) v `runtime/workspace.py`.
+> Adresářový rozpad `store/`, `frames/`, `out/poses/`, `out/pipeline/`, `dataset/` (derived, per-run) je
+> beze změny; jediná strukturální změna je konsolidovaný produkt (viz poznámka v `09_konsolidace.md`).
+> Viz `docs/bring-your-own-dataset.md` pro aktuální popis.
 
 ## 11. `09_konsolidace.md` — Konsolidace (jeden driver, přestavba na `34bca9`, jeden 3D produkt)
 
@@ -158,3 +168,11 @@ tw45 ΔE00 5,03 / 93,99 %; clean 835; pseudo-GT a 3D projekce v rámci ±0,1 pb 
 (Potree koule ověřeny proti kamerovému modelu, NCC 1,000).
 
 **2026-09-17 – Potree data na rychlém disku.** Viewer servíruje `/home/jatuma/repos/Geovap/potree_output/` (env `POINTCLOUD_OUTPUT` v `pointcloud-tools/.env`, `config.POTREE_OUTPUT_DIR`); obsahuje `consolidated/{cloud,objects,vendor,panos*,index.html}` a `clusters/src`. `/mnt/Geovap_cache/TestOutput/output/consolidated` je jen starší kopie.
+
+> **Poznámka (genuinely changed, ne jen přejmenováno)**: `objects/` a `vendor/` jako samostatné sady
+> LAZ vedle `cloud/` už neexistují. Konsolidovaný produkt je dnes jedno LAZ na dlaždici nesoucí
+> všechny dimenze najednou (barva, sémantika, cluster id, referenční RGB) — `pointcloud-tools/` a
+> `mapping/` samy o sobě zanikly, nahradil je `packages/geovap-deliver` (stage `merge`,
+> `geovap.stages.deliver.merge`) a `packages/geovap-deliver/geovap/infra/containers/compose.yml`
+> pro PotreeConverter/viewer. Popis proč a co to znamená pro `docs/09_konsolidace.md`'s tříparalelní
+> LAZ popis je v poznámce tamtéž a v `docs/artifacts.md` (`consolidated_tiles`).

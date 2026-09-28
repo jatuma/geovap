@@ -125,6 +125,9 @@ export GEOVAP_POSES=corrected      # nebo cesta k libovolné pose tabulce
 uv run python -m mapping.cli.render_frame 367 ...
 ```
 
+Dnes: `uv run python -m geovap.stages.prepare.render 367 --dataset drazkov ...` (`--poses corrected`
+je sdílený dataset flag, stejná sémantika jako `$GEOVAP_POSES`).
+
 nebo v kódu `load_poses("corrected")` / `load_poses("/path/to/table.csv")`. Bez nastavení
 `GEOVAP_POSES` (nebo s `GEOVAP_POSES=export`) je chování **byte-identické** dnešnímu stavu —
 `_load_export()` se nezměnila, `test_load_poses_export_unchanged` to hlídá.
@@ -166,7 +169,7 @@ levnější dodatečnou pojistku proti sousednímu průjezdu ve stejném časov�
 
 ### 3.3 S2 — diagnostika (baseline + parallax)
 
-**Baseline** (`out/poses/report_export_baseline.md`, z `dataset/frame_quality.csv`, n = 1 503,
+**Baseline** (`out/poses/report_export_baseline.md`, z `datasets/drazkov/baseline/frame_quality.csv`, n = 1 503,
 n s edge-ICP fitem = 1 432): medián |du| 0,43 px, |dv| 1,06 px, MAD du 8,05 px, inlier@8px 0,197
 celkem; po třídách clean 0,38/0,78 px (MAD 8,1/11,2), reject 0,63/6,57 px (MAD 8,0/13,5); zatáčky
 (n=209) 0,40/1,19 px vs. rovné (n=1294) 0,43/1,04 px — na úrovni celého snímku není zatáčka vidět v
@@ -290,7 +293,7 @@ workerů, log `full_run.log`): **3 112 s celkem**, výsledek `status_counts` v C
 **Akceptační práh je nízko záměrně.** Zjištění během vývoje: na 20 čistých rovných snímcích
 (|yaw_rate|<3°/s) je medián `rms_px` v jejich **nerefinované** póze 22,5 — skoro přesně jako "před"
 čísla ve vývojovém běhu — přestože medián |du|,|dv| je jen 0,46/1,16 px a MAD 7,9/11,5 px, což sedí
-s `dataset/frame_quality.csv`'s clean-baseline (0,38/0,78 px medián, 8,1/11,2 px MAD) na šum
+s `datasets/drazkov/baseline/frame_quality.csv`'s clean-baseline (0,38/0,78 px medián, 8,1/11,2 px MAD) na šum
 vzorkování. Samotná edge-ICP metrika má **vlastní podlahu** (šum vegetace/okluzních hran nafukuje
 soft-L1 RMS přes ocasy) ~20 px i u dobře zarovnaných snímků — poměr RMS jako akceptační kritérium
 by tedy honil šum místo chyby pózy. Akceptace proto zrcadlí přímo `quality.py`: robustní medián
@@ -390,7 +393,8 @@ známý 3-uzlový graf), `test_geometry.py` (`euler_from_vehicle_rotation` round
 
 **Validační zpráva S7 hotová** (`pose_report.compare_pose_sources` + `run_final_report`,
 `out/poses/report_final.md`/`.json`; spuštění `uv run python -m mapping.cli.pose_report run
---workers 8`, ~26 min). Porovnává `export` vs. `poses_corrected` na šesti nezávislých metrikách:
+--workers 8`, ~26 min; dnes `uv run python -m geovap.stages.register.report run --workers 8 --dataset drazkov`,
+stage `pose-report`). Porovnává `export` vs. `poses_corrected` na šesti nezávislých metrikách:
 
 **1. Siluetová shoda** (`quality.py`, vlastní póza každého zdroje):
 
@@ -441,7 +445,7 @@ LAS, seg dataset rastry), musí mračno registrovat stejným `pass_transforms.js
 falešný offset kamera-vs-mračno v řádu až 1–2 m daleko od těžiště registrace daného průjezdu. Bod 1
 (siluety) tímhle problémem netrpí — `compare_pose_sources` tam bere hrany z okolí vlastní (případně
 posunuté) pózy zdroje stejným, neregistrovaným `CloudStore()`, jakým dnes vzniká
-`dataset/frame_quality.csv`, takže lokální per-snímkové kontroly zůstávají informativní i bez
+`datasets/drazkov/baseline/frame_quality.csv`, takže lokální per-snímkové kontroly zůstávají informativní i bez
 registrace mračna.
 
 ---
@@ -516,6 +520,21 @@ uv run python -m mapping.cli.assemble_poses run                            # S_a
 uv run python -m mapping.cli.pose_report run --workers 8                   # S7, ~26 min -> report_final.md/.json
 ```
 
+Dnešní ekvivalent, stage po stage (`geovap stages --dataset drazkov` vypíše celý seznam;
+`store_add_columns`+`pass_psid` splynuly do jedné stage `store-columns`):
+
+```
+uv run python -m geovap.stages.prepare.store --stage columns --workers 8 --dataset drazkov   # S1: store-columns (+ psid crosstab)
+uv run python -m geovap.stages.register.align --workers 8 --dataset drazkov                  # S2: align
+uv run python -m geovap.stages.register.trajectory --stage rot --passes all --workers 6 --dataset drazkov       # S3b: traj-rot
+uv run python -m geovap.stages.register.trajectory --stage validate --dataset drazkov                            # S3b QA: traj-validate
+uv run python -m geovap.stages.register.refine --poses export --passes all --workers 8 --dataset drazkov \
+    --out Geovap_cache/out/poses/poses_refined_export.csv                                     # S4: refine
+uv run python -m geovap.stages.register.passes --datum none --dataset drazkov                 # S5: register
+uv run python -m geovap.stages.register.passes --stage assemble --dataset drazkov             # S_assemble: assemble
+uv run python -m geovap.stages.register.report run --workers 8 --dataset drazkov              # S7: pose-report
+```
+
 `build_trajectory` **bez** `--rot-only` (S3, poziční mód) je v repozitáři, ale podle §3.4 se
 nespouští produkčně — je tam jen pro budoucí pokus s křížovou konzistencí hlav.
 
@@ -524,7 +543,7 @@ nespouští produkčně — je tam jen pro budoucí pokus s křížovou konziste
 ## 7. Dopad na dataset
 
 Kromě `pose_report` (§3.8, siluety/barva/interpolace, výše) proběhla přestavba obou navazujících
-datasetů na `poses_corrected` — plný detail a čísla v `04_cisty_dataset.md §5` a `dataset/README.md`.
+datasetů na `poses_corrected` — plný detail a čísla v `04_cisty_dataset.md §5` a `datasets/drazkov/baseline/README.md`.
 Shrnutí:
 
 **Čistý dataset (`04`, `mapping/quality.py`).** Celý běh (1 503/1 503 snímků) do
@@ -536,7 +555,7 @@ zatáčkách, kde `quality.py` taky měří. `clean` 825→**830** (+5), `reject
 jednosměrně) — čisté zlepšení je malé, ne dramatické. Nejhorší průjezdy (12, 13, 14 — §1 zmiňuje jen
 souhrnně, detail v `04 §3`) zůstávají nejhoršími i po korekci, jen o pár snímků méně vyhrocené;
 konflikty průjezdů 26→23 snímků, ale s částečně jinou množinou průjezdů (17, 20 nově, ne jen
-vymizení starých). `dataset/clean_frames.json` (produkční množina pro `seg/render_labels.py` atd.)
+vymizení starých). `datasets/drazkov/baseline/clean_frames.json` (produkční množina pro `seg/render_labels.py` atd.)
 **zůstává na exportních pózách** — tahle přestavba je srovnávací měření, ne změna produkční množiny.
 
 **Segmentační pseudo-GT (`03`/`05`, `mapping/seg/`).** Přestavba do `Geovap_cache/segds_e8f3e1/` nad
@@ -565,11 +584,12 @@ volá `load_poses("corrected")` napřímo mimo tyhle dva pipeline, musí mračno
 
 **Jak reprodukovat**: `GEOVAP_POSES=corrected uv run python -m mapping.quality 8 350` (čistý
 dataset, `04 §5`) a `GEOVAP_POSES=corrected uv run python -m mapping.cli.seg_build areas|rasters|
-points|labels|views|dataset` (pseudo-GT, `dataset/README.md`) — oba automaticky píšou do
+points|labels|views|dataset` (pseudo-GT, `datasets/drazkov/baseline/README.md`) — oba automaticky píšou do
 hash-suffixovaných adresářů (`out/dataset_e8f3e1/`, `Geovap_cache/segds_e8f3e1/`), nikdy nepřepíšou
-exportní výstupy.
+exportní výstupy. Dnes: `--poses corrected uv run python -m geovap.stages.register.screen --workers 8 --limit 350 --dataset drazkov`
+a `--poses corrected uv run python -m geovap.stages.semantics.pseudogt.dataset areas|rasters|points|labels|views|dataset --dataset drazkov`.
 
-**Projekce segmentace do mračna (`06`, `mapping/seg/project.py`, `dataset/seg/project_eomt_city.{json,md}`).**
+**Projekce segmentace do mračna (`06`, `mapping/seg/project.py`, `datasets/drazkov/baseline/seg/project_eomt_city.{json,md}`).**
 Přestavba na `poses_corrected` (registrované mračno, produkty `e8f3e1`, čistá množina 830 — 5 nově
 promovaných snímků oproti exportním 825): (1) EoMT-L předpověď (`segds/bench/eomt_city/`, pózo-nezávislá,
 jen fotka) doplněna pro 37 chybějících snímků čisté množiny (~4,5 s/snímek, RTX 3090, ~3 min celkem);
@@ -594,7 +614,7 @@ apod.) zůstávají vzájemně v souřadnicích konzistentní. Registrace se pou
 který bod vidí který snímek (`open_store(poses)` → `td.xyz_m()` pro promítání), nikdy se nezapisuje do
 výstupního mračna.
 
-**Výsledek (export 825 → corrected 830, `dataset/seg/project_eomt_city.md` má plnou tabulku).** coverage
+**Výsledek (export 825 → corrected 830, `datasets/drazkov/baseline/seg/project_eomt_city.md` má plnou tabulku).** coverage
 0,799→**0,807** (+0,8 pp), pixel acc 0,683→**0,667** (−1,5 pp), mIoU_core 0,352→**0,328** (−2,4 pp),
 mIoU_core (ground pts) 0,213→0,197, acc (ground pts) 0,718→0,704. Po tiles (38): coverage se zlepšila u 16,
 zhoršila u 14 (mean +0,6 pp; tiles 002/004 nejvíc, +14,8/+11,8 pp — víc snímků nově v dosahu `r_max=40 m`
@@ -618,3 +638,8 @@ tenhle běh nedělal.
 run --workers 8` + `eval` + `render` + PotreeConverter (`pointcloud-tools/docker-compose.yml`) +
 `potree-classes`, stejně jako u exportního běhu (`05_benchmark_segmentace.md`), jen s `GEOVAP_POSES=corrected`
 před importem.
+
+Dnes: `--poses corrected uv run python -m geovap.stages.semantics.segment.evaluate run --models eomt_city
+--frames <chybějící snímky> --dataset drazkov` a `--poses corrected uv run python -m geovap.stages.semantics.label.project
+run --workers 8 --dataset drazkov` + `eval` + `render` + `potree-classes` (stage `seg-project`); PotreeConverter
+je dnes stage `potree` (`geovap.stages.deliver.octree`), ne samostatný `pointcloud-tools/docker-compose.yml`.

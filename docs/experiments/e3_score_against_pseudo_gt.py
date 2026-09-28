@@ -1,3 +1,13 @@
+"""NOT MAINTAINED -- historical record only.
+
+Imports the deleted `experiments/common` package (`class_map`, `io_data`, `camera`); kept for what
+it measured (`03_semanticka_segmentace.md` SS12), not as runnable code.
+
+What replaced it: scoring model predictions against JVF-derived pseudo-GT is now the `evaluate`/
+`report` subcommands of the `seg-eval` stage (`geovap.stages.semantics.segment.evaluate`), which
+folds this script's per-class banding logic into a full confusion-matrix + boundary-IoU report; see
+`05_benchmark_segmentace.md` for the corresponding measurements on the current pipeline.
+
 """E3 - skore zero-shot baseline (E2) proti realne JVF pseudo-GT (E1).
 
 Pro kazdy JVF objekt pokryty v E1 (coverage.csv) a segmentovany v E2 (seg_*.npz):

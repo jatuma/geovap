@@ -1,3 +1,13 @@
+"""NOT MAINTAINED -- historical record only.
+
+Imports the deleted `experiments/common` package (`io_data`, `reproject`); kept for what it
+measured (`03_semanticka_segmentace.md` SS12), not as runnable code.
+
+What replaced it: zero-shot model inference over reprojected views became the `seg-eval` stage
+(`geovap.stages.semantics.segment.evaluate`/`models.py`/`bench.py`), with the model wrapper
+(`ModelSpec`) explicitly documented as descending from this script's `mask2former_semantic_probs`,
+and the view geometry moved to `geovap.stages.semantics.pseudogt.views`.
+
 """E2 - zero-shot baseline segmentace panoramat pomoci hotoveho Mask2Former (Mapillary Vistas
 taxonomie, checkpoint facebook/mask2former-swin-large-mapillary-vistas-semantic, MIT kod /
 vistas vahy - vyzkumne pouziti, viz SS5.1 03_semanticka_segmentace.md).

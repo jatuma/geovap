@@ -1,3 +1,15 @@
+"""NOT MAINTAINED -- historical record only.
+
+This script imports `common.class_map`, `common.io_data`, `common.camera` -- the flat
+`experiments/common/` package that was deleted in the `packages/` restructuring. It will not run
+as-is; it is kept for what it measured (`03_semanticka_segmentace.md` SS12), not as runnable code.
+
+What replaced it: the JVF-projection-as-pseudo-GT idea became a first-class, resumable stage,
+`segds` (`geovap.stages.semantics.pseudogt.*`, esp. `areas.py`/`points.py`/`erp.py`/`views.py`),
+which reads reference vectors through the `ReferenceVectors` adapter Protocol
+(`geovap.io.protocols`) instead of `common.io_data.JvfObject`, and reprojects through
+`geovap.domain.model.geometry`/`geovap.domain.math.sampling` instead of `common.camera`.
+
 """E1 - projekce JVF vektoru (linie/body) do panoramat = pseudo-ground-truth zdarma.
 
 Pro kazdy JVF objekt najde nejblizsi panorama (prostorove, do MAX_DIST metru),

@@ -1,0 +1,42 @@
+# Who owns what.
+#
+# The restructuring split the pipeline so that no two streams share a directory and streams talk to
+# each other only through the artifacts in `docs/artifacts.md`. This file records that split. Add
+# your GitHub handles where the placeholders are; until then the paths themselves are the useful
+# part, and a reviewer can see at a glance whether a change crosses a boundary.
+#
+# A change that touches two stream blocks below is a cross-stream change, and those are the ones
+# worth a second pair of eyes: the layering contracts (`uv run lint-imports`) will catch an illegal
+# import, but nothing catches a stage quietly changing the shape of an artifact another stream reads.
+
+# ---- Foundation. Change-by-review after Phase 0: everything else is built on these.
+/packages/geovap-core/geovap/domain/          @geovap/foundation
+/packages/geovap-core/geovap/io/              @geovap/foundation
+/packages/geovap-core/geovap/runtime/         @geovap/foundation
+/packages/geovap-core/geovap/stages/base/     @geovap/foundation
+/packages/geovap-core/geovap/stages/prepare/  @geovap/foundation
+/datasets/                                    @geovap/foundation
+
+# ---- A: panorama registration
+/packages/geovap-core/geovap/stages/register/ @geovap/registration
+
+# ---- B: semantics (optional branch; the whole distribution)
+/packages/geovap-semantics/                   @geovap/semantics
+
+# ---- C: clustering (optional branch, and the only one that imports no project code)
+/packages/geovap-core/geovap/stages/objects/  @geovap/clustering
+
+# ---- D: colour
+/packages/geovap-core/geovap/stages/colour/   @geovap/colour
+
+# ---- E: delivery -- the consolidated product, the octree, the viewer (the whole distribution)
+/packages/geovap-deliver/                     @geovap/delivery
+
+# ---- F: the app and verification
+/packages/geovap-app/                         @geovap/app
+/packages/geovap-core/geovap/stages/verify/   @geovap/app
+
+# ---- Shared. A change here affects every stream.
+/.importlinter                                @geovap/foundation
+/pyproject.toml                               @geovap/foundation
+/docs/artifacts.md                            @geovap/foundation

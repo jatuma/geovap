@@ -1,6 +1,6 @@
 # Čistý dataset Dražkov — snímky ověřeně zarovnané s mračnem
 
-Výběr podmnožiny panoramat (a k nim náležejících bodů), u kterých je zarovnání s mračnem **nezávisle ověřené** a póza dobře podmíněná, pro další práci: pseudo-GT pro segmentaci, přenos značek 2D→3D, fúzi barev, kalibrační experimenty. Definice je objektivní (kritéria níže), reprodukovatelná (`uv run python -m mapping.quality`) a verzovaná v `dataset/`.
+Výběr podmnožiny panoramat (a k nim náležejících bodů), u kterých je zarovnání s mračnem **nezávisle ověřené** a póza dobře podmíněná, pro další práci: pseudo-GT pro segmentaci, přenos značek 2D→3D, fúzi barev, kalibrační experimenty. Definice je objektivní (kritéria níže), reprodukovatelná (`uv run python -m mapping.quality`, dnes `uv run python -m geovap.stages.register.screen --dataset drazkov`) a verzovaná v `datasets/drazkov/baseline/`.
 
 ## 1. Proč ne podle ΔE
 
@@ -43,17 +43,17 @@ U třídy *clean* je P90 \|du\| = 1,5 px a P90 \|dv\| = 3,4 px (0,15°); pokrýv
 
 Průjezdy s nejhorší bilancí: **12** (143 snímků, 28 clean, 56 reject — severovýchodní smyčka přes dlaždice 004–009 včetně okrajových 001, 006, 008), 13 a 14 (severozápad, dlaždice 002, 003, 007), 15. Průjezdy 0, 1, 23–27 (hlavní ulice a jižní část) jsou téměř celé čisté.
 
-![mapa](dataset/frame_quality_map.png)
+![mapa](datasets/drazkov/baseline/frame_quality_map.png)
 
-![statistiky](dataset/frame_quality_stats.png)
+![statistiky](datasets/drazkov/baseline/frame_quality_stats.png)
 
 ### Dlaždice
 
-`dataset/tile_summary.json`: pro každou dlaždici počet snímků s kamerou do 20 m od jejího bboxu po třídách. **29 z 38 dlaždic** má ≥ 60 % snímků clean + unverified: 002–005, 007, 010, 011, 013–017, 019–021, 023, 025–028, 030–038. Slabé dlaždice (více reject než clean): **001, 006, 009** (okraje obce, průjezdy 12–14) — používat jen s filtrem podle snímků.
+`datasets/drazkov/baseline/tile_summary.json`: pro každou dlaždici počet snímků s kamerou do 20 m od jejího bboxu po třídách. **29 z 38 dlaždic** má ≥ 60 % snímků clean + unverified: 002–005, 007, 010, 011, 013–017, 019–021, 023, 025–028, 030–038. Slabé dlaždice (více reject než clean): **001, 006, 009** (okraje obce, průjezdy 12–14) — používat jen s filtrem podle snímků.
 
 ## 4. Jak dataset používat
 
-Soubory (verzované kopie v `dataset/`, originály v `Geovap_cache/out/dataset/`):
+Soubory (verzované kopie v `datasets/drazkov/baseline/`, originály v `Geovap_cache/out/dataset/`):
 
 - `frame_quality.csv` — 1 503 řádků, všechny veličiny + `cls` + `reasons`.
 - `clean_frames.json` — seznamy indexů snímků po třídách (index = pořadí v čase = `mapping.poses.load_poses()`), použité prahy.
@@ -65,11 +65,12 @@ Typické použití:
 import json
 from mapping.poses import load_poses
 from mapping.frame_select import FrameIndex
-sel = json.load(open("dataset/clean_frames.json"))
+sel = json.load(open("datasets/drazkov/baseline/clean_frames.json"))
 frames = set(sel["clean"]) | set(sel["unverified"])      # 988 snímků
 poses = load_poses(); fi = FrameIndex(poses)
 # pseudo-GT / render jen z čistých snímků:
 #   uv run python -m mapping.cli.render_frame <k> --jvf --overlay      pro k in frames
+#   dnes: uv run python -m geovap.stages.prepare.render <k> --jvf --overlay --dataset drazkov
 # obarvení / hlasování o třídách: v mapping.colorize omezit `frames` na tuto množinu
 #   (Options zatím nemá filtr snímků – přidat `frame_whitelist`), nebo body filtrovat podle src_image.
 ```
@@ -93,12 +94,12 @@ takže korigovaný běh není potřeba nijak zvlášť míchat s `CloudStore(reg
 `GEOVAP_POSES=corrected`.
 
 ```
-GEOVAP_POSES=corrected uv run python -m mapping.quality 8 350   # 8 procesů, přírůstkově do dataset_e8f3e1/
+GEOVAP_POSES=corrected uv run python -m mapping.quality 8 350   # 8 procesů, přírůstkově do dataset_e8f3e1/ -- dnes: uv run python -m geovap.stages.register.screen --workers 8 --limit 350 --dataset drazkov
 GEOVAP_POSES=corrected uv run python -c "from mapping.quality import reclassify; reclassify()"
 ```
 
 Celý běh (1 503/1 503 snímků, dokončeno) proti stejnému `export.csv`-founded `frame_quality.csv` v
-`dataset/export_baseline/` (regresní referenční bod, `dataset/README.md`):
+`datasets/drazkov/baseline/export_baseline/` (regresní referenční bod, `datasets/drazkov/baseline/README.md`):
 
 | třída | export | corrected | Δ | \|du\| med [px] (exp→cor) | \|dv\| med [px] (exp→cor) | MAD du/dv (exp→cor) | inlier (exp→cor) |
 |---|---:|---:|---:|---|---|---|---|
@@ -134,11 +135,12 @@ téměř celé čisté, jsou po korekci prakticky beze změny (0: 132→134, 1: 
 35→**33**, 24: 30→**31**, 25: 38→38, 27: 29→**28**) — korekce se soustředila do stejných problémových
 smyček, ne do už dobrých úseků. `tile_summary.json` (bilance po dlaždicích, `§3`) má teď generátor
 (`mapping.quality.write_tile_summary`/`plot_quality`, CLI `uv run python -m mapping.quality
-tile-summary <csv> <out_dir> --poses {export,corrected}`) — zrekonstruovaný z ad hoc skriptu, ověřený
-proti dosavadnímu `dataset/export_baseline/tile_summary.json` na téže (export) tabulce: **17 z 38
+tile-summary <csv> <out_dir> --poses {export,corrected}`, dnes `uv run python -m geovap.stages.register.screen
+tile-summary <csv> <out_dir> --poses {export,corrected} --dataset drazkov`) — zrekonstruovaný z ad hoc skriptu, ověřený
+proti dosavadnímu `datasets/drazkov/baseline/export_baseline/tile_summary.json` na téže (export) tabulce: **17 z 38
 dlaždic přesná shoda**, zbytek se liší o pár snímků na dlaždici (bbox-distance zaokrouhlení na
 hranicích dlaždic, ne chyba generátoru — stejná hranice jako u původního ad hoc skriptu). Dnešní
-`dataset/tile_summary.json` je z korigovaného běhu (830 clean).
+`datasets/drazkov/baseline/tile_summary.json` je z korigovaného běhu (830 clean).
 
 **Verdikt**: korekce pózy čistý dataset mírně zlepšila, ne dramaticky a ne bezezbytku. `clean` +5
 snímků (0,6 %), `reject` −12 (−5,5 %), geometrická reziduua (\|du\|, \|dv\|, MAD, inlier) se zlepšila
@@ -148,13 +150,13 @@ taky měří (siluety vůči hraně fotky). Nejhorší průjezdy (12, 13, 14) z�
 korekci — korekce posouvá hranici o pixely, neřeší tam strukturální problém (viz `08 §3.4`
 azimutálně strukturované reziduum, které žádná tuhá póza jednoho snímku nevysvětlí).
 
-**Promoce (od této aktualizace)**: `dataset/clean_frames.json` (použité v `mapping/README.md`,
+**Promoce (od této aktualizace)**: `datasets/drazkov/baseline/clean_frames.json` (použité v `mapping/README.md`,
 `seg/render_labels.py` atd.) je **promotované na korigované pózy** — kopie
 `Geovap_cache/out/dataset_e8f3e1/{frame_quality.csv,clean_frames.json}`, produkční množina je teď
-830/163/302/208. Export klasifikace (825/163/295/220) je uložená v `dataset/export_baseline/` jako
+830/163/302/208. Export klasifikace (825/163/295/220) je uložená v `datasets/drazkov/baseline/export_baseline/` jako
 regresní referenční bod, ne živá data; kdo ji potřebuje explicitně, čte odtud. Přechod se netýká jen
 klasifikace: `825→830 clean` je turnover 32 vypadlých + 37 nových snímků (793 společných), ne prostý
-přírůstek pěti — viz `dataset/README.md` pro rozpad podle průjezdu a dopad na segmentační dataset
+přírůstek pěti — viz `datasets/drazkov/baseline/README.md` pro rozpad podle průjezdu a dopad na segmentační dataset
 (`Geovap_cache/segds_e8f3e1/`, přestavěný na tuto novou množinu).
 
 ## 6. Reprodukce
@@ -162,6 +164,10 @@ přírůstek pěti — viz `dataset/README.md` pro rozpad podle průjezdu a dopa
 ```
 uv run python -m mapping.quality 4 350     # 4 procesy, 350 snímků na běh (přírůstkově, JSONL), opakovat
 uv run python -c "from mapping.quality import reclassify; reclassify()"   # přepočet tříd po změně prahů
+
+# dnes (`geovap.stages.register.screen`, stage `quality`):
+uv run python -m geovap.stages.register.screen --workers 4 --limit 350 --dataset drazkov
+uv run python -c "from geovap.stages.register.screen import reclassify; reclassify(out_dir=..., poses_source='corrected')"   # přepočet tříd po změně prahů
 ```
 
 Poznámka k prostředí: sledování paměti hlídačem úloh počítá stránky memmapovaného store do RSS každého procesu; `CloudStore.release()` (po každém snímku) a `drop_cache()` to řeší, přesto běhy nad ~10 min v pozadí bývají ukončeny — proto po částech.

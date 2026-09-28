@@ -18,10 +18,10 @@ mračnem.
 | soubor | účel |
 |---|---|
 | `mapping/cli/pipeline.py` | **driver**: `run [--from/--to/--only] [--force] [--detach] [--with-optional]`, `status`, `compare`, `env-check`. 24 stagí, každý příkaz vlastní subprocess (`uv run python -u -m …`, env `GEOVAP_CACHE`, `GEOVAP_POSES` — do stage `assemble` včetně **export**, pak `corrected`), markery `out/pipeline/<stage>.json` (hash vstupů, výstupy, metriky), log `out/pipeline/pipeline.log` + `logs/`, `--detach` = `setsid nohup` + PID guard. `compare` → `out/pipeline/comparison.{md,json}`. |
-| `mapping/config.py` | `CACHE_ROOT` = env `GEOVAP_CACHE`, jinak první existující z `../Geovap_cache`, `/mnt/Geovap_cache` (+ symlink `/home/jatuma/repos/Geovap/Geovap_cache → /mnt/Geovap_cache`); `CLEAN_FRAMES_JSON`, `QUALITY_CSV`, `POTREE_OUTPUT_DIR` (env `POTREE_OUTPUT`), `PIPELINE_DIR`, `CONSOLIDATED_DIR`. Pět natvrdo zapsaných čtení `dataset/clean_frames.json` nahrazeno konstantou. |
+| `mapping/config.py` | `CACHE_ROOT` = env `GEOVAP_CACHE`, jinak první existující z `../Geovap_cache`, `/mnt/Geovap_cache` (+ symlink `/home/jatuma/repos/Geovap/Geovap_cache → /mnt/Geovap_cache`); `CLEAN_FRAMES_JSON`, `QUALITY_CSV`, `POTREE_OUTPUT_DIR` (env `POTREE_OUTPUT`), `PIPELINE_DIR`, `CONSOLIDATED_DIR`. Pět natvrdo zapsaných čtení `datasets/drazkov/baseline/clean_frames.json` nahrazeno konstantou. |
 | `mapping/cli/colorize.py --poses`, `mapping/cli/build_frames.py`, `products.build_all_frames(skip_existing)` | obarvení a produkty pro libovolný zdroj póz, resumable |
 | `mapping/seg/project.py` | `SEG_OUT_DIR`/`LAS_DIR` pose-aware (`out/seg_eomt_<hash6>`, `POTREE_OUTPUT/seg_eomt_<hash6>/tiles`), `_meta.json` nese `poses_hash`; `cli/seg_project.py --poses` |
-| `mapping/quality.py reclassify | promote` | promoce `out/dataset_<hash6>/` do `dataset/` se zálohou a diffem clean množiny |
+| `mapping/quality.py reclassify | promote` | promoce `out/dataset_<hash6>/` do `datasets/drazkov/baseline/` se zálohou a diffem clean množiny |
 | `mapping/seg/nearfield.py main()`, `seg_bench --frames missing:<spec> | <soubor.json>`, `seg_bench evaluate --out` | doplnění chybějících predikcí, evaluace na pevné množině snímků bez přepsání hlavních výsledků |
 | `mapping/las_out.py` | `write_tile(xyz=…)` (registrované souřadnice), `CONS_EXTRA_DIMS`, `OBJ_EXTRA_DIMS`, `verify(xyz_mode="registered")` |
 | `mapping/merge.py`, `mapping/cli/merge_products.py` | **konsolidovaný produkt**: per dlaždice tw45 RGB + sémantická třída + clustery → `out/consolidated/tiles/*.laz` a `objects/*.laz` v registrovaném rámci, kontrola identity bodů a `poses_hash` vstupů, resumable, `summary.json` |
@@ -30,6 +30,25 @@ mračnem.
 | `pointcloud-tools/consolidated/index.html` | stránka s 6 módy (RGB tw45 / segmentace / objekty / třída objektu / ΔE00 / RGB original = TerraScan), panos panel z `view.html`, URL parametry pro headless (`mode, panos, frame, pano_opacity, yaw, pitch, fov, budget, nogui, base, objects`) |
 | `pointcloud-tools/validate/{screenshots.py, driver.js, edge_metric.py, sphere_check.py, check_products.py}` | headless Chromium záběry (cloud / fotka / blend × yaw), **sphere_check** (Potree vs. náš kamerový model, NCC), kontroly produktu (cluster id, histogramy tříd, ΔE mediány, oktree metadata, verify flagy) |
 | `tests/test_pipeline.py`, `tests/test_las_out_xyz.py`, `tests/test_merge.py` | 160 testů celkem, ~11 s |
+
+> **Poznámka (po restrukturalizaci do `packages/`, 2026-09): tabulka výše je historický záznam kódu, jak
+> vypadal v době tohoto běhu — čísla a závěry pod ní se nemění. Dnešní stav je genuinely jiný, ne jen
+> přejmenovaný, ve dvou věcech:**
+> 1. **Prostředí.** `mapping/config.py` a `GEOVAP_CACHE` neexistují; dnešní tři kořeny jsou
+>    `$GEOVAP_DATA` (read-only vstup), `$GEOVAP_WORKSPACE` (naše mezivýstupy — nahrazuje `CACHE_ROOT`),
+>    `$GEOVAP_PUBLISH` (co se předá vieweru — nahrazuje `POTREE_OUTPUT_DIR`/`POINTCLOUD_OUTPUT`), plus
+>    `$GEOVAP_DATASET`/`$GEOVAP_DATASETS` (který popisovač) a `$GEOVAP_POSES` (export vs. korigovaná
+>    tabulka) — viz `packages/geovap-core/geovap/runtime/settings.py`, `runtime/workspace.py`,
+>    `docs/bring-your-own-dataset.md`. Driver `mapping.cli.pipeline` je dnes `geovap run`/`geovap status`/
+>    `geovap compare` (`packages/geovap-app`).
+> 2. **Konsolidovaný produkt sám.** `mapping/merge.py` psal `out/consolidated/tiles/*.laz` **a**
+>    `objects/*.laz` (dvě kopie stejných 585 M XYZ trojic, jedna s barvou, jedna s cluster id) plus
+>    třetí, „vendor" sadu zmíněnou jinde v tomto dokumentu. Dnešní stage `merge`
+>    (`geovap.stages.deliver.merge`/`objects.merge_tiles`, viz `docs/artifacts.md#consolidated_tiles`)
+>    píše **jedno** LAZ na dlaždici se všemi dimenzemi najednou — barva, sémantická třída, cluster id
+>    i referenční RGB pohromadě. `objects/` a `vendor/` jako samostatné adresáře vedle `cloud/` dnes
+>    neexistují. `pointcloud-tools/` (docker-compose, viewer, validate skripty) je nahrazeno
+>    `packages/geovap-deliver` (`infra/containers/compose.yml`, `infra/viewer/`, `infra/shots/`).
 
 ## 2. Průběh běhu (`pipeline run --detach`, pózy `corrected`, tag `tw45`)
 
@@ -104,10 +123,10 @@ snímků, GPU). Vyhodnocení proti **novému pseudo-GT** (`segds_34bca9`, regist
 Pořadí modelů se nemění, EoMT-L (DINOv2, Cityscapes) zůstává nejlepší. Na stejných snímcích klesá mIoU_core
 všem modelům o ~3 pb — stejný jev jako v `08 §7` (0.353→0.328 ve 3D): pseudo-GT se s registrací posouvá
 (fence −12 % bodů), predikce zůstávají. `nf_ok` podmnožina (48 snímků na novém benchi) je menší, protože
-near-field flag zůstává na 340/762. Podrobné tabulky `dataset/seg/bench/tables.md`, per-class
+near-field flag zůstává na 340/762. Podrobné tabulky `datasets/drazkov/baseline/seg/bench/tables.md`, per-class
 `per_class_iou.csv`, pásy `bands.csv`.
 
-**3D projekce EoMT-L** (`out/seg_eomt_34bca9/`, `dataset/seg/project_eomt_city.json`): coverage **0.808**,
+**3D projekce EoMT-L** (`out/seg_eomt_34bca9/`, `datasets/drazkov/baseline/seg/project_eomt_city.json`): coverage **0.808**,
 pixel acc 0.667, **mIoU_core 0.328**, ground-only 0.197 (e8f3e1: 0.807/0.667/0.328; export 0.799/0.683/0.352);
 per-class IoU terrain 0.571, road 0.559, vegetation 0.497, building 0.319, sidewalk 0.193, fence 0.154.
 Vizuální kontrola `report/bev_*.jpg`, `report/erp_f*.jpg` (BEV labels sedí na půdorys JVF; ERP round-trip
@@ -154,11 +173,11 @@ prohlížeči) a je opraven.
 
 ## 6. Kde co leží
 
-- driver a markery: `Geovap_cache/out/pipeline/` (`pipeline.log`, `<stage>.json`, `comparison.md`, `baseline/` = snapshot `dataset/` před během, `backup/`)
+- driver a markery: `Geovap_cache/out/pipeline/` (`pipeline.log`, `<stage>.json`, `comparison.md`, `baseline/` = snapshot `datasets/drazkov/baseline/` před během, `backup/`)
 - pózy: `out/poses/poses_corrected.{csv,json}` (hash `34bca9ff23`), `out/pass_reg/pass_transforms.json`, `out/poses/report_final.{md,json}`
 - produkty: `frames/34bca9/`, `out/tw45/{tiles,stats,report.md}`, `out/dataset_34bca9/`, `segds_34bca9/`, `out/seg_eomt_34bca9/`, `out/consolidated/{tiles,objects,summary.json,validation/}`
 - Potree: `/mnt/Geovap_cache/TestOutput/output/consolidated/{cloud,objects,panos_*,index.html}` → `http://localhost:8080/pointclouds/consolidated/index.html`; staré `clusters/`, `eomt_city_seg/` zůstávají pro porovnání
-- verzované tabulky: `dataset/` (promotováno z `dataset_34bca9`), `dataset/seg/{bench/,bench/baseline_frames/,project_eomt_city.json}`
+- verzované tabulky: `datasets/drazkov/baseline/` (promotováno z `dataset_34bca9`), `datasets/drazkov/baseline/seg/{bench/,bench/baseline_frames/,project_eomt_city.json}`
 
 ## 7. Oprava kamerového modelu (2026-09-16)
 
@@ -237,6 +256,8 @@ Archiv se smaže až po ověření nového běhu uživatelem.
 ```
 uv run python -m mapping.cli.pipeline run --from align --force --detach
 ```
+
+Dnes: `uv run geovap run --from align --force --detach --dataset drazkov`.
 
 Spuštěno 2026-09-16 11:30 UTC, očekávaná doba ~5–6 h.
 

@@ -3,7 +3,7 @@
 Navazuje na `04_cisty_dataset.md` (825 snímků `clean`) a na §12 v `03_semanticka_segmentace.md`. Cíl: (1) husté
 pseudo-GT pro sémantickou segmentaci z JVF DTM exportu bez ruční anotace, (2) srovnat nejnadějnější zero-shot
 modely na téže geometrii a metrice. Kód `mapping/seg/`, CLI `mapping.cli.seg_build` a `mapping.cli.seg_bench`,
-data `Geovap_cache/segds/`, metadata a tabulky `dataset/seg/`.
+data `Geovap_cache/segds/`, metadata a tabulky `datasets/drazkov/baseline/seg/`.
 
 ## 1. Odkud jsou značky
 
@@ -34,7 +34,7 @@ JVF export nemá plochy jako polygony: **plošný objekt = hraniční linie + je
    **viditelných** JVF linií (hranice dopravní stavby, budovy, stavby, zdi, plot, zábradlí, zeleň) jen pro
    evaluaci hranic, nikdy jako trénovací značka.
 
-### Taxonomie (`dataset/seg/classes.json`)
+### Taxonomie (`datasets/drazkov/baseline/seg/classes.json`)
 
 | id | třída | zdroj JVF | v mIoU |
 |---|---|---|---|
@@ -265,13 +265,28 @@ uv run python -m mapping.cli.seg_bench evaluate && uv run python -m mapping.cli.
 uv run pytest     # test_seg_*: polygonizace, pravidla bodů, round-trip výsečí, taxonomie, metriky
 ```
 
+Dnešní ekvivalent (`mapping/cli/seg_build.py` → stage `segds`, `geovap.stages.semantics.pseudogt.dataset`;
+`mapping/cli/seg_bench.py` → stage `seg-eval`, `geovap.stages.semantics.segment.evaluate`):
+
+```
+uv run python -m geovap.stages.semantics.pseudogt.dataset areas --dataset drazkov
+uv run python -m geovap.stages.semantics.pseudogt.dataset rasters --dataset drazkov
+uv run python -m geovap.stages.semantics.pseudogt.dataset points --workers 4 --dataset drazkov
+uv run python -m geovap.stages.semantics.pseudogt.dataset labels --frames clean --workers 8 --dataset drazkov
+uv run python -m geovap.stages.semantics.pseudogt.dataset views --workers 10 --dataset drazkov
+uv run python -m geovap.stages.semantics.pseudogt.dataset dataset --dataset drazkov
+uv run python -m geovap.stages.semantics.segment.evaluate run --models all --frames bench --dataset drazkov
+uv run python -m geovap.stages.semantics.segment.evaluate evaluate --dataset drazkov && uv run python -m geovap.stages.semantics.segment.evaluate report --dataset drazkov
+uv run pytest -q
+```
+
 
 ## 5. Dodatek: projekce do mračna na korigovaných pózách
 
 Fáze 2D→3D (`mapping.seg.project`, ne benchmark samotný) proběhla znovu na `poses_corrected`
 (registrované mračno, čistá množina 830 místo 825) — plný popis, opravený bug (`BENCH_DIR` byl mylně
 pose-source-aware) a čísla v `08_korekce_poz_panoramat.md §7` ("Projekce segmentace do mračna") a
-`dataset/seg/project_eomt_city.{json,md}` (export baseline v `dataset/seg/export_baseline/`).
+`datasets/drazkov/baseline/seg/project_eomt_city.{json,md}` (export baseline v `datasets/drazkov/baseline/seg/export_baseline/`).
 Krátce: coverage +0,8 pp, pixel acc a mIoU_core mírně KLESLY (−1,5 / −2,4 pp) — ale pseudo-GT se mezitím
 taky přestavěl, takže to není čistě geometrický regres. Předpověď EoMT-L (`segds/bench/eomt_city/`) je
 teď kompletní pro všech **830** čistých snímků (dřív 825) — je pózo-nezávislá (jen fotka), takže tahle
