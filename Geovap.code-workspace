@@ -1,11 +1,14 @@
 {
 	"folders": [
-		{
-			"path": ".."
-		},
-		{
-			"path": "../../../../../mnt"
-		}
+		{ "name": "geovap", "path": "." },
+		{ "name": "data", "path": "../Geovap_data" }
 	],
-	"settings": {}
+	"settings": {
+		"python.analysis.extraPaths": [
+			"packages/geovap-core",
+			"packages/geovap-semantics",
+			"packages/geovap-deliver",
+			"packages/geovap-app"
+		]
+	}
 }

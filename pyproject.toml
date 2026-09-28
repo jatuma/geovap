@@ -58,3 +58,14 @@ packages = ["mapping"]
 testpaths = ["tests"]
 markers = ["slow: needs the full dataset / long runtime"]
 addopts = "-m 'not slow'"
+
+[tool.pyright]
+# The four distributions each contribute to the same `geovap` PEP 420 namespace. They are installed
+# editable, so imports resolve at runtime, but an editor that only looks at the source tree needs to
+# be told where the roots are -- otherwise every `from geovap.domain...` is flagged unresolved.
+extraPaths = [
+    "packages/geovap-core",
+    "packages/geovap-semantics",
+    "packages/geovap-deliver",
+    "packages/geovap-app",
+]
