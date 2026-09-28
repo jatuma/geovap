@@ -64,12 +64,14 @@ def test_baseline_defaults_to_a_directory_beside_the_descriptor(make_descriptor_
     assert s.workspace.baseline == s.descriptor.file.resolve().parent / "testds" / "baseline"
 
 
-def test_clean_frames_falls_back_to_the_baseline(make_descriptor_file, env_paths):
+def test_clean_frames_falls_back_to_the_baseline(make_descriptor_file, env_paths, tmp_path):
     """Before the screening stage has run there is no workspace copy; a stage that needs the clean
     set must still be runnable against the dataset's tracked one."""
     import json
 
-    s = settings.build(dataset=make_descriptor_file())
+    # An explicit empty workspace: with $GEOVAP_WORKSPACE pointing at a real cache, the fallback
+    # would never be reached because that cache already holds a screening result.
+    s = settings.build(dataset=make_descriptor_file(), workspace=tmp_path / "empty-ws")
     ws = s.workspace
     ws.baseline.mkdir(parents=True, exist_ok=True)
     (ws.baseline / "clean_frames.json").write_text(json.dumps({"clean": [3, 1, 2], "reject": []}))

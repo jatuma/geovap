@@ -2,7 +2,7 @@ import numpy as np
 
 from geovap.domain.math import colour_metrics as metrics
 from mapping.accumulate import ColourTopK, NearestInTime
-from mapping.sample import linear_to_srgb_u8, srgb_to_linear
+from geovap.domain.math.colour_metrics import linear_to_srgb_u8, srgb_to_linear
 
 
 def test_srgb_roundtrip():

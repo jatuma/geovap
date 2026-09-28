@@ -18,10 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import PANO_H, PANO_W, POSES_DIR, REPO_ROOT, R_MAX
+from .config import PANO_H, PANO_W, POSES_DIR, QUALITY_CSV, R_MAX
 
 YAW_RATE_THRESH_DEG_S = 8.0
-DEFAULT_CSV = REPO_ROOT / "dataset" / "frame_quality.csv"
+DEFAULT_CSV = QUALITY_CSV
 
 
 def _read_rows(path: Path) -> list[dict]:
@@ -363,7 +363,8 @@ def _init_colour(a: str, b: str) -> None:
 
 
 def _colour_job(k: int) -> dict:
-    from .sample import PanoSampler, load_pano_rgb
+    from geovap.domain.math.sampling import PanoSampler
+    from geovap.io.images import load_pano_rgb
 
     al_a, al_b = _DG["al_a"], _DG["al_b"]
     poses_a, poses_b = _DG["poses_a"], _DG["poses_b"]
@@ -693,7 +694,7 @@ def slow_regression_037(
     from .cloud_store import CloudStore
     from .colorize import Options, colorize_tile
     from .config import STORE_DIR
-    from .frame_select import FrameIndex
+    from geovap.domain.model.frames import FrameIndex
 
     if not (STORE_DIR / "tiles.json").exists():
         return {"skipped": f"{STORE_DIR / 'tiles.json'} not found (store not built)"}

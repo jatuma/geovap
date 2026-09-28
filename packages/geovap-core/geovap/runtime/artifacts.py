@@ -182,3 +182,27 @@ def as_markdown() -> str:
             f"{'yes' if a.optional else 'no'} | {a.summary} |"
         )
     return "\n".join(rows)
+
+
+#: The generated table in `docs/artifacts.md` sits between these markers; the prose around them is
+#: written by hand and is not touched by regeneration.
+DOC_BEGIN = "<!-- BEGIN GENERATED: geovap.runtime.artifacts -->"
+DOC_END = "<!-- END GENERATED -->"
+
+
+def render_doc(existing: str) -> str:
+    """`existing` with the region between the markers replaced by the current table."""
+    try:
+        head, rest = existing.split(DOC_BEGIN, 1)
+        _, tail = rest.split(DOC_END, 1)
+    except ValueError:
+        raise ValueError(f"docs/artifacts.md is missing the {DOC_BEGIN} / {DOC_END} markers") from None
+    return f"{head}{DOC_BEGIN}\n\n{as_markdown()}\n\n{DOC_END}{tail}"
+
+
+if __name__ == "__main__":  # `uv run python -m geovap.runtime.artifacts` regenerates the doc
+    import sys
+
+    target = Path(sys.argv[1] if len(sys.argv) > 1 else "docs/artifacts.md")
+    target.write_text(render_doc(target.read_text(encoding="utf-8")), encoding="utf-8")
+    print(f"regenerated {target}")

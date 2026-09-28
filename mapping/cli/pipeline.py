@@ -50,7 +50,7 @@ from ..config import (
     STORE_DIR,
 )
 
-DATASET_DIR = REPO_ROOT / "dataset"
+DATASET_DIR = config.BASELINE_DIR
 LOGS_DIR = PIPELINE_DIR / "logs"
 BASELINE_DIR = PIPELINE_DIR / "baseline"
 PIPELINE_LOG = PIPELINE_DIR / "pipeline.log"

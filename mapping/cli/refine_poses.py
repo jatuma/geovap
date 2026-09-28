@@ -19,7 +19,7 @@ import numpy as np
 
 from ..cloud_store import CloudStore
 from ..config import POSES_DIR
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..pose_refine import DEFAULT_FREE, default_prior, group_by_pass, load_align, plan_frames, refine_pass
 from ..poses import Poses, load_poses, write_pose_table
 from geovap.domain.model.rig import IDENTITY

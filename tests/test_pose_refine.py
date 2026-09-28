@@ -139,7 +139,7 @@ def test_recovers_perturbation_real_frame():
     flagged here as an open issue rather than silently asserted away."""
     from mapping.calib import icp as I
     from mapping.cloud_store import CloudStore
-    from mapping.frame_select import FrameIndex
+    from geovap.domain.model.frames import FrameIndex
     from mapping.poses import load_poses
     from mapping.quality import yaw_rates
     from mapping.vehicle_mask import MASK_PATH, VehicleMask

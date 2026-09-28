@@ -15,7 +15,7 @@ import numpy as np
 from .. import render
 from ..cloud_store import CloudStore, open_store
 from ..config import NO_POINT, POTREE_OUTPUT_DIR
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from ..products import load_products
 from ..vehicle_mask import VehicleMask

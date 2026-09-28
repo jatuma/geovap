@@ -12,7 +12,7 @@ import numpy as np
 
 from .config import CACHE_ROOT, PANO_H, PANO_W
 from .poses import Poses
-from .sample import load_pano_rgb
+from geovap.io.images import load_pano_rgb
 
 MASK_PATH = CACHE_ROOT / "vehicle_mask.npz"
 MASK_W, MASK_H = 1000, 500

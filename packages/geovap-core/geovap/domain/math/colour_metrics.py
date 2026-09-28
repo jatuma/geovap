@@ -8,6 +8,20 @@ DE_BIN = 0.05
 DE_MAX = 100.0
 N_DE_BINS = int(DE_MAX / DE_BIN)  # 2000
 
+# sRGB <-> linear LUTs (float32)
+_x = np.arange(256, dtype=np.float32) / 255.0
+SRGB_TO_LIN = np.where(_x <= 0.04045, _x / 12.92, ((_x + 0.055) / 1.055) ** 2.4).astype(np.float32)
+
+
+def srgb_to_linear(rgb_u8: np.ndarray) -> np.ndarray:
+    return SRGB_TO_LIN[rgb_u8]
+
+
+def linear_to_srgb_u8(lin: np.ndarray) -> np.ndarray:
+    lin = np.clip(lin, 0.0, 1.0)
+    s = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
+    return np.clip(np.rint(s * 255.0), 0, 255).astype(np.uint8)
+
 DIST_EDGES = np.array([0, 2, 3, 4, 6, 10, 15, 25, 40, np.inf])  # last bin also holds "no nearest-in-time sample" (cam_dist 0)
 GRAD_EDGES = np.array([0, 1, 2, 3, 4, 6, 8, 12, 16, 24, np.inf])  # Sobel/8 on 8-bit gray
 EL_EDGES = np.arange(-90, 91, 10)  # 18 bands

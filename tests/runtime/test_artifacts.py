@@ -39,3 +39,15 @@ def test_docs_table_is_generated_from_this_module():
     md = artifacts.as_markdown()
     for a in artifacts.ARTIFACTS:
         assert f"`{a.name}`" in md
+
+
+def test_the_published_doc_is_in_sync():
+    """`docs/artifacts.md` is what another team reads before writing against an artifact. It is
+    generated, so the only way it can be wrong is if someone forgot to regenerate it."""
+    from pathlib import Path
+
+    doc = Path(__file__).resolve().parents[2] / "docs" / "artifacts.md"
+    current = doc.read_text(encoding="utf-8")
+    assert current == artifacts.render_doc(current), (
+        "docs/artifacts.md is stale; run `uv run python -m geovap.runtime.artifacts`"
+    )

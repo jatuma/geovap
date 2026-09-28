@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 from .config import MAD_CUTOFF, TOP_K
-from .sample import linear_to_srgb_u8
+from geovap.domain.math.colour_metrics import linear_to_srgb_u8
 
 
 class ColourTopK:

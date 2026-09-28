@@ -23,7 +23,7 @@ from .cloud_store import CloudStore
 from .config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from .poses import Poses
 from .products import gather_candidates
-from .sample import load_pano_rgb
+from geovap.io.images import load_pano_rgb
 
 W, H = 500, 250
 DT_MAX = 8.0
@@ -188,7 +188,7 @@ class Aligner:
         return float(np.median(d76))
 
     def align(self, k: int) -> Alignment:
-        from .sample import PanoSampler
+        from geovap.domain.math.sampling import PanoSampler
 
         photo = self.photo_gray(k)
         xyz, gray, gps, rgb = self.gather(k)

@@ -9,7 +9,7 @@ from geovap.domain.math import colour_metrics as metrics
 from mapping import config
 from mapping.cloud_store import CloudStore
 from mapping.colorize import Options, colorize_tile
-from mapping.frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 
 pytestmark = pytest.mark.slow
 

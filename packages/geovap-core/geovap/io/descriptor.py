@@ -20,6 +20,9 @@ from geovap.domain.model.sensor import Sensor, Tuning
 
 _BUILTIN_DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
 
+#: Colon-separated extra directories to search for `<name>.toml`.
+ENV_SEARCH_PATH = "GEOVAP_DATASETS"
+
 _PATH_KEYS = ("data_root", "workspace", "publish")
 #: Optional: git-tracked reference results for this dataset. Defaults, in `runtime.workspace`,
 #: to `<descriptor dir>/<name>/baseline`, so a descriptor need not spell it out.
@@ -93,15 +96,28 @@ class Descriptor:
         )
 
 
+def search_path() -> list[Path]:
+    """Where a bare dataset name is looked up, in order.
+
+    `$GEOVAP_DATASETS` (colon-separated) comes first so a deployment can keep its descriptors
+    anywhere; then `./datasets`, which is where this repository keeps them; then the few shipped
+    inside the package. Real datasets deliberately do NOT ship in the wheel -- a descriptor plus its
+    tracked baseline is data about one site, and `pip install geovap-core` should not carry it.
+    """
+    out = [Path(p) for p in os.environ.get(ENV_SEARCH_PATH, "").split(os.pathsep) if p]
+    out.append(Path("datasets"))
+    out.append(_BUILTIN_DATASETS_DIR)
+    return out
+
+
 def _resolve_descriptor_file(path_or_name: str | Path) -> Path:
-    """Explicit path -> used as-is; otherwise `datasets/<name>.toml` under the current working
-    directory, then the built-in descriptors shipped with the package."""
+    """Explicit path -> used as-is; otherwise `<name>.toml` in each directory of `search_path()`."""
     given = Path(path_or_name)
     if given.is_file():
         return given
 
     name = str(path_or_name)
-    candidates = [Path("datasets") / f"{name}.toml", _BUILTIN_DATASETS_DIR / f"{name}.toml"]
+    candidates = [d / f"{name}.toml" for d in search_path()]
     for candidate in candidates:
         if candidate.is_file():
             return candidate

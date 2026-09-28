@@ -34,8 +34,12 @@ POSES_DIR = OUT_DIR / "poses"
 PIPELINE_DIR = OUT_DIR / "pipeline"
 CONSOLIDATED_DIR = OUT_DIR / "consolidated"
 
-CLEAN_FRAMES_JSON = Path(os.environ.get("GEOVAP_CLEAN_FRAMES", REPO_ROOT / "dataset" / "clean_frames.json"))
-QUALITY_CSV = REPO_ROOT / "dataset" / "frame_quality.csv"
+# Transitional: the git-tracked reference results moved to `datasets/<name>/baseline/`, since they
+# are measurements OF one dataset rather than part of the application. `runtime.workspace` resolves
+# them per active dataset; this constant keeps the not-yet-migrated modules working meanwhile.
+BASELINE_DIR = REPO_ROOT / "datasets" / "drazkov" / "baseline"
+CLEAN_FRAMES_JSON = Path(os.environ.get("GEOVAP_CLEAN_FRAMES", BASELINE_DIR / "clean_frames.json"))
+QUALITY_CSV = BASELINE_DIR / "frame_quality.csv"
 POTREE_OUTPUT_DIR = Path(os.environ.get("POTREE_OUTPUT", "/home/jatuma/repos/Geovap/potree_output"))  # fast local drive since 2026-09-17; /mnt (slow) holds the cache
 
 # pose source: "export" (default, the regression anchor) or a corrected pose-table name/path.

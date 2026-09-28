@@ -17,7 +17,7 @@ import numpy as np
 
 from geovap.domain.model import geometry
 from ..config import PANO_H, PANO_W, ZB_H, ZB_W
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR

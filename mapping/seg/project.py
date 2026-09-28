@@ -29,7 +29,7 @@ from geovap.domain.math import depth as zbuffer
 from .. import las_out, products
 from ..cloud_store import CloudStore, TileInfo, open_store
 from ..config import CLEAN_FRAMES_JSON, OUT_DIR, PANO_H, PANO_W, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from geovap.domain.model.rig import IDENTITY
 from geovap.domain.scheme import taxonomy as T

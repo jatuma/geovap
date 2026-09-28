@@ -673,7 +673,8 @@ def _validate_job(k: int) -> dict:
     with explicit (R, C) from each table. Both tables share the same `C` by construction (rot-only
     origin == the export table's own linear interpolation), so the candidate cloud is gathered once."""
     from geovap.domain.model import geometry
-    from ..sample import PanoSampler, load_pano_rgb
+    from geovap.domain.math.sampling import PanoSampler
+    from geovap.io.images import load_pano_rgb
 
     store = _VG["store"]
     poses_exp, poses_rot = _VG["poses_exp"], _VG["poses_rot"]

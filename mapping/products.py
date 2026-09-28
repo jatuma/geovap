@@ -17,7 +17,7 @@ from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
 from .cloud_store import CloudStore, open_store
 from .config import FRAMES_DIR, NO_POINT, PANO_H, PANO_W, R_MAX, R_MIN, SENSOR, TOL_ABS, TOL_REL, ZB_H, ZB_W
-from .frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from .poses import Poses, load_poses
 from geovap.domain.model.rig import IDENTITY, RigModel
 

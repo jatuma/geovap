@@ -26,7 +26,7 @@ from scipy import ndimage
 from geovap.domain.model import geometry
 from .. import compat, vectors
 from ..config import OUT_DIR, R_MAX, ZB_H, ZB_W
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..pass_reg import PASS_REG_DIR, ROAD_BOUNDARY_CODE, CLS_CURB, Patches, apply_pass_transforms
 from ..poses import Poses, load_poses
 from ..products import FrameProducts

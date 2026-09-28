@@ -11,11 +11,11 @@ from geovap.runtime import settings
 
 
 def test_explicit_paths_beat_the_environment(make_descriptor_file, env_paths, tmp_path, monkeypatch):
-    """The bug this prevents: a CLI flag silently ignored because `$GEOVAP_DATA` was exported in the
-    shell. Precedence is argument > `$GEOVAP_*` > the descriptor's own value."""
+    """The bug this prevents: a CLI flag silently ignored because an override was exported in the
+    shell. Precedence is argument > `$GEOVAP_OVERRIDE_*` > the descriptor's own value."""
     stale, wanted = tmp_path / "stale", tmp_path / "wanted"
-    monkeypatch.setenv(settings.ENV_DATA_ROOT, str(stale))
-    monkeypatch.setenv(settings.ENV_WORKSPACE, str(stale))
+    monkeypatch.setenv(settings.ENV_OVERRIDE_DATA_ROOT, str(stale))
+    monkeypatch.setenv(settings.ENV_OVERRIDE_WORKSPACE, str(stale))
 
     s = settings.configure(dataset=make_descriptor_file(), data_root=wanted)
     assert s.paths.data_root == wanted  # the flag wins
@@ -25,13 +25,23 @@ def test_explicit_paths_beat_the_environment(make_descriptor_file, env_paths, tm
 def test_the_environment_can_redirect_a_dataset_without_editing_its_descriptor(
     make_descriptor_file, env_paths, tmp_path, monkeypatch
 ):
-    """`$GEOVAP_*` overrides the descriptor, which is how a CLI flag reaches a stage subprocess
-    (`runtime.procs` exports the resolved roots) and how a developer points a dataset at a copy.
-    The cost is that a stale exported variable redirects any dataset; `geovap doctor` prints the
-    resolved roots for exactly that reason."""
-    monkeypatch.setenv(settings.ENV_WORKSPACE, str(tmp_path / "scratch"))
+    """`$GEOVAP_OVERRIDE_*` beats the descriptor. That is how a `--data-root` flag reaches a stage
+    subprocess, and how a developer points a dataset at a copy for one run."""
+    monkeypatch.setenv(settings.ENV_OVERRIDE_WORKSPACE, str(tmp_path / "scratch"))
     s = settings.build(dataset=make_descriptor_file())
     assert s.paths.workspace == tmp_path / "scratch"
+
+
+def test_a_descriptors_own_variable_is_not_a_global_override(
+    make_descriptor_file, env_paths, dataset_dir, tmp_path, monkeypatch
+):
+    """The fixture dataset resolves `${GEOVAP_SYNTHETIC_ROOT}` and Dražkov resolves `${GEOVAP_DATA}`.
+    If those variables doubled as blanket overrides, exporting one to work on Dražkov would silently
+    point the fixture -- and every other dataset -- at Dražkov's directory too. The run would
+    succeed, against the wrong data."""
+    monkeypatch.setenv("GEOVAP_DATA", str(tmp_path / "some-other-dataset"))
+    s = settings.build(dataset=make_descriptor_file())
+    assert s.paths.data_root == dataset_dir  # its own ${TESTDS_DATA_ROOT}, untouched
 
 
 def test_settings_do_not_touch_the_disk(make_descriptor_file, env_paths, tmp_path):
@@ -67,7 +77,7 @@ def test_missing_environment_variable_names_itself(tmp_path, monkeypatch):
     )
     monkeypatch.delenv("GEOVAP_NOT_SET_ANYWHERE", raising=False)
     # No `$GEOVAP_DATA` override in play, so the descriptor's own expansion is what has to fail.
-    monkeypatch.delenv(settings.ENV_DATA_ROOT, raising=False)
+    monkeypatch.delenv(settings.ENV_OVERRIDE_DATA_ROOT, raising=False)
     with pytest.raises(DescriptorError, match="GEOVAP_NOT_SET_ANYWHERE"):
         settings.build(dataset=d)
 

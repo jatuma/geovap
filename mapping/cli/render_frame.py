@@ -16,7 +16,7 @@ import numpy as np
 from .. import compat, render, vectors
 from ..cloud_store import open_store
 from ..config import RENDERS_DIR
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from ..products import load_products
 from geovap.domain.model.rig import IDENTITY, RigModel

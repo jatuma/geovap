@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 import mapping.pass_reg as pr
-from mapping.frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from mapping.poses import load_poses, write_pose_table
 
 PASS_REG_DIR = pr.PASS_REG_DIR

@@ -21,10 +21,10 @@ from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
 from ..cloud_store import CloudStore
 from ..config import GRAY_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import Poses
 from geovap.domain.model.rig import RigModel
-from ..sample import load_pano_rgb
+from geovap.io.images import load_pano_rgb
 
 OBJ_W, OBJ_H = 1000, 500
 

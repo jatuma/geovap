@@ -30,10 +30,10 @@ from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
 from .cloud_store import open_store
 from .config import OUT_DIR, PANO_H, PANO_W, REPO_ROOT, R_MAX, R_MIN, SENSOR, source_dir
-from .frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from .poses import Poses, load_poses
 from .products import TIME_WINDOW_S, frames_dir, gather_candidates
-from .sample import load_pano_rgb
+from geovap.io.images import load_pano_rgb
 
 FINE_W, FINE_H = 4000, 2000
 

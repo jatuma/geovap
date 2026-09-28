@@ -18,7 +18,7 @@ import numpy as np
 from .. import render, vectors
 from ..cloud_store import CloudStore, open_store
 from ..config import CLEAN_FRAMES_JSON, NO_POINT, PANO_H, PANO_W, ZB_H, ZB_W
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from ..products import FrameProducts, load_products
 from ..vehicle_mask import VehicleMask

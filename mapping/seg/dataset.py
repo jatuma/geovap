@@ -22,7 +22,7 @@ from .render_labels import BANDS_DIR, LABELS_DIR, clean_frames
 from .views import VIEW_SIZE, VIEWS
 from . import nearfield
 
-DATASET_SEG_DIR = Path(__file__).resolve().parents[2] / "dataset" / "seg"
+DATASET_SEG_DIR = _QUALITY_CSV.parent / "seg"
 QUALITY_CSV = _QUALITY_CSV
 BAND_ROWS = (int(round((90 - 45) / 180 * ZB_H)), int(round((90 + 55) / 180 * ZB_H)))  # phi in [-55, +45] deg -> rows 250..805
 N_BENCH = 100

@@ -37,14 +37,24 @@ if TYPE_CHECKING:
     from geovap.io.protocols import PanoSource, PoseSource, ReferenceVectors, TileSource
     from geovap.runtime.workspace import Workspace
 
-#: Environment variables read when `configure()` is not given an explicit value. They are also what
-#: `runtime.procs` exports to a stage subprocess, so a child resolves to exactly its parent's
-#: dataset without inheriting a half-resolved object.
+#: Which dataset, and which pose table within it. Genuinely global choices.
 ENV_DATASET = "GEOVAP_DATASET"
-ENV_DATA_ROOT = "GEOVAP_DATA"
-ENV_WORKSPACE = "GEOVAP_WORKSPACE"
-ENV_PUBLISH = "GEOVAP_PUBLISH"
 ENV_POSES = "GEOVAP_POSES"
+
+#: Path OVERRIDES, and only overrides. These are deliberately NOT the variables a descriptor
+#: interpolates.
+#:
+#: The distinction is load-bearing. `drazkov.toml` says `data_root = "${GEOVAP_DATA}"`, so exporting
+#: `GEOVAP_DATA` redirects Dražkov -- because Dražkov's own descriptor asked for that variable. If
+#: `GEOVAP_DATA` were ALSO a blanket override, it would redirect every other dataset too, including
+#: `synthetic.toml`, which resolves `${GEOVAP_SYNTHETIC_ROOT}` and has nothing to do with it. That
+#: is a silent wrong-data bug: the run succeeds, against the wrong directory.
+#:
+#: So a descriptor declares which variables it reads, and these three exist only to carry a CLI flag
+#: (`--data-root`) into a stage subprocess, which is why `runtime.procs` is their only writer.
+ENV_OVERRIDE_DATA_ROOT = "GEOVAP_OVERRIDE_DATA_ROOT"
+ENV_OVERRIDE_WORKSPACE = "GEOVAP_OVERRIDE_WORKSPACE"
+ENV_OVERRIDE_PUBLISH = "GEOVAP_OVERRIDE_PUBLISH"
 
 #: Used when `$GEOVAP_DATASET` is unset. A descriptor of this name must resolve -- either
 #: `./datasets/<name>.toml` or one shipped in `geovap/io/datasets/`.
@@ -141,12 +151,18 @@ class Settings:
         )
 
     def env(self) -> dict[str, str]:
-        """The environment a subprocess needs to resolve to this exact dataset (see `runtime.procs`)."""
+        """The environment a subprocess needs to resolve to exactly this dataset.
+
+        The resolved roots are exported as OVERRIDES rather than as the descriptor's own variables:
+        the parent may have got them from a `--data-root` flag, and the child must see that, not
+        re-derive them. Passing the descriptor by path (not by name) also removes any dependence on
+        the child's search path.
+        """
         return {
             ENV_DATASET: str(self.descriptor.file),
-            ENV_DATA_ROOT: str(self.paths.data_root),
-            ENV_WORKSPACE: str(self.paths.workspace),
-            ENV_PUBLISH: str(self.paths.publish),
+            ENV_OVERRIDE_DATA_ROOT: str(self.paths.data_root),
+            ENV_OVERRIDE_WORKSPACE: str(self.paths.workspace),
+            ENV_OVERRIDE_PUBLISH: str(self.paths.publish),
             ENV_POSES: self.pose_table,
         }
 
@@ -161,15 +177,14 @@ def build(
 ) -> Settings:
     """Resolve a descriptor into `Settings` WITHOUT installing it as the process-wide one.
 
-    Precedence for each path is: explicit argument > `${ENV}` inside the descriptor > literal value
-    in the descriptor. The environment is consulted only for values not given here, so a CLI flag
-    always wins over a stale exported variable.
+    Precedence for each path: explicit argument > `$GEOVAP_OVERRIDE_*` (which is how an argument
+    reaches a subprocess) > whatever the descriptor says, including its own `${VAR}` interpolation.
     """
     name = dataset if dataset is not None else os.environ.get(ENV_DATASET, DEFAULT_DATASET)
     overrides = {
-        "data_root": data_root if data_root is not None else os.environ.get(ENV_DATA_ROOT),
-        "workspace": workspace if workspace is not None else os.environ.get(ENV_WORKSPACE),
-        "publish": publish if publish is not None else os.environ.get(ENV_PUBLISH),
+        "data_root": data_root if data_root is not None else os.environ.get(ENV_OVERRIDE_DATA_ROOT),
+        "workspace": workspace if workspace is not None else os.environ.get(ENV_OVERRIDE_WORKSPACE),
+        "publish": publish if publish is not None else os.environ.get(ENV_OVERRIDE_PUBLISH),
     }
     descriptor = Descriptor.load(name, overrides={k: v for k, v in overrides.items() if v is not None})
     pose_table = poses if poses is not None else os.environ.get(ENV_POSES, DEFAULT_POSE_TABLE)

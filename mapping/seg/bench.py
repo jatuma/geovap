@@ -17,7 +17,7 @@ import numpy as np
 import torch
 
 from ..config import ZB_H, ZB_W
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import load_poses
 from geovap.domain.scheme import taxonomy as T
 from .areas import SEGDS_ROOT

@@ -14,7 +14,7 @@ import numpy as np
 
 from ..cloud_store import CloudStore
 from ..config import DEG_PER_PX, OUT_DIR
-from ..frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from ..poses import Poses, load_poses
 from geovap.domain.model.rig import IDENTITY, RigModel
 from . import icp as I

@@ -52,7 +52,7 @@ from geovap.domain.model import geometry
 from . import compat
 from .cloud_store import CloudStore, STORE_DIR
 from .config import JVF_GEOJSON, OUT_DIR, PANO_H, PANO_W, POSES_DIR, ZB_H, ZB_W
-from .frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from .poses import Poses, load_poses
 from .products import FrameProducts
 

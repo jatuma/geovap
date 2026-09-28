@@ -1,0 +1,72 @@
+# Synthetic dataset descriptor: a tiny, generated stand-in for Dražkov's shape (posed
+# equirectangular panoramas + tiled MLS LAZ ground points + JVF/ZPS reference vectors), so every
+# team stream can exercise its stage without the real ~600 GB dataset mounted. Generate the fixture
+# with `python -m geovap.io.datasets.synthetic <dir>` (see that module for what it builds and why),
+# point `GEOVAP_SYNTHETIC_ROOT` (and, if used, `GEOVAP_SYNTHETIC_WORKSPACE` /
+# `GEOVAP_SYNTHETIC_PUBLISH`) at it, then run `geovap doctor --dataset synthetic` as the smoke test.
+name = "synthetic"
+
+[paths]
+data_root = "${GEOVAP_SYNTHETIC_ROOT}"
+workspace = "${GEOVAP_SYNTHETIC_WORKSPACE}"
+publish   = "${GEOVAP_SYNTHETIC_PUBLISH}"
+
+[crs]
+epsg = 5514
+proj4 = "+proj=krovak +lat_0=49.5 +lon_0=24.8333333333333 +alpha=30.2881397527778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +towgs84=589,76,480,0,0,0,0 +units=m +no_defs +type=crs"
+
+[poses]
+adapter = "ladybug_export_csv"
+file = "panos/export.csv"
+# Deliberately NOT Dražkov's column indices/order/width (0,1,2,3,4,11,12,13 over 17 columns): this
+# generator's export.csv puts the timestamp and filename first and pads with two unused columns, so
+# anything that hardcodes Dražkov's positions instead of reading them from here fails loudly.
+columns = { t = 0, file = 1, e = 2, n = 3, h = 4, yaw = 5, pitch = 6, roll = 7 }
+expect_columns = 10
+
+[panos]
+adapter = "equirect_dir"
+dir = "panos"
+width = 512
+height = 256
+
+[tiles]
+adapter = "laz_dir"
+dir = "tiles"
+glob = "*.laz"
+# Zero-padded to 4 digits -- Dražkov's tiles are zero-padded to 3 -- so any code that assumes a
+# 3-character tile id (a stray `name[:3]` or `[-3:]` slice) breaks here instead of on the real data.
+id_regex = 'SYN_TILE_(?P<id>\d{4})_JTSK\.laz'
+out_name = "SYN_{id}{kind}.laz"
+grid = "tiles_grid.geojson"
+
+[tiles.names]
+cluster     = "objects_t{id}.laz"
+cluster_rgb = "rgb_t{id}.laz"
+
+[reference]
+adapter = "jvf_zps"
+file = "reference/vectors.geojson"
+# `codes` omitted: the fixture's features use real codes from the adapter's own bundled
+# jvf_zps_cz.toml, so no copy needs to ship with the fixture.
+
+[sensor]
+pano_w = 512
+pano_h = 256
+zb_w = 128
+zb_h = 64
+r_min = 0.5
+r_max = 40.0
+point_spacing = 0.05
+cell_size = 4.0
+tol_abs = 0.15
+tol_rel = 0.03
+splat_k = 1.2
+splat_min_px = 1
+splat_max_px = 4
+
+[tuning]
+score_r0 = 8.0
+incidence_max_deg = 80.0
+top_k = 5
+mad_cutoff = 2.5

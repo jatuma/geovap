@@ -22,10 +22,12 @@ from . import las_out, products
 from .accumulate import ColourTopK, NearestInTime
 from .cloud_store import CloudStore, TileInfo, open_store
 from .config import INCIDENCE_MAX_DEG, OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SCORE_R0, TOP_K
-from .frame_select import FrameIndex
+from geovap.domain.model.frames import FrameIndex
 from .poses import load_poses
 from geovap.domain.model.rig import IDENTITY, RigModel
-from .sample import PanoSampler, load_pano_rgb, srgb_to_linear
+from geovap.domain.math.sampling import PanoSampler
+from geovap.io.images import load_pano_rgb
+from geovap.domain.math.colour_metrics import srgb_to_linear
 from geovap.domain.model.tiles import id_from_sidecar
 
 

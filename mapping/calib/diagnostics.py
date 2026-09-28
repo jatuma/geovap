@@ -199,7 +199,7 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
     1/r. Returns the summary dict (also the `verdict`: "present" / "absent" / "inconclusive").
     """
     from ..cloud_store import CloudStore
-    from ..frame_select import FrameIndex
+    from geovap.domain.model.frames import FrameIndex
     from ..poses import load_poses
     from geovap.domain.model.rig import IDENTITY
     from ..vehicle_mask import MASK_PATH, VehicleMask
