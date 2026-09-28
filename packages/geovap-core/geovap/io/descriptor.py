@@ -21,6 +21,9 @@ from geovap.domain.model.sensor import Sensor, Tuning
 _BUILTIN_DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
 
 _PATH_KEYS = ("data_root", "workspace", "publish")
+#: Optional: git-tracked reference results for this dataset. Defaults, in `runtime.workspace`,
+#: to `<descriptor dir>/<name>/baseline`, so a descriptor need not spell it out.
+_OPTIONAL_PATH_KEYS = ("baseline",)
 _VAR_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
@@ -42,6 +45,8 @@ class Descriptor:
     panos: dict = field(default_factory=dict)
     tiles: dict = field(default_factory=dict)
     reference: dict | None = None
+    #: Optional; `runtime.workspace.baseline_dir` supplies the default when this is None.
+    baseline: Path | None = None
 
     @classmethod
     def load(cls, path_or_name: str | Path, *, overrides: dict[str, str] | None = None) -> Descriptor:
@@ -55,6 +60,12 @@ class Descriptor:
         except KeyError as exc:
             raise DescriptorError(f"{file}: missing [paths] table") from exc
         paths = {key: _resolve_path(key, raw_paths, overrides, file) for key in _PATH_KEYS}
+        paths.update(
+            {
+                key: (_resolve_path(key, raw_paths, overrides, file) if key in raw_paths or key in overrides else None)
+                for key in _OPTIONAL_PATH_KEYS
+            }
+        )
 
         try:
             crs = Crs(**data["crs"])
@@ -71,6 +82,7 @@ class Descriptor:
             data_root=paths["data_root"],
             workspace=paths["workspace"],
             publish=paths["publish"],
+            baseline=paths["baseline"],
             crs=crs,
             sensor=sensor,
             tuning=tuning,

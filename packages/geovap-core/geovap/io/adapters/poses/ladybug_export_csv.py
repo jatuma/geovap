@@ -83,6 +83,9 @@ class LadybugExportCsvPoseSource:
             source="export",
         )
 
+    def source_file(self) -> Path | None:
+        return self._path
+
     def describe(self) -> dict:
         if not self._path.exists():
             return {"file": str(self._path), "exists": False}

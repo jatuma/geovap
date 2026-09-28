@@ -24,6 +24,12 @@ class PoseSource(Protocol):
 
     def load(self) -> Poses: ...
 
+    def source_file(self) -> Path | None:
+        """The file this trajectory was read from, for provenance. `None` for an adapter that has no
+        single file (a database, a directory of per-pass tables). A pose table written downstream
+        records its hash, which is how a run can prove which vendor export it descends from."""
+        ...
+
     def describe(self) -> dict:
         """Summary for `geovap doctor`: frame count, time span, spatial extent, source file."""
         ...
