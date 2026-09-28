@@ -32,7 +32,7 @@ from ..config import CLEAN_FRAMES_JSON, OUT_DIR, PANO_H, PANO_W, POTREE_OUTPUT_D
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from geovap.domain.model.rig import IDENTITY
-from . import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
 
 REPO_DIR = Path(__file__).resolve().parents[2]

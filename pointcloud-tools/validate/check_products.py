@@ -109,7 +109,7 @@ def check_classification_hist(seg_labels_dir: Path | None, tile_metas: dict[str,
         return [{"check": "classification_hist", "tile": None, "ok": None, "detail": f"missing seg labels dir {seg_labels_dir}"}]
     import numpy as np
 
-    from mapping.seg import taxonomy as T
+    from geovap.domain.scheme import taxonomy as T
 
     for name, meta in sorted(tile_metas.items()):
         c = {"check": "classification_hist", "tile": name, "ok": None, "detail": ""}
@@ -270,7 +270,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seg-labels", default=None, help="seg_eomt labels dir with NNN.npy (default: autodetect under OUT_DIR)")
     ap.add_argument("--tw45-stats", default=None, help="tw45 run's stats/ dir (default: autodetect tw45*/stats under OUT_DIR)")
     ap.add_argument("--pass-transforms", default=None, help="pass_transforms.json (default: OUT_DIR/pass_reg/pass_transforms.json)")
-    ap.add_argument("--tol", type=float, default=None, help="tolerance for dE00 median comparison (default: one histogram bin, mapping.metrics.DE_BIN)")
+    ap.add_argument("--tol", type=float, default=None, help="tolerance for dE00 median comparison (default: one histogram bin, geovap.domain.math.colour_metrics.DE_BIN)")
     ap.add_argument("--old-octree-meta", default=None, help="source-frame octree metadata.json to measure the registration shift against (default POTREE_OUTPUT_DIR/clusters/rgb/metadata.json)")
     args = ap.parse_args(argv)
 

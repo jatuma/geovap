@@ -1,6 +1,6 @@
 import numpy as np
 
-from mapping.seg import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 from mapping.seg.project import VoteHist, edge_factor
 
 

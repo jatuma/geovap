@@ -2,13 +2,13 @@
 
 For every photo-only screenshot produced by screenshots.py (camera at the sphere centre, known
 Potree view yaw/pitch, vertical FOV, viewport), render the SAME view offline from the source
-panorama through `mapping.geometry` (the camera model), then correlate the two greyscale images
+panorama through `geovap.domain.model.geometry` (the camera model), then correlate the two greyscale images
 (NCC after downsampling). A correct `panos.py` convention (AZ_OFFSET, course/pitch/roll
 re-parametrisation, texture.repeat.x) gives NCC close to 1; a half-turn or a mirrored texture
 gives ~0 or negative.
 
 WHY THE NCC-ALONE CHECK WAS CIRCULAR (2026-09-16): `render_offline` maps the panorama onto the
-Potree view using `mapping.geometry.cam_to_pano` - the SAME camera model that `export_panos.py`
+Potree view using `geovap.domain.model.geometry.cam_to_pano` - the SAME camera model that `export_panos.py`
 used to build the sphere's UV coordinates in the first place. If that model has, say, its azimuth
 convention reflected (front/back swapped, as the pre-2026-09-16 `experiments/common/camera.py`
 formula was), then BOTH the exported sphere texture and this offline render are wrong in exactly
@@ -100,7 +100,7 @@ def render_offline(pano_bgr: np.ndarray, R: np.ndarray, w: int, h: int, yaw: flo
 def render_pinhole(P: np.ndarray, C: np.ndarray, w: int, h: int, yaw: float, pitch: float, fov_deg: float, splat_px: int = 3) -> np.ndarray:
     """Grey silhouette-only pinhole render [h,w] uint8 of the registered point cloud `P` [N,3] from
     camera centre `C`, for the given Potree view. Uses ONLY `C` and the Potree view axes
-    (`potree_axes`) - no `mapping.geometry.cam_to_pano`/`pano_rays`, so it cannot inherit a camera-
+    (`potree_axes`) - no `geovap.domain.model.geometry.cam_to_pano`/`pano_rays`, so it cannot inherit a camera-
     model convention bug. Every visible point is painted the same grey (200); only occupancy
     (the silhouette) is meaningful, not colour or depth."""
     import cv2
@@ -190,7 +190,7 @@ def main(argv=None) -> int:
 
     from mapping import geometry
     from mapping.poses import load_poses
-    from mapping.rig import IDENTITY
+    from geovap.domain.model.rig import IDENTITY
 
     do_pinhole = not args.no_pinhole
     store_cache: dict[str, object] = {}
@@ -323,7 +323,7 @@ def main(argv=None) -> int:
                and (not do_pinhole or (all(model_independent_pass.values()) and bool(model_independent_pass))),
                "note": "primary (AZ 0) sets must match the camera model (NCC > 0.6 and clearly above the half-turn alternative); "
                        "the *180 control sets must NOT (their half-turn alternative wins). NCC-vs-offline alone is CIRCULAR "
-                       "(both use mapping.geometry.cam_to_pano) - model_independent_pass additionally requires NCC(offline, "
+                       "(both use geovap.domain.model.geometry.cam_to_pano) - model_independent_pass additionally requires NCC(offline, "
                        "photo) >= 0.95 AND the pinhole (point-cloud, model-free) silhouette to be closer to the photo than "
                        "every control variant's pinhole silhouette on the same frame/yaw. That combination is the "
                        "AZ_OFFSET_DEG = 0 verdict."}

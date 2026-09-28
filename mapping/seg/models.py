@@ -12,7 +12,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from . import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 
 
 @dataclass

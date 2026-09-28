@@ -1,7 +1,7 @@
 import numpy as np
 
 from mapping.seg import evaluate as E
-from mapping.seg import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 
 
 def test_confusion_and_iou():

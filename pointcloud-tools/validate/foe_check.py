@@ -1,6 +1,6 @@
 """Focus-of-expansion check: model-free second opinion on the camera model's azimuth convention.
 
-`sphere_check.py` catches a Potree/panos.py convention that has drifted from `mapping.geometry`,
+`sphere_check.py` catches a Potree/panos.py convention that has drifted from `geovap.domain.model.geometry`,
 but both an offline render and a point-cloud pinhole render still ultimately trust *some* piece of
 this repo's geometry (poses, `frame_rotations`). This check adds one more, cheaper, independent
 signal that does not even need the point cloud: the FOCUS OF EXPANSION (FOE) of frame-to-frame
@@ -11,7 +11,7 @@ from a single column of the panorama as it moves closer - the FOE - and that col
 definition, the panorama column the camera model assigns to the travel direction
 `C[k+1] - C[k]`. We measure the photo FOE purely from pixels (template-matching a horizontal-flow
 profile along the horizon band between frame k and k+1 - no camera model, no `cam_to_pano`
-involved), then compare it to the column `mapping.geometry.cam_to_pano` predicts for the same
+involved), then compare it to the column `geovap.domain.model.geometry.cam_to_pano` predicts for the same
 travel direction via `R[k]`. If the model's azimuth convention is reflected (as the pre-2026-09-16
 `experiments/common/camera.py` formula was), the two disagree by ~half the panorama width; a
 correct model gives near-zero circular difference.
@@ -96,7 +96,7 @@ def photo_foe_u(prof: np.ndarray, w: int, good_ncc: float = 0.5, near_deg_frac: 
 
 
 def model_travel_u(R: np.ndarray, mv: np.ndarray, w: int, h: int) -> float:
-    """Column `mapping.geometry.cam_to_pano` assigns to the travel direction `mv` (world), for a
+    """Column `geovap.domain.model.geometry.cam_to_pano` assigns to the travel direction `mv` (world), for a
     frame with rotation `R` (world -> camera, from `frame_rotations`)."""
     from mapping import geometry
 
@@ -113,7 +113,7 @@ def circ_diff_frac(a_frac: float, b_frac: float) -> float:
 
 def check_frame(poses, k: int, w: int, h: int) -> dict:
     from mapping import geometry
-    from mapping.rig import IDENTITY
+    from geovap.domain.model.rig import IDENTITY
 
     row: dict = {"frame": k, "frame_next": k + 1}
     try:

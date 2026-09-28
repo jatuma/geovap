@@ -20,8 +20,8 @@ from scipy import ndimage
 from ..config import ZB_H, ZB_W
 from ..poses import load_poses
 from ..products import load_products
-from . import classes as C
-from . import taxonomy as T
+from geovap.domain.scheme import classes as C
+from geovap.domain.scheme import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
 from .dataset import BAND_ROWS
 from .models import SPECS

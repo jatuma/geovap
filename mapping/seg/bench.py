@@ -19,7 +19,7 @@ import torch
 from ..config import ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..poses import load_poses
-from . import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 from .areas import SEGDS_ROOT
 from .fusion import fuse, to_common
 from .models import SPECS, SegModel

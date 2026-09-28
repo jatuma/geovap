@@ -20,7 +20,7 @@ from scipy import ndimage
 
 from ..cloud_store import CloudStore, open_store
 from ..poses import load_poses
-from . import classes as C
+from geovap.domain.scheme import classes as C
 from .areas import AREAS_DIR, SEGDS_DIR, load_faces, load_objects
 
 RASTER_DIR = SEGDS_DIR / "rasters"

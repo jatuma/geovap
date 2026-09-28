@@ -16,6 +16,7 @@ pass conflict), reject (geometry not verifiable or bad).
 """
 from __future__ import annotations
 
+from dataclasses import replace
 import csv
 import json
 from dataclasses import asdict, dataclass
@@ -24,6 +25,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from geovap.domain.math import edges as edges_math
 from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
 from .cloud_store import open_store
@@ -90,60 +92,14 @@ def yaw_rates(poses: Poses) -> np.ndarray:
 
 
 def _silhouette_points(xyz, R, C):
-    """Exact-cell silhouette / depth-edge points from a fine z-buffer. Returns xyz subset."""
-    u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
-    keep = zbuffer.range_filter(r, R_MIN, R_MAX)
-    if keep.sum() < 1000:
-        return xyz[:0]
-    s = FINE_W / PANO_W
-    x, y = u[keep] * s, v[keep] * s
-    import mapping.zbuffer as zb
-
-    old = zb.SPLAT_MAX_PX
-    zb.SPLAT_MAX_PX = 3
-    try:
-        depth, _ = zbuffer.splat(x, y, r[keep], np.arange(keep.sum(), dtype=np.uint32), FINE_W, FINE_H, SENSOR)
-    finally:
-        zb.SPLAT_MAX_PX = old
-    d = zbuffer.close_depth(depth)
-    fin = np.isfinite(d)
-    el_rows = 90.0 - (np.arange(FINE_H) + 0.5) / FINE_H * 180.0
-    edge = np.zeros_like(fin)
-    for dy, dx in ((0, 2), (0, -2), (2, 0), (-2, 0)):
-        dn = np.roll(d, (-dy, -dx), axis=(0, 1))
-        fn = np.isfinite(dn)
-        edge |= fin & fn & (dn - d > np.maximum(0.5, 0.15 * d))
-        edge |= fin & ~fn & (el_rows > 0)[:, None]
-    edge &= (el_rows >= -40)[:, None]
-    cx = np.mod(np.floor(x).astype(np.int64), FINE_W)
-    cy = np.clip(np.floor(y).astype(np.int64), 0, FINE_H - 1)
-    near = r[keep] <= d[cy, cx] + np.maximum(0.15, 0.03 * r[keep])
-    sel = edge[cy, cx] & near
-    return xyz[keep][sel]
+    """`domain.math.edges.silhouette_points` at this module's fine z-buffer resolution."""
+    return edges_math.silhouette_points(xyz, R, C, SENSOR, FINE_W, FINE_H)
 
 
 def _residual(xyz_edge, R, C, dt_img, edge_idx, valid, window=20.0, n_max=20000):
-    """Median du, dv (full-res px), MADs, inlier fraction within 8 CHAM px."""
-    if len(xyz_edge) == 0:
-        return 0, np.nan, np.nan, np.nan, np.nan, np.nan
-    if len(xyz_edge) > n_max:
-        xyz_edge = xyz_edge[:: len(xyz_edge) // n_max]
-    s = FINE_W / PANO_W
-    u, v, r, el = geometry.world_to_pano(xyz_edge, R, C, PANO_W, PANO_H, dtype=np.float64)
-    x, y = u * s, v * s
-    xi = np.mod(np.floor(x).astype(np.int64), FINE_W)
-    yi = np.clip(np.floor(y).astype(np.int64), 0, FINE_H - 1)
-    d = dt_img[yi, xi].astype(np.float32)
-    ok = valid[yi, xi] & (d <= window)
-    n = int(ok.sum())
-    if n < 50:
-        return n, np.nan, np.nan, np.nan, np.nan, np.nan
-    ex = edge_idx[1, yi[ok], xi[ok]].astype(np.float64) + 0.5
-    ey = edge_idx[0, yi[ok], xi[ok]].astype(np.float64) + 0.5
-    du = ((ex - x[ok] + FINE_W / 2) % FINE_W - FINE_W / 2) / s
-    dv = (ey - y[ok]) / s
-    inl = float((d[ok] <= 8.0).mean() * ok.mean())  # fraction of all edge points within 8 CHAM px
-    return n, float(np.median(du)), float(np.median(dv)), float(np.median(np.abs(du - np.median(du)))), float(np.median(np.abs(dv - np.median(dv)))), inl
+    """`domain.math.edges.residual`; inlier threshold is this module's CONFLICT_PX convention."""
+    return edges_math.residual(xyz_edge, R, C, dt_img, edge_idx, valid, SENSOR, FINE_W, FINE_H,
+                               window=window, n_max=n_max, inlier_px=CONFLICT_PX)
 
 
 def _photo_edges(poses: Poses, k: int, vmask):

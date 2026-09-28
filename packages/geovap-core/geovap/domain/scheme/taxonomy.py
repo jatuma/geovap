@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from . import classes as C
+from geovap.domain.scheme import classes as C
 
 COMMON = ["road", "sidewalk", "building", "wall", "fence", "vegetation", "terrain", "water", "guard_rail", "stairs", "pole", "sky", "vehicle", "person", "other"]
 COMMON_ID = {n: i for i, n in enumerate(COMMON)}

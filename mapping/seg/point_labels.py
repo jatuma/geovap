@@ -22,7 +22,7 @@ import numpy as np
 
 from ..cloud_store import CloudStore, open_store
 from ..poses import load_poses
-from . import classes as C
+from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR
 from .rasters import Rasters
 

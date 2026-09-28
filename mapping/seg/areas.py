@@ -25,7 +25,7 @@ from shapely.strtree import STRtree
 from .. import compat
 from ..config import CACHE_ROOT, source_dir
 from ..poses import load_poses
-from . import classes as C
+from geovap.domain.scheme import classes as C
 
 # The segds root is pose-source aware: byte-identical to today (SEGDS_ROOT) for the default
 # "export" pose table (env GEOVAP_POSES unset -- the regression anchor), a hash-suffixed sibling

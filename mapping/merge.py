@@ -27,7 +27,7 @@ from . import las_out
 from .cloud_store import SCALE, STORE_DIR, CloudStore, TileData, open_store
 from .config import EXPECTED_TOTAL_POINTS, OUT_DIR, POTREE_OUTPUT_DIR, CONSOLIDATED_DIR, source_dir
 from .poses import load_poses
-from .seg import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 
 CLUSTERS_SRC_DEFAULT = POTREE_OUTPUT_DIR / "clusters" / "src"
 

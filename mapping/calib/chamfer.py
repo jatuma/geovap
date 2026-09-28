@@ -9,6 +9,7 @@ Lower is better; smooth in the parameters because the DT is continuous.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from dataclasses import dataclass
 
 import cv2
@@ -132,15 +133,8 @@ def fine_edge_points(frame: int, store: CloudStore, fi: FrameIndex, vmask, el_mi
     s = FINE_W / PANO_W
     x, y = u * s, v * s
     # splatted buffer (holes closed) for edge detection; clamp splat to [1,3] px at this resolution
-    from ..config import SPLAT_MAX_PX
-    import mapping.zbuffer as zb
-
-    old = zb.SPLAT_MAX_PX
-    zb.SPLAT_MAX_PX = 3
-    try:
-        depth, _ = zbuffer.splat(x, y, r, np.arange(len(r), dtype=np.uint32), FINE_W, FINE_H, SENSOR)
-    finally:
-        zb.SPLAT_MAX_PX = old
+    fine = replace(SENSOR, splat_max_px=3)
+    depth, _ = zbuffer.splat(x, y, r, np.arange(len(r), dtype=np.uint32), FINE_W, FINE_H, fine)
     d = zbuffer.close_depth(depth)
     fin = np.isfinite(d)
     h, w = d.shape

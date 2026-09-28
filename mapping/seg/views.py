@@ -19,7 +19,7 @@ from geovap.domain.model import geometry
 from ..config import PANO_H, PANO_W, ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..poses import load_poses
-from . import classes as C
+from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR
 from .render_labels import LABELS_DIR, frames_arg
 

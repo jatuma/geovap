@@ -20,6 +20,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.optimize import least_squares
 
+from geovap.domain.math import edges as edges_math
 from geovap.domain.model import geometry
 from ..cloud_store import CloudStore
 from ..config import DEG_PER_PX, PANO_H, PANO_W, R_MAX, R_MIN
@@ -127,37 +128,20 @@ def prepare_frame(frame: int, store: CloudStore, fi: FrameIndex, vmask, n_points
         xyz, kind = xyz[sel], kind[sel]
     # recompute the edge map exactly as chamfer does, but keep the nearest-edge indices
     edges, valid = _photo_edges(fi.poses, frame, vmask)
-    pad = 64
-    e = np.concatenate([edges[:, -pad:], edges, edges[:, :pad]], axis=1)
-    dt, (ir, ic) = ndimage.distance_transform_edt(~e, return_indices=True)
-    ir = ir[:, pad:-pad]
-    ic = (ic[:, pad:-pad] - pad) % Ch.CHAM_W
-    dt = dt[:, pad:-pad]
-    return IcpFrame(frame, xyz, kind, np.stack([ir, ic]).astype(np.int16), dt.astype(np.float16), valid)
+    dt, idx = edges_math.edge_distance_transform(edges)
+    return IcpFrame(frame, xyz, kind, idx, dt, valid)
 
 
 def _photo_edges(poses: Poses, frame: int, vmask) -> tuple[np.ndarray, np.ndarray]:
+    """Load the frame's luminance and hand it to `domain.math.edges.photo_edges`."""
     from .objective import photo_luminance
 
-    W, H = Ch.CHAM_W, Ch.CHAM_H
-    lum = photo_luminance(poses, frame, W, H)
-    g = cv2.GaussianBlur(lum, (0, 0), 1.0)
-    mag = np.hypot(cv2.Sobel(g, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(g, cv2.CV_32F, 0, 1, ksize=3))
-    valid = lum > 0.01
-    if vmask is not None:
-        vv, uu = np.mgrid[0:H, 0:W]
-        valid &= ~vmask(uu * (PANO_W / W), vv * (PANO_H / H))
-    lower = valid.copy()
-    lower[: H // 3] = False
-    thr = np.percentile(mag[lower], Ch.EDGE_PCT)
-    sky = valid.copy()
-    sky[H // 2 :] = False
-    thr_sky = max(thr, np.percentile(mag[sky], Ch.SKY_EDGE_PCT))
-    thr_map = np.where(np.arange(H)[:, None] < H // 2 - int(H * 5 / 180), thr_sky, thr)
-    edges = (mag > thr_map) & valid
-    density = cv2.blur(edges.astype(np.float32), (Ch.TEXTURE_WIN, Ch.TEXTURE_WIN))
-    edges &= density <= Ch.TEXTURE_DENSITY
-    return edges, valid
+    lum = photo_luminance(poses, frame, Ch.CHAM_W, Ch.CHAM_H)
+    return edges_math.photo_edges(
+        lum, pano_w=PANO_W, pano_h=PANO_H, vmask=vmask,
+        edge_pct=Ch.EDGE_PCT, sky_edge_pct=Ch.SKY_EDGE_PCT,
+        texture_win=Ch.TEXTURE_WIN, texture_density=Ch.TEXTURE_DENSITY,
+    )
 
 
 class EdgeICP:

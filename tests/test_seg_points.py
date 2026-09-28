@@ -1,6 +1,6 @@
 import numpy as np
 
-from mapping.seg import classes as C
+from geovap.domain.scheme import classes as C
 from mapping.seg.point_labels import label_points
 from mapping.seg.rasters import Grid
 

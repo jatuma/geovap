@@ -2,7 +2,7 @@ import numpy as np
 from shapely.geometry import LineString, Point
 
 from mapping.seg import areas
-from mapping.seg import classes as C
+from geovap.domain.scheme import classes as C
 
 
 def _ring(x0, y0, x1, y1):

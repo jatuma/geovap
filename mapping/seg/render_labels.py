@@ -22,7 +22,7 @@ from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..products import FrameProducts, load_products
 from ..vehicle_mask import VehicleMask
-from . import classes as C
+from geovap.domain.scheme import classes as C
 from .areas import SEGDS_DIR, load_objects
 from .point_labels import PointLabels
 

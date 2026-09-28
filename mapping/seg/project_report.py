@@ -19,7 +19,7 @@ from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..products import load_products
 from ..vehicle_mask import VehicleMask
-from . import taxonomy as T
+from geovap.domain.scheme import taxonomy as T
 from .bench import DATASET_SEG_DIR
 from .point_labels import LABEL_DIR as GT_LABEL_DIR
 from .project import LAS_DIR, N_CLASSES, SEG_OUT_DIR, load_mask, mask_paths

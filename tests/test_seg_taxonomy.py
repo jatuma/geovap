@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mapping.seg import classes as C
-from mapping.seg import taxonomy as T
+from geovap.domain.scheme import classes as C
+from geovap.domain.scheme import taxonomy as T
 
 CITYSCAPES_19 = ["road", "sidewalk", "building", "wall", "fence", "pole", "traffic light", "traffic sign", "vegetation", "terrain", "sky", "person", "rider", "car", "truck", "bus", "train", "motorcycle", "bicycle"]
 
