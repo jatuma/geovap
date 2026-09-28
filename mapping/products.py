@@ -199,7 +199,7 @@ def _build_and_save(frame: int) -> int:
     return fp.meta["n_splatted"]
 
 
-def build_all_frames(frames=None, rig: RigModel = IDENTITY, workers: int = 16, poses_source: str | None = None) -> None:
+def build_all_frames(frames=None, rig: RigModel = IDENTITY, workers: int = 16, poses_source: str | None = None, skip_existing: bool = True) -> None:
     from multiprocessing import Pool
 
     from tqdm import tqdm
@@ -209,6 +209,14 @@ def build_all_frames(frames=None, rig: RigModel = IDENTITY, workers: int = 16, p
     root = frames_dir(poses)
     root.mkdir(parents=True, exist_ok=True)
     rig.to_json(root / "rig.json")
+    n_requested = len(frames)
+    if skip_existing:
+        frames = [f for f in frames if not product_path(f, root).exists()]
+    n_skipped = n_requested - len(frames)
+    n_built = len(frames)
+    print(f"build_all_frames: {n_requested} requested, {n_skipped} skipped (already exist), {n_built} to build")
+    if not frames:
+        return
     with Pool(workers, initializer=_init_worker, initargs=(rig.as_vector(True), True, poses_source)) as pool:
         for _ in tqdm(pool.imap_unordered(_build_and_save, frames, chunksize=4), total=len(frames), desc="frames"):
             pass

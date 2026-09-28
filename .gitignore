@@ -13,3 +13,6 @@ pointcloud-tools/output/eomt_city_seg/
 *.jpg
 */output/**
 *.bin
+node_modules/
+.env
+*.bak

@@ -34,8 +34,8 @@ def test_near_wall_occludes_far_wall():
 def test_seam_wrap_and_empty_cells():
     C = np.zeros(3)
     R = np.eye(3)
-    # points straight ahead (az ~ 0) straddle the seam u=0/W
-    P = np.array([[10.0, 0.001, 0.0], [10.0, -0.001, 0.0]])
+    # points straight behind (az ~ 180, the seam is at the rear since the 2026-09-16 fix) straddle u=0/W
+    P = np.array([[-10.0, 0.001, 0.0], [-10.0, -0.001, 0.0]])
     u, v, r, el = geometry.world_to_pano(P, R, C)
     assert u[0] < 1 and u[1] > PANO_W - 1
     s = ZB_W / PANO_W

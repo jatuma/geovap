@@ -19,19 +19,28 @@ so the three numbers are a re-parametrisation of the whole rotation, not the veh
 `potree_angles` inverts that formula for the rotation the sphere actually needs (`sphere_rotation`).
 
 Sphere convention (three.js r124 `SphereGeometry` + equirectangular texture, derived in
-`tests/test_panos.py`): the mesh-local direction of image pixel (u, v) is
+`tests/test_panos.py`): Potree's `Images360` loader sets `texture.repeat.x = -1`, and that is
+CORRECT for our panoramas -- a normal photo (lettering readable) seen from inside a three.js
+sphere is mirrored, and -1 undoes it; both viewer pages keep it and only expose `?flip=1` as an
+A/B override. With repeat.x = -1 the texel of pixel u sits at texture s = 1 - u/w, which makes
+the mesh-local direction of image pixel (u, v)
 
-    L = (-cos(az) cos(el), sin(el), sin(az) cos(el)) = POTREE_M @ d_cam
+    L = (cos(az) cos(el), sin(el), -sin(az) cos(el)) = POTREE_M @ d_cam
 
 with (az, el) the same angles as `geometry.pano_rays`. Hence R_mesh = (POTREE_M @ R)^T for a
-frame with rotation R (world -> camera). This assumes texture.repeat.x == +1; Potree's loader
-sets -1 (mirrored panoramas), and `view.html` resets it after every load -- keep the two in sync.
+frame with rotation R (world -> camera).
 
-AZ_OFFSET_DEG (default 180) is spun into that rotation about the camera's own vertical axis.
-The derivation above says it should be 0, and every link of it was checked against the built
-potree.js in the viewer container -- but on screen the spheres come out turned by half a
-revolution, so the measured value wins. Set it to 0 with `--az-offset 0` to see the derived
-convention; if a Potree upgrade ever makes 0 the right answer, this is the only number to change.
+AZ_OFFSET_DEG (default 0) is spun into that rotation about the camera's own vertical axis; it is
+0 by derivation. The convention was fixed on 2026-09-16 (the camera model had been reflected
+about the lateral axis) -- an older analysis had claimed 0 vs. 180 was settled by NCC correlation
+against Potree screenshots via `pointcloud-tools/validate/sphere_check.py`, but that check rendered
+through the same wrong camera model on both sides and so could not have detected the error; it is
+not evidence either way. What IS evidence: the user visually confirmed, on the export produced by
+the OLD camera model with `az_offset_deg = 180` and repeat.x = -1, that the spheres line up
+correctly. That fixture (`tests/fixtures/panos_corr180_coordinates.txt`, built from
+`tests/fixtures/poses_corrected_34bca9.csv`) is reproduced line-for-line by this derivation with
+az 0 -- see `test_new_export_reproduces_user_confirmed_panos_corr180` -- which is what ties the new
+math back to a confirmed-correct display. `--az-offset 180` still exists for A/B sets only.
 """
 from __future__ import annotations
 
@@ -47,10 +56,11 @@ from . import geometry
 from .poses import Poses, load_poses
 from .rig import IDENTITY, RigModel
 
-# camera axes (x fwd, y left, z up) -> sphere-local axes (three.js: y up, texture seam at -x)
-POTREE_M = np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
-# measured, not derived: half a turn about the camera vertical (see the module docstring)
-AZ_OFFSET_DEG = 180.0
+# camera axes (x fwd, y left, z up) -> sphere-local axes, for Potree's texture.repeat.x = -1
+# (three.js: y up; POTREE_M_old @ Rz(180deg), fixed 2026-09-16 -- see the module docstring)
+POTREE_M = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
+# 0 by derivation; reproduces the user-confirmed display, see the module docstring
+AZ_OFFSET_DEG = 0.0
 
 HEADER = "file\ttime\tlongitude\tlatitude\taltitude\tcourse\tpitch\troll"
 

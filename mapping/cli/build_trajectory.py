@@ -37,7 +37,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..config import POSES_DIR, R_MAX, REPO_ROOT
+from ..config import CLEAN_FRAMES_JSON, POSES_DIR, R_MAX
 from ..poses import Poses, load_poses, write_pose_table
 from ..products import TIME_WINDOW_S, gather_candidates
 from ..quality import _photo_edges, _residual, _silhouette_points, yaw_rates
@@ -90,7 +90,7 @@ def clean_straight_frame_idx(poses: Poses, pass_id: int | None = None) -> np.nda
     """Indices into `poses` of clean, straight (|yaw_rate| < 5 deg/s) frames, optionally restricted
     to one pass. `dataset/clean_frames.json`'s "clean" class already enforces this yaw-rate cut, so
     the check here is redundant defence, not a second filter."""
-    clean = set(json.loads((REPO_ROOT / "dataset" / "clean_frames.json").read_text())["clean"])
+    clean = set(json.loads(CLEAN_FRAMES_JSON.read_text())["clean"])
     yr = np.nan_to_num(yaw_rates(poses), nan=0.0)
     idx = np.array(sorted(clean), dtype=np.int64)
     idx = idx[np.abs(yr[idx]) < YAW_RATE_STRAIGHT]

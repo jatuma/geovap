@@ -10,6 +10,19 @@ shrnutí této práce od čísla v souboru lišilo, platí soubor a je to tak do
 
 ---
 
+> **Oprava kamerového modelu 2026-09-16 — dopad na tento dokument.** Všechny výsledky níže (S0–S7,
+> `pose_report`, dopad na `04`/`05`/`06`) byly spočítané se **starým, zrcadleným kamerovým modelem**
+> (`mapping/geometry.py`/`camera.py` mapovaly azimut na sloupec obráceně — viz
+> `02_obarveni_pointcloudu.md §2.2` „Oprava konvence 2026-09-16" a `09_konsolidace.md`). Geometrické
+> a barevné metriky v tomto dokumentu (siluety, ΔE, cross-pass konflikty) se proto regenerují; běh
+> nad opraveným modelem byl spuštěn 2026-09-16 11:30 UTC (`09_konsolidace.md §"Výsledky nového běhu"`).
+> Jedna oprava se týká přímo kódu popsaného zde: pod novou konvencí je `align.py`'s
+> `yaw_offset = shift·360/W` **správně** (test `tests/test_align_yaw_sign.py`); pod starou konvencí
+> mělo totéž znaménko **opačný smysl**, tedy stage-1 NCC návrhy yaw v `align_frames.py`/Aligneru
+> (§3.3, §3.8) byly znaménkově přehozené — stage-2 barevné hledání i tak zkoušelo 0 a dolaďovalo, takže
+> to degradovalo měkce, ne katastroficky (proto stage-1 návrhy vypadaly jako šum kolem nuly, ne jako
+> systematická chyba).
+
 ## 1. Cíl a shrnutí výsledku
 
 Cíl: opravit pózu 1 503 panoramat proti mračnu i proti JVF referenci a přitom nechat `export.csv`

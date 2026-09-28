@@ -3,6 +3,8 @@
 The reference below is a transcription of what the viewer does -- three.js r124 `SphereGeometry`
 plus `Potree.Images360Loader` -- and is deliberately independent of `mapping.panos`.
 """
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -50,10 +52,10 @@ def sphere_local_dir(u: float, v: float, w: int = PANO_W, h: int = PANO_H) -> np
     """Direction, in mesh-local axes, of the vertex whose texture is panorama pixel (u, v).
 
     three.js r124 SphereGeometry: position = (-cos(phi) sin(theta), cos(theta), sin(phi) sin(theta)),
-    uv = (phi / 2pi, 1 - theta / pi); with `texture.repeat.x = 1` (view.html resets Potree's -1)
-    texel s = u / w and t = 1 - v / h.
+    uv = (phi / 2pi, 1 - theta / pi). Potree's loader sets `texture.repeat.x = -1`; that is the
+    correct display and the pages keep it, so texel s = 1 - u / w and t = 1 - v / h.
     """
-    phi = 2.0 * np.pi * (u / w)
+    phi = 2.0 * np.pi * (1.0 - u / w)
     theta = np.pi * (v / h)
     return np.array([-np.cos(phi) * np.sin(theta), np.cos(theta), np.sin(phi) * np.sin(theta)])
 
@@ -66,12 +68,17 @@ def test_sphere_local_dir_matches_potree_m():
         assert np.allclose(panos.POTREE_M @ d_cam, sphere_local_dir(u, v), atol=1e-12)
 
 
-@pytest.mark.parametrize("az_offset", [0.0, panos.AZ_OFFSET_DEG])
+@pytest.mark.parametrize("az_offset", [0.0, 180.0])
 def test_written_angles_reproduce_the_projection(az_offset):
     """A pixel put on the sphere by the viewer points where geometry says it points.
 
     With az_offset = 0 this is the pure convention check; the production value turns the sphere
     about the camera vertical, so the expected ray is the geometry ray for the shifted column.
+    The offset only re-derotates `pano_rays` by `rz_cam(az_offset)^T` before POTREE_M is applied,
+    and POTREE_M cancels out of that step regardless of its value (it's orthogonal), so the sign
+    of the column shift (u + az_offset/360*W) is unchanged by the repeat.x = -1 convention fix --
+    verified numerically against the production `potree_angles` code path for az_offset in
+    {0, 37, 180} before writing this test.
     """
     poses = _synthetic_poses()
     R, _C = geometry.frame_rotations(poses)
@@ -87,7 +94,7 @@ def test_written_angles_reproduce_the_projection(az_offset):
             assert np.degrees(np.arccos(np.clip(want @ got, -1, 1))) < 1e-5
 
 
-@pytest.mark.parametrize("az_offset", [0.0, 90.0, panos.AZ_OFFSET_DEG])
+@pytest.mark.parametrize("az_offset", [0.0, 90.0, 180.0])
 def test_potree_angles_roundtrip_through_sphere_rotation(az_offset):
     poses = _synthetic_poses(11, seed=5)
     R, _C = geometry.frame_rotations(poses)
@@ -136,3 +143,67 @@ def test_real_poses_angles_are_finite(poses, k):
     course, pitch, roll = panos.potree_angles(R)
     assert np.isfinite([course[0], pitch[0], roll[0]]).all()
     assert abs(pitch[0]) < 30 and abs(roll[0]) < 30
+
+
+def test_new_export_reproduces_user_confirmed_panos_corr180():
+    """The user visually confirmed the sphere export made by the OLD camera model with
+    `az_offset_deg = 180` and `texture.repeat.x = -1` (fixture: `panos_corr180_coordinates.txt`,
+    built from `poses_corrected_34bca9.csv`, rig IDENTITY, all 1503 frames, old POTREE_M, AZ 180).
+    The new camera model + new POTREE_M, at the new default az offset of 0, must write the exact
+    same numbers -- that is the evidence that the new derivation is correct, not just self-consistent.
+    """
+    from mapping.poses import read_pose_table
+    from mapping.rig import IDENTITY
+
+    fixtures = Path(__file__).parent / "fixtures"
+    poses = read_pose_table(fixtures / "poses_corrected_34bca9.csv")
+    R, C = geometry.frame_rotations(poses, IDENTITY)
+    names = [f"f{k:04d}.jpg" for k in range(len(poses))]
+    lines = panos.coordinates_text(names, poses.t, C, R).strip().split("\n")
+
+    ref_lines = (fixtures / "panos_corr180_coordinates.txt").read_text().strip().split("\n")
+    assert lines[0] == ref_lines[0]
+    assert len(lines) == len(ref_lines)
+    for got_line, ref_line in zip(lines[1:], ref_lines[1:]):
+        got = got_line.split("\t")
+        ref = ref_line.split("\t")
+        assert got[0] == ref[0]
+        pos_got = np.array([float(x) for x in got[2:5]])
+        pos_ref = np.array([float(x) for x in ref[2:5]])
+        assert np.max(np.abs(pos_got - pos_ref)) < 1e-4
+        ang_got = np.array([float(x) for x in got[5:8]])
+        ang_ref = np.array([float(x) for x in ref[5:8]])
+        d = np.abs(ang_got - ang_ref)
+        d[0] = min(d[0], 360.0 - d[0])  # course wraps at +-180
+        assert np.max(d) < 1e-6
+
+
+def test_potree_angles_at_az_0_matches_the_old_formula_at_az_180():
+    """Documents *why* the numbers above are identical: with the camera model reflected about the
+    lateral axis, POTREE_M_new = POTREE_M_old @ Rz(180 deg), and az_offset folds a Rz(az) into the
+    same product -- so (POTREE_M_new, az=0) and (POTREE_M_old, az=180) give the same R_mesh.
+    """
+    m_old = np.array([[-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
+
+    def old_potree_angles(R):
+        az = np.deg2rad(180.0)
+        c, s = np.cos(az), np.sin(az)
+        rz = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+        m = np.swapaxes(m_old @ rz @ np.asarray(R, dtype=np.float64), -1, -2)
+        b = np.arcsin(np.clip(-m[..., 2, 0], -1.0, 1.0))
+        c2 = np.arctan2(m[..., 1, 0], m[..., 0, 0])
+        a = np.arctan2(m[..., 2, 1], m[..., 2, 2])
+        course = 90.0 - np.degrees(c2)
+        pitch = -np.degrees(b)
+        roll = np.degrees(a) - 90.0
+        return (course + 180.0) % 360.0 - 180.0, pitch, roll
+
+    poses = _synthetic_poses(9, seed=13)
+    R, _C = geometry.frame_rotations(poses)
+    course_new, pitch_new, roll_new = panos.potree_angles(R, 0.0)
+    course_old, pitch_old, roll_old = old_potree_angles(R)
+    d_course = np.abs(course_new - course_old)
+    d_course = np.minimum(d_course, 360.0 - d_course)
+    assert np.max(d_course) < 1e-9
+    assert np.allclose(pitch_new, pitch_old, atol=1e-9)
+    assert np.allclose(roll_new, roll_old, atol=1e-9)

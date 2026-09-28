@@ -7,7 +7,7 @@ services:
     entrypoint: ["tail", "-f", "/dev/null"]
     volumes:
       - ../Geovap_data:/data:ro
-      - ./output:/output
+      - ${POINTCLOUD_OUTPUT:-./output}:/output
     working_dir: /data
 
   # Converts LAS/LAZ into Potree's web-viewable octree format.
@@ -19,7 +19,8 @@ services:
     build: ./potreeconverter
     volumes:
       - ../Geovap_data:/data:ro
-      - ./output:/output
+      - ${POINTCLOUD_OUTPUT:-./output}:/output
+      - ${GEOVAP_CACHE:-../../Geovap_cache}/out:/cache_out:ro
 
   # Web viewer, serves ./output/<name> as browsable/viewable point clouds.
   viewer:
@@ -27,4 +28,4 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./output:/usr/share/nginx/html/pointclouds:ro
+      - ${POINTCLOUD_OUTPUT:-./output}:/usr/share/nginx/html/pointclouds:ro

@@ -105,9 +105,13 @@ def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray, 
     diag_comp = {n: np.zeros(NC) for n in ("verge", "road_or_verge", "paved_other")}
     n_frames = 0
     r0, r1 = BAND_ROWS
+    n_no_gt = 0
     for k in frames:
         pp = BENCH_DIR / tag / f"f{k:04d}_common.png"
         if not pp.exists():
+            continue
+        if not (LABELS_DIR / f"f{k:04d}.png").exists() or not (BANDS_DIR / f"f{k:04d}.png").exists():
+            n_no_gt += 1  # frame not in this pose source's clean set -> no pseudo-GT rendered for it
             continue
         n_frames += 1
         pred = cv2.imread(str(pp), 0)
@@ -168,7 +172,7 @@ def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray, 
     total = cm.sum()
     res = {
         "tag": tag,
-        "n_frames": n_frames,
+        "n_frames": n_frames, "n_no_gt": n_no_gt,
         "pixel_acc": _f(np.diag(cm).sum() / total) if total else None,
         "pixel_acc_cosw": _f(np.diag(cmw).sum() / cmw.sum()) if total else None,
         "mIoU_core": _f(np.nanmean(core)) if core else None,
@@ -205,11 +209,14 @@ def timing(tag: str) -> dict:
     return {"s_per_pano_median": _f(np.median(secs[1:] if len(secs) > 1 else secs)), "peak_mib": int(max(float(r["peak_mib"]) for r in rows))}
 
 
-def run(tags: list[str], frames: list[int], poses_source: str | None = None) -> dict:
-    """Evaluate on all frames and on the near-field-clean subset (labels not displaced by pass registration)."""
+def run(tags: list[str], frames: list[int], poses_source: str | None = None, out_dir: Path = OUT_DIR) -> dict:
+    """Evaluate on all frames and on the near-field-clean subset (labels not displaced by pass registration).
+    `out_dir` (default `dataset/seg/bench`) receives results.json + the CSVs; pass another dir to keep a
+    second evaluation (e.g. on a fixed baseline frame list) from overwriting the main one."""
     from . import nearfield
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
     poses = load_poses(poses_source)
     lut = T.gt_to_common_lut()
     W = lat_weights()
@@ -227,31 +234,31 @@ def run(tags: list[str], frames: list[int], poses_source: str | None = None) -> 
         r["spec"] = {"checkpoint": SPECS[tag].checkpoint, "taxonomy": SPECS[tag].taxonomy, "licence": SPECS[tag].licence, "note": SPECS[tag].note}
         results[tag] = r
         print(f"[{tag}] {r['n_frames']} frames: mIoU_core {r['mIoU_core']} (nf_ok {r['nf_ok']['n_frames']} frames: {r['nf_ok']['mIoU_core']}), acc {r['pixel_acc_cosw']}, fence band {r['class_bands']['fence']}, {r['timing']}")
-    (OUT_DIR / "results.json").write_text(json.dumps(results, indent=1))
-    write_csvs(results)
+    (out_dir / "results.json").write_text(json.dumps(results, indent=1))
+    write_csvs(results, out_dir)
     return results
 
 
-def write_csvs(results: dict) -> None:
+def write_csvs(results: dict, out_dir: Path = OUT_DIR) -> None:
     tags = list(results)
-    with (OUT_DIR / "per_class_iou.csv").open("w", newline="") as fh:
+    with (out_dir / "per_class_iou.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["class", "gt_px"] + tags)
         for n in T.CORE + T.EXT:
             w.writerow([n, results[tags[0]]["per_class"][n]["gt_px"]] + [_cell(results[t]["per_class"][n]) for t in tags])
-    with (OUT_DIR / "summary.csv").open("w", newline="") as fh:
+    with (out_dir / "summary.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["model", "checkpoint", "taxonomy", "frames", "mIoU_core_cosw", "mIoU_core_plain", "mIoU_ext", "pixel_acc_cosw", "frames_nf_ok", "mIoU_core_nf_ok", "s_per_pano", "peak_MiB", "licence"])
         for t in tags:
             r = results[t]
             w.writerow([t, r["spec"]["checkpoint"], r["spec"]["taxonomy"], r["n_frames"], r["mIoU_core"], r["mIoU_core_plain"], r["mIoU_ext"], r["pixel_acc_cosw"], r["nf_ok"]["n_frames"], r["nf_ok"]["mIoU_core"], r["timing"].get("s_per_pano_median"), r["timing"].get("peak_mib"), r["spec"]["licence"]])
-    with (OUT_DIR / "boundary.csv").open("w", newline="") as fh:
+    with (out_dir / "boundary.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
         keys = list(results[tags[0]]["boundary_iou"])
         w.writerow(["boundary"] + tags)
         for k in keys:
             w.writerow([k] + [results[t]["boundary_iou"][k] for t in tags])
-    with (OUT_DIR / "bands.csv").open("w", newline="") as fh:
+    with (out_dir / "bands.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["metric"] + tags)
         for k in CLASS_BANDS:

@@ -18,7 +18,7 @@ def erp_pixel_rays(pano_w: int, pano_h: int, device: torch.device) -> torch.Tens
     """Smerove vektory (dopredu=+z v yaw=0, vpravo=+x, nahoru=+y) pro kazdy ERP pixel. [H,W,3]."""
     us = torch.arange(pano_w, device=device, dtype=torch.float64) + 0.5
     vs = torch.arange(pano_h, device=device, dtype=torch.float64) + 0.5
-    az = us / pano_w * 360.0  # stupne, sev u=0 je az=0 relativne k yaw snimku
+    az = 180.0 - us / pano_w * 360.0  # stupne; sev u=0 je VZADU (az=180), stred u=W/2 dopredu (oprava 2026-09-16, viz mapping/geometry.py)
     el = 90.0 - vs / pano_h * 180.0
     az_r = torch.deg2rad(az)[None, :].expand(pano_h, pano_w)
     el_r = torch.deg2rad(el)[:, None].expand(pano_h, pano_w)
@@ -113,7 +113,7 @@ def make_extract_grid(
     az = torch.rad2deg(torch.atan2(right2, fwd2))
     el = torch.rad2deg(torch.atan2(up2, torch.hypot(right2, fwd2)))
 
-    u = torch.remainder(az, 360.0) / 360.0 * pano_w + pad
+    u = torch.remainder(180.0 - az, 360.0) / 360.0 * pano_w + pad  # 2026-09-16: sev vzadu, sloupce po smeru hodin
     v = (90.0 - el) / 180.0 * pano_h
 
     padded_w = pano_w + 2 * pad

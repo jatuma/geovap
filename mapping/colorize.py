@@ -187,7 +187,8 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
         if opt.subsample is None:
             prov = {"rig": {"boresight_deg": list(opt.rig.boresight_deg), "lever_arm_m": list(opt.rig.lever_arm_m), "dt_s": opt.rig.dt_s, "hash": opt.rig.hash()},
                     "r_max": opt.r_max, "top_k": opt.top_k, "occlusion": opt.occlusion, "sampling": opt.sampling, "git": products.git_rev(),
-                    "rgb_scaling": "8bit*256", "frames": [int(f) for f in frames]}
+                    "rgb_scaling": "8bit*256", "frames": [int(f) for f in frames],
+                    "poses_source": fi.poses.source, "poses_hash": fi.poses.hash()}
             las_out.write_tile(td, Path(opt.out_dir) / opt.tag / "tiles" / f"ID3432_000{tile.name}_colored.laz", fused["rgb"], extras, prov)
 
     # stratified random subsample for ad-hoc plots

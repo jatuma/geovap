@@ -1,0 +1,7 @@
+model,checkpoint,taxonomy,frames,mIoU_core_cosw,mIoU_core_plain,mIoU_ext,pixel_acc_cosw,frames_nf_ok,mIoU_core_nf_ok,s_per_pano,peak_MiB,licence
+m2f_vistas,facebook/mask2former-swin-large-mapillary-vistas-semantic,vistas,96,0.4991,0.4994,0.3719,0.7818,46,0.4649,5.108,6585,"MIT code, Vistas weights (research)"
+m2f_city,facebook/mask2former-swin-large-cityscapes-semantic,cityscapes,96,0.4447,0.4428,0.3891,0.7383,46,0.4089,4.947,3569,"MIT code, Cityscapes weights (research)"
+oneformer_city,shi-labs/oneformer_cityscapes_swin_large,cityscapes,96,0.4357,0.4372,0.3812,0.7152,46,0.4088,5.5045,4662,"MIT code, Cityscapes weights (research)"
+eomt_city,tue-mps/cityscapes_semantic_eomt_large_1024,cityscapes,96,0.4949,0.4994,0.433,0.7551,46,0.4469,4.549,3844,"Apache-2.0 code, Cityscapes weights (research)"
+eomt_dinov3_ade,tue-mps/eomt-dinov3-ade-semantic-large-512,ade,96,0.4121,0.4159,0.2899,0.6787,46,0.3832,7.5325,14410,Apache-2.0 + DINOv3 licence
+segformer_b5,nvidia/segformer-b5-finetuned-cityscapes-1024-1024,cityscapes,96,0.3816,0.3798,0.3339,0.6757,46,0.3688,4.164,3821,NVIDIA non-commercial (research only)

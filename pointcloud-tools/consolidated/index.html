@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Dražkov – consolidated</title>
+	<link rel="stylesheet" type="text/css" href="/potree/build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="/potree/libs/jstree/themes/mixed/style.css">
+	<style>
+		body { margin: 0; padding: 0; overflow: hidden; }
+		#modes { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10000;
+			display: flex; gap: 4px; background: rgba(20,20,20,.85); padding: 6px; border-radius: 6px; font-family: sans-serif; }
+		#modes button { background: #333; color: #ddd; border: 1px solid #555; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+		#modes button.active { background: #2b7bd6; color: #fff; border-color: #2b7bd6; }
+		#modes span { color: #aaa; font-size: 12px; align-self: center; margin-left: 8px; }
+		#panos_panel {
+			position: absolute; left: 10px; bottom: 10px; z-index: 10000; display: none;
+			background: rgba(20,20,20,0.85); color: #eee; font: 12px sans-serif;
+			padding: 8px 10px; border-radius: 4px; width: 210px;
+		}
+		#panos_panel h4 { margin: 0 0 6px 0; font-size: 12px; font-weight: bold; }
+		#panos_panel label { display: block; margin: 6px 0 2px 0; }
+		#panos_panel input[type=range] { width: 100%; }
+		#panos_panel .row { display: flex; gap: 4px; margin-top: 6px; }
+		#panos_panel button { flex: 1; cursor: pointer; }
+		#panos_panel .hint { color: #999; margin-top: 6px; line-height: 1.4; }
+	</style>
+</head>
+<body>
+	<script src="/potree/libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="/potree/libs/spectrum/spectrum.js"></script>
+	<script src="/potree/libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="/potree/libs/other/BinaryHeap.js"></script>
+	<script src="/potree/libs/tween/tween.min.js"></script>
+	<script src="/potree/libs/d3/d3.js"></script>
+	<script src="/potree/libs/proj4/proj4.js"></script>
+	<script src="/potree/libs/openlayers3/ol.js"></script>
+	<script src="/potree/libs/i18next/i18next.js"></script>
+	<script src="/potree/libs/jstree/jstree.js"></script>
+	<script src="/potree/build/potree/potree.js"></script>
+	<script src="/potree/libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;">
+		<div id="potree_render_area" style="background-image: url('/potree/build/potree/resources/images/background.jpg')"></div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+	<div id="modes">
+		<button data-mode="rgb">RGB (tw45)</button>
+		<button data-mode="seg">Segmentation</button>
+		<button data-mode="objects">Objects</button>
+		<button data-mode="objclass">Object class</button>
+		<button data-mode="de">dE00</button>
+		<button data-mode="vendor">RGB (original)</button>
+		<span>keys: 1 / 2 / 3 / 4 / 5 / 6</span>
+	</div>
+
+	<div id="panos_panel">
+		<h4>360&deg; panoramas</h4>
+		<div id="panos_current">click a sphere to enter</div>
+		<label>photo opacity: <span id="panos_opacity_val">0.50</span></label>
+		<input id="panos_opacity" type="range" min="0" max="1" step="0.02" value="0.5">
+		<label>sphere radius: <span id="panos_radius_val">1000</span> m</label>
+		<input id="panos_radius" type="range" min="5" max="1000" step="5" value="1000">
+		<label><input id="panos_depth" type="checkbox"> photo behind the cloud (depth test)</label>
+		<div class="row">
+			<button id="panos_prev">&larr; prev</button>
+			<button id="panos_blink">blink</button>
+			<button id="panos_next">next &rarr;</button>
+		</div>
+		<div class="hint">keys: [ ] frame, B blink, Esc unfocus</div>
+	</div>
+
+	<script>
+		// Potree 1.8 bundles three.js as a module: there is no global THREE. Clone a colour object
+		// out of a built-in gradient to get new ones.
+		const rgbColor = (r, g, b) => Potree.Gradients.SPECTRAL[0][1].clone().setRGB(r, g, b);
+		proj4.defs("EPSG:5514", "+proj=krovak +lat_0=49.5 +lon_0=24.8333333333333 +alpha=30.2881397527778 +k=0.9999 +x_0=0 +y_0=0 +ellps=bessel +towgs84=589,76,480,0,0,0,0 +units=m +no_defs +type=crs");
+
+		function getParam(name) {
+			const params = new URLSearchParams(window.location.search);
+			return params.get(name);
+		}
+
+		const p_nogui = getParam("nogui") === "1" || getParam("nogui") === "true";
+		const p_budget = getParam("budget");
+		const p_fov = getParam("fov");
+		const p_edl = getParam("edl");
+
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.setEDLEnabled(p_edl === null ? true : (p_edl === "1" || p_edl === "true"));
+		viewer.setFOV(p_fov !== null ? parseFloat(p_fov) : 60);
+		viewer.setPointBudget(p_budget !== null ? parseInt(p_budget, 10) : 3_000_000);
+		// (no viewer.loadSettingsFromURL(): Potree would read our ?opacity= param and crash on this.setOpacity)
+		viewer.setDescription("");
+		if (!p_nogui) {
+			viewer.loadGUI(() => { viewer.setLanguage('en'); });
+		} else {
+			document.getElementById("modes").style.display = "none";
+			viewer.setBackground("black");  // headless shots: no-point pixels are pure black (silhouette metric)
+		}
+
+		// classification palette for the vendor classes (1 = unclassified/objects, 2 = ground)
+		viewer.setClassifications({
+			"1": { visible: true, name: "unclassified", color: [0.55, 0.65, 0.85, 1.0] },
+			"2": { visible: true, name: "ground",       color: [0.55, 0.40, 0.25, 1.0] },
+			"DEFAULT": { visible: true, name: "other",  color: [0.3, 0.3, 0.3, 1.0] },
+		});
+
+		// ?base=<dir> points the page at another octree folder (e.g. the old export-pose
+		// /pointclouds/eomt_city_seg/ for A/B checks); ?objects=0 skips the objects + vendor octrees.
+		const base = getParam("base") || "/pointclouds/consolidated/";
+		const withObjects = getParam("objects") !== "0";
+		const cloudName = getParam("cloud") || "cloud";
+		const clouds = {};   // name -> pointcloud
+
+		function load(name) {
+			return new Promise(res => Potree.loadPointCloud(base + name + "/metadata.json", name, e => {
+				const pc = e.pointcloud;
+				viewer.scene.addPointCloud(pc);
+				const m = pc.material;
+				m.size = 1;
+				m.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+				m.shape = Potree.PointShape.SQUARE;
+				m.activeAttributeName = "rgba";
+				clouds[name] = pc;
+				res(pc);
+			}));
+		}
+
+		// classes.json lives next to cloud/ (see project_report.write_potree_classes); applies to
+		// the "classification" attribute (mode "seg") on the cloud octree.
+		function applyClasses() {
+			return fetch(base + cloudName + "/classes.json").then(r => r.ok ? r.json() : null).then(spec => {
+				if (!spec || !spec.classes) return;
+				const cls = {};
+				for (const [id, c] of Object.entries(spec.classes)) {
+					const col = (c.color || [0, 0, 0, 255]).map(x => x / 255);
+					while (col.length < 4) col.push(1);
+					cls[id] = { visible: c.visible !== false, name: c.name || id, color: col };
+				}
+				viewer.setClassifications(cls);
+			}).catch(err => console.warn("classes.json not applied:", err));
+		}
+
+		// Potree 1.8 colours a scalar attribute with w = (value + offset) * scale, where
+		// scale = |initialRange| / |range| and offset = -(range.lo - initial.lo) / |initialRange| -- a mapping
+		// that only normalises correctly when the attribute's initialRange has length 1. For raw uint8/float
+		// attributes we compensate: to display [lo, hi] request range [ilo + lo*S, ilo + hi*S], S = |initialRange|.
+		function scalarRange(pc, name, lo, hi) {
+			const a = pc.pcoGeometry.pointAttributes.attributes.find(x => x.name === name);
+			if (!a || !a.initialRange) return;
+			const ilo = a.initialRange[0], S = a.initialRange[1] - a.initialRange[0] || 1;
+			pc.material.setRange(name, [ilo + lo * S, ilo + hi * S]);
+		}
+		let currentMode = "rgb";
+		function setMode(mode) {
+			if (!clouds.cloud || (withObjects && (!clouds.objects || !clouds.vendor))) return;
+			currentMode = mode;
+			// exactly one octree on screen: the cluster-palette one in "objects", the main one otherwise
+			// (applyOpacity() below re-applies this together with the photo-only/cloud-only rule)
+			clouds.cloud.visible = mode !== "objects" && mode !== "vendor";
+			if (clouds.objects) clouds.objects.visible = mode === "objects";
+			if (clouds.vendor) clouds.vendor.visible = mode === "vendor";
+			const cloud = clouds.cloud;
+			const m = cloud.material;
+			m.gradient = Potree.Gradients.SPECTRAL;
+			m.activeAttributeName = "rgba";
+			if (mode === "seg") {
+				m.activeAttributeName = "classification";
+			} else if (mode === "objclass") {
+				// 0 ground/low, 1 structure, 2 vegetation, 3 wire
+				m.activeAttributeName = "obj_class";
+				scalarRange(cloud, "obj_class", 0, 3);
+				m.gradient = [[0.0, rgbColor(0.2, 0.2, 0.2)], [0.33, rgbColor(0.35, 0.45, 0.9)],
+					[0.66, rgbColor(0.25, 0.7, 0.25)], [1.0, rgbColor(1.0, 0.25, 0.25)]];
+			} else if (mode === "de") {
+				m.activeAttributeName = "dE00_med";
+				scalarRange(cloud, "dE00_med", 0, 20);  // 0 = perfect match ... 20 = the ">20" bin of the dE report
+				m.gradient = Potree.Gradients.VIRIDIS || Potree.Gradients.SPECTRAL;
+			}
+			if (clouds.objects) clouds.objects.material.activeAttributeName = "rgba";
+			if (clouds.vendor) clouds.vendor.material.activeAttributeName = "rgba";
+			if (window.__setOpacity && panosImages && panosImages.focusedImage) window.__setOpacity(document.getElementById("panos_opacity").value);
+			document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+			history.replaceState(null, "", "#" + mode);
+		}
+		window.setMode = setMode;
+
+		document.querySelectorAll("#modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+		window.addEventListener("keydown", e => {
+			if (e.target.tagName === "INPUT") return;
+			if (e.key === "1") setMode("rgb");
+			if (e.key === "2") setMode("seg");
+			if (e.key === "3") setMode("objects");
+			if (e.key === "4") setMode("objclass");
+			if (e.key === "5") setMode("de");
+			if (e.key === "6") setMode("vendor");
+		});
+
+		// ----------------------------------------------------------------- 360 panoramas
+		// <panos dir> (built by `python -m mapping.cli.export_panos`) holds Potree's own
+		// coordinates.txt + one jpg per frame. Overridable with ?panos=<dir>.
+		// Ported verbatim from viewer/view.html: two deviations from stock Potree.Images360, both
+		// needed to compare photo against cloud:
+		//  * its loader sets texture.repeat.x = -1. That is CORRECT for our panoramas: a normal photo
+		//    (lettering readable) on the inside of a three.js sphere is mirrored, and -1 undoes it.
+		//    Verified 2026-09-16 on the "VMX-2HA" lettering. ?flip=1 forces +1 (mirrored, A/B only);
+		//    the sphere angles come from mapping/panos.py, whose POTREE_M is derived for this
+		//    default repeat.x = -1 (see its module docstring and tests/test_panos.py). Keep in sync.
+		//  * the sphere is opaque and 1000 m wide, which hides the cloud completely; we clone the
+		//    material (Potree shares one instance with the marker spheres) and make it blendable.
+		let panosImages = null;
+		function loadPanos(dir) {
+			return fetch(dir + "/coordinates.txt", { method: "HEAD" }).then(r => {
+				if (!r.ok) return null;
+				return Potree.Images360Loader.load(dir, viewer).then(images => {
+					// Potree's MapView (loaded with the GUI) listens to this event and calls this.toMap.forward,
+					// which is undefined when the octree carries no CRS (our LAS writer copies no CRS VLR ->
+					// metadata.json projection ""). The images are already pushed into the scene before the
+					// event fires, so swallow the map-view failure instead of aborting everything below
+					// (texture un-mirroring, blendable material, panel) -- exactly the failure that left the
+					// spheres MIRRORED in every interactive session before 2026-09-16.
+					try {
+						viewer.scene.add360Images(images);
+					} catch (err) {
+						if (!viewer.scene.images360.includes(images)) viewer.scene.images360.push(images);
+						console.warn("add360Images: map view rejected the spheres (no CRS on the octree); continuing without map markers:", err.message);
+					}
+					panosImages = images;
+
+					const rawLoad = images.load.bind(images);
+					images.load = img => rawLoad(img).then(v => {
+						if (img.texture && getParam("flip") === "1") { img.texture.repeat.x = 1; img.texture.needsUpdate = true; }
+						return v;
+					});
+
+					const mat = images.sphere.material.clone();
+					mat.transparent = true;
+					mat.depthWrite = false;
+					mat.depthTest = false;
+					images.sphere.material = mat;
+					images.sphere.renderOrder = 1000;
+
+					const el = id => document.getElementById(id);
+					const panel = el("panos_panel");
+					if (!p_nogui) panel.style.display = "block";
+
+					// Potree draws point clouds in its own (EDL) pass on top of the scene, so the
+					// sphere can never occlude points however opaque it is. For a real "photo only"
+					// (opacity 1) the clouds are hidden; for "cloud only" (opacity 0) the sphere is.
+					const applyOpacity = () => {
+						const a = parseFloat(el("panos_opacity").value);
+						mat.opacity = a;
+						images.sphere.visible = a > 0 && images.focusedImage !== null;
+						for (const key of Object.keys(clouds)) {
+							if (key === "objects") clouds[key].visible = a < 1 && currentMode === "objects";
+							else if (key === "vendor") clouds[key].visible = a < 1 && currentMode === "vendor";
+							else clouds[key].visible = a < 1 && currentMode !== "objects" && currentMode !== "vendor";
+						}
+						el("panos_opacity_val").textContent = a.toFixed(2);
+					};
+					const applyRadius = () => {
+						const r = parseFloat(el("panos_radius").value);
+						images.sphere.scale.set(r, r, r);
+						el("panos_radius_val").textContent = r;
+					};
+					window.__setOpacity = a => { el("panos_opacity").value = a; applyOpacity(); };
+					el("panos_opacity").addEventListener("input", applyOpacity);
+					el("panos_radius").addEventListener("input", applyRadius);
+					el("panos_depth").addEventListener("change", e => { mat.depthTest = e.target.checked; });
+					applyOpacity();
+					applyRadius();
+
+					// index of the focused image, so [ ] can walk the pass in capture order
+					const indexOf = img => images.images.indexOf(img);
+					const show = i => {
+						const n = images.images.length;
+						const img = images.images[((i % n) + n) % n];
+						images.focus(img);
+						if (p_nogui && images.elUnfocus) images.elUnfocus.style.display = "none";
+						applyOpacity();
+						el("panos_current").textContent = img.file.substring(img.file.lastIndexOf("/") + 1)
+							+ "  (" + (indexOf(img) + 1) + "/" + n + ")";
+						// Images360.focus() itself starts a 500 ms view.setView() animation that lands
+						// the camera a hair short of the sphere's centre, looking at it (see potree.js
+						// Images360.focus). Callers just need to wait out the animation (see the
+						// afterPanos 700 ms wait below) before reading back viewer.scene.view.position.
+						return img;
+					};
+					window.__focusFrame = i => show(i);
+					const step = d => {
+						const cur = images.focusedImage;
+						show(cur ? indexOf(cur) + d : 0);
+					};
+					let blinkSaved = null;
+					const blink = () => {
+						if (blinkSaved === null) { blinkSaved = mat.opacity; mat.opacity = mat.opacity > 0.5 ? 0 : 1; }
+						else { mat.opacity = blinkSaved; blinkSaved = null; }
+					};
+					el("panos_prev").addEventListener("click", () => step(-1));
+					el("panos_next").addEventListener("click", () => step(+1));
+					el("panos_blink").addEventListener("click", blink);
+					document.addEventListener("keydown", e => {
+						if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+						if (e.key === "[") step(-1);
+						else if (e.key === "]") step(+1);
+						else if (e.key === "b" || e.key === "B") blink();
+						else if (e.key === "Escape") images.unfocus();
+					});
+
+					console.log("360 panoramas: " + images.images.length + " from " + dir);
+
+					const p_frame = getParam("frame");
+					if (p_frame !== null) show(parseInt(p_frame, 10));
+
+					return images;
+				});
+			}).catch(err => { console.warn("panos not loaded:", err); return null; });
+		}
+
+		// ----------------------------------------------------------------- headless-driver hooks
+		// window.__ready flips true once both octrees are loaded, panoramas (if requested) are
+		// loaded and no more nodes are streaming in; window.__setCam/__setOpacity let a driver take
+		// several shots from a single page load without reloading the octrees.
+		window.__ready = false;
+		window.__setCam = (yaw, pitch, fov) => {
+			if (yaw !== undefined && yaw !== null) viewer.scene.view.yaw = yaw;
+			if (pitch !== undefined && pitch !== null) viewer.scene.view.pitch = pitch;
+			if (fov !== undefined && fov !== null) viewer.setFOV(fov);
+		};
+
+		function pollReady() {
+			if (Potree.numNodesLoading === 0) {
+				window.__ready = true;
+			} else {
+				setTimeout(pollReady, 100);
+			}
+		}
+
+		function loadAs(name, key) {
+			return new Promise(res => Potree.loadPointCloud(base + name + "/metadata.json", key, e => {
+				const pc = e.pointcloud;
+				viewer.scene.addPointCloud(pc);
+				const m = pc.material;
+				m.size = 1;
+				m.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+				m.shape = Potree.PointShape.SQUARE;
+				m.activeAttributeName = "rgba";
+				clouds[key] = pc;
+				res(pc);
+			}));
+		}
+		const loads = [loadAs(cloudName, "cloud")];
+		if (withObjects) { loads.push(loadAs("objects", "objects")); loads.push(loadAs("vendor", "vendor")); }
+		Promise.all(loads).then(() => applyClasses()).then(() => {
+			const p_mode = getParam("mode") || (location.hash || "#rgb").slice(1);
+			setMode(p_mode);
+
+			const p_radius = getParam("radius");
+			const p_opacity = getParam("pano_opacity");
+			const p_yaw = getParam("yaw");
+			const p_pitch = getParam("pitch");
+
+			const panosDir = getParam("panos") || (base + cloudName + "/panos");
+			const afterPanos = loadPanos(panosDir).then(images => {
+				if (images) {
+					if (p_radius !== null) images.sphere.scale.set(parseFloat(p_radius), parseFloat(p_radius), parseFloat(p_radius));
+					const p_frame = getParam("frame");
+					if (p_frame !== null) {
+						// loadPanos() already focuses p_frame; give its 500 ms animation + settle
+						// time before flipping camera params or reporting ready.
+						return new Promise(res => setTimeout(res, 700));
+					}
+				}
+				return null;
+			});
+
+			afterPanos.then(() => {
+				if (p_opacity !== null && window.__setOpacity) window.__setOpacity(parseFloat(p_opacity));
+				if (p_yaw !== null || p_pitch !== null) {
+					window.__setCam(p_yaw !== null ? parseFloat(p_yaw) : undefined, p_pitch !== null ? parseFloat(p_pitch) : undefined);
+				} else if (getParam("frame") === null) {
+					viewer.fitToScreen();
+				}
+				pollReady();
+			});
+		});
+	</script>
+</body>
+</html>

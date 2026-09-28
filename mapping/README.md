@@ -16,6 +16,29 @@ Data se čtou z `Geovap_data/DTM_Dražkov`, všechny odvozené soubory jdou do `
 (přepsatelné proměnnými `GEOVAP_DATA`, `GEOVAP_CACHE`). Skripty v `experiments/` zůstávají
 netknuté a používají se přes `mapping.compat` (`common.io_data`, `common.class_map`).
 
+## Jeden vstupní bod: `mapping.cli.pipeline` (2026-09-16, `09_konsolidace.md`)
+
+```
+uv run python -m mapping.cli.pipeline env-check [--fix-symlink]
+uv run python -m mapping.cli.pipeline run --detach            # celý řetězec, ~6 h; log out/pipeline/pipeline.log
+uv run python -m mapping.cli.pipeline run --from segds --to seg-project   # výřez; --only a,b ; --force ; --with-optional
+uv run python -m mapping.cli.pipeline status | compare        # markery out/pipeline/<stage>.json, comparison.md
+```
+
+Stage v pořadí: `env-check, baseline, store-columns, align, traj-rot, [traj-validate], refine, register,
+[reg-conflict], assemble, products, pose-report, colorize, colour-report, quality, promote, segds, seg-eval,
+seg-project, compare, merge, potree, panos, validate`. Každý příkaz běží jako vlastní subprocess; stage do
+`assemble` včetně dostávají `GEOVAP_POSES=export` (korigovaná tabulka teprve vzniká), zbytek `corrected`.
+Stage je hotová, když má marker s `rc=0`, nezměněný hash vstupů a existující výstupy — `run` ji pak přeskočí.
+Cache: `config.CACHE_ROOT` = `GEOVAP_CACHE`, jinak `../Geovap_cache` (symlink na `/mnt/Geovap_cache`).
+
+Konsolidovaný 3D produkt (`mapping.merge`, `mapping.cli.merge_products run|verify|classes`): per dlaždice
+tw45 RGB + sémantická třída (`classification`, 255 = neoznačeno) + `cluster_id/obj_class/hag` + `ref_r/g/b`,
+`dE00_med`, `n_views`, `col_conf` → `out/consolidated/tiles/*.laz`, `objects/*.laz` (RGB = paleta clusterů) a `vendor/*.laz` (RGB = TerraScan),
+**XYZ v registrovaném rámci** (`CloudStore(registration=…)`), kontrola identity bodů proti store a `poses_hash`
+vstupů. Potree: `pointcloud-tools/consolidated/index.html` (6 módů + panoramata), validace
+`pointcloud-tools/validate/` (`check_products.py`, `screenshots.py`, `sphere_check.py`).
+
 ## Postup (jednou)
 
 ```
@@ -45,10 +68,10 @@ CLI:
 
 ```
 uv run python -m mapping.cli.render_frame 367 --layers rgb depth classification --jvf --overlay
-uv run python -m mapping.cli.colorize --workers 8 --tag run [--no-occlusion] [--sampling nearest]
+uv run python -m mapping.cli.colorize --workers 8 --tag run [--poses corrected] [--no-occlusion] [--sampling nearest]
 uv run python -m mapping.report run                # out/run/report.md + PNG
 uv run python -m mapping.cli.calibrate             # edge-ICP kalibrace rigu, out/calib/{rig_fit,fit}.json
-uv run python -m mapping.cli.export_panos --cloud pointcloud-tools/output/eomt_city_seg   # 360 koule do Potree
+uv run python -m mapping.cli.export_panos --cloud /mnt/Geovap_cache/TestOutput/output/consolidated/cloud --poses corrected   # 360 koule do Potree
 ```
 
 ### Panoramata v Potree (`panos.py`, `Images360`)
@@ -63,11 +86,18 @@ přeparametrizaci celé rotace; `panos.potree_angles` tenhle vzorec invertuje pr
 koule opravdu potřebuje (`(POTREE_M @ R)^T`). Ověřeno v `tests/test_panos.py` proti nezávislému
 přepisu toho, co dělá prohlížeč (three.js r124 `SphereGeometry` + `Images360Loader`), na < 1e-5°.
 
-`AZ_OFFSET_DEG = 180` (přepínač `--az-offset`) přitáčí kouli kolem svislé osy kamery. Odvození
-říká 0 a každý jeho článek je ověřený proti sestavenému `potree.js` v kontejneru prohlížeče, ale
-na obrazovce koule vycházely otočené o půl otáčky — platí naměřená hodnota. Jediné číslo, které
-se mění, kdyby upgrade Potree udělal z 0 správnou odpověď. Přepis samotného `coordinates.txt`
-trvá zlomek vteřiny (obrázky se nepřegenerovávají), takže se dá zkoušet.
+`AZ_OFFSET_DEG = 0` (přepínač `--az-offset`) přitáčí kouli kolem svislé osy kamery. Odvození říká 0.
+Dřívější „naměřených" 180 bylo posouzeno okem na silnici mezi dvěma živými ploty — scéna, která po
+půlotáčce vypadá stejně; na snímku s osamělým stromem koule s 180 staví strom tam, kde má lidar volné
+nebe. `pointcloud-tools/validate/sphere_check.py` vykreslí týž pohled offline přes `mapping.geometry`
+a koreluje ho s fotkou, jak ji vykreslí Potree — **pozor:** verdikt NCC 1,000 pro 0 naměřený před
+2026-09-16 byl kruhový (test i kamerový model sdílely stejnou zrcadlenou konvenci, viz
+`02_obarveni_pointcloudu.md §2.2` a `09_konsolidace.md §7`); `sphere_check.py` teď navíc počítá
+model-nezávislou pinhole referenci ze siluet registrovaného mračna a vyžaduje NCC ≥ 0,95 **a** lepší
+pinhole shodu než každá kontrolní sada (`--no-pinhole` pro vynechání). `AZ_OFFSET_DEG = 0` samo o sobě
+zůstává správně i po opravě kamerového modelu. Přepis samotného `coordinates.txt` trvá zlomek vteřiny
+(obrázky se nepřegenerovávají), takže A/B sady (`panos_corr180`, `panos_exp0`, `panos_exp180`) jsou
+levné.
 
 Prohlížeč (`pointcloud-tools/viewer/view.html`) si `panos/` najde sám (`?panos=<dir>` přebije) a
 proti výchozímu Potree mění dvě věci — obě kvůli srovnání fotky s mračnem:
@@ -86,9 +116,14 @@ uv run python -m mapping.cli.export_panos --out <dir> --frames clean --stride 4 
 
 ## Konvence (ověřené, neměnit)
 
-yaw = matematický azimut CCW od +E; roll a pitch se **záporným znaménkem**; `v = 0` zenit;
-šev `u = 0` v azimutu = yaw; bez zrcadlení. `geometry.world_to_pano` je maticový přepis
-`experiments/common/camera.py` (test shody < 1e-6 px ve float64).
+yaw = matematický azimut CCW od +E; roll a pitch se **záporným znaménkem**; `v = 0` zenit.
+
+**Šev a směr sloupce — opraveno 2026-09-16.** Šev je **vzadu**, ne v azimutu = yaw, a sloupce rostou
+**po směru hodinových ručiček**: `u = ((180 − az) mod 360)/360·W`, což je zrcadlení kolem příčné osy
+oproti dřívějšímu (chybnému) `u = (az mod 360)/360·W` — přední/zadní se prohodí, levá/pravá zůstává.
+Detail, důkazy a dopad na naměřená čísla viz `02_obarveni_pointcloudu.md §2.2` a `09_konsolidace.md §7`.
+`geometry.world_to_pano` je maticový přepis `experiments/common/camera.py`/`experiments/common/reproject.py`
+(oba opravené stejně, test shody < 1e-6 px ve float64).
 
 Rig model (`rig.py`): boresight (ω, φ, κ) body→kamera, lever arm v osách vozidla (x vpřed, y vlevo,
 z nahoru), časový offset dt. Identita reprodukuje pilot. Produkty nesou hash rigu.

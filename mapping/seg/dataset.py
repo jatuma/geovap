@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 
 from ..cloud_store import open_store
+from ..config import QUALITY_CSV as _QUALITY_CSV
 from ..config import ZB_H
 from ..poses import load_poses
 from ..products import git_rev
@@ -22,7 +23,7 @@ from .views import VIEW_SIZE, VIEWS
 from . import nearfield
 
 DATASET_SEG_DIR = Path(__file__).resolve().parents[2] / "dataset" / "seg"
-QUALITY_CSV = Path(__file__).resolve().parents[2] / "dataset" / "frame_quality.csv"
+QUALITY_CSV = _QUALITY_CSV
 BAND_ROWS = (int(round((90 - 45) / 180 * ZB_H)), int(round((90 + 55) / 180 * ZB_H)))  # phi in [-55, +45] deg -> rows 250..805
 N_BENCH = 100
 RARE_MIN_FRAMES = 40

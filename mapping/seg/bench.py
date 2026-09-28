@@ -33,6 +33,12 @@ BENCH_DIR = SEGDS_ROOT / "bench"
 DATASET_SEG_DIR = Path(__file__).resolve().parents[2] / "dataset" / "seg"
 
 
+def missing_predictions(tag: str, frames: list[int], out_root: Path = BENCH_DIR) -> list[int]:
+    """Frames in `frames` that don't yet have a `f%04d_common.png` prediction for `tag`."""
+    out = out_root / tag
+    return [k for k in frames if not (out / f"f{k:04d}_common.png").exists()]
+
+
 def frame_views(photo_bgr: np.ndarray, R_cam: np.ndarray, R_lev: np.ndarray, size: int = VIEW_SIZE) -> list[np.ndarray]:
     out = []
     for view in VIEWS:

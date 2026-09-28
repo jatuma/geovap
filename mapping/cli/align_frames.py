@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from .. import align as A
-from ..config import POSES_DIR, REPO_ROOT
+from ..config import CLEAN_FRAMES_JSON, POSES_DIR
 from ..poses import Poses, load_poses
 from ..quality import yaw_rates
 
@@ -50,7 +50,7 @@ def _job(k: int) -> A.Alignment:
 
 def straight_frames(n: int) -> np.ndarray:
     """n frames evenly spaced (by index into the sorted list) from dataset/clean_frames.json's "clean" class."""
-    clean = json.loads((REPO_ROOT / "dataset" / "clean_frames.json").read_text())["clean"]
+    clean = json.loads(CLEAN_FRAMES_JSON.read_text())["clean"]
     clean = np.array(sorted(clean))
     if n >= len(clean):
         return clean

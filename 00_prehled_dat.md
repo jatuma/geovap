@@ -1,7 +1,9 @@
 # Přehled dat a experimentů — od průjezdu k segmentaci v mračnu
 
-Souhrn napříč dokumenty `01`–`08`: co bylo naměřeno/dodáno, jaký experiment z toho co vyrobil, kam
-výstup putuje dál. Řazeno chronologicky; `07`/`08` zpětně opravují vstupy pro `04`/`05`/`06` — tato
+Souhrn napříč dokumenty `01`–`09`: co bylo naměřeno/dodáno, jaký experiment z toho co vyrobil, kam
+výstup putuje dál. **Aktuální stav (2026-09-16) je v `09_konsolidace.md`**: celý řetězec `02`–`08` běží
+jedním driverem `mapping.cli.pipeline`, korigované pózy mají hash `34bca9ff23`, výstupem je jedno
+registrované mračno s RGB, segmentací, clustery a panoramaty (`/pointclouds/consolidated/`). Řazeno chronologicky; `07`/`08` zpětně opravují vstupy pro `04`/`05`/`06` — tato
 revize je vyznačena samostatně na konci.
 
 ## 0. Vstupní data (dodaná, nevznikla experimentem)
@@ -127,9 +129,32 @@ JVF (1_ZPS_GAD.geojson) ──────────────────�
                                                                   přeprojektováno do mračna)
 ```
 
-## 10. Kde co leží (verzované vs. cache)
+## 10. Kde co leží (verzované vs. cache) — stav po `09`
 
-- Verzované v `dataset/`: `frame_quality.csv`, `clean_frames.json`, `tile_summary.json`, mapy/statistiky, `seg/{classes,splits,bench_frames,stats,project_eomt_city}.json`, `seg/project_eomt_city.md`.
-- Regresní baseline (export pózy, ne živá data): `dataset/export_baseline/`, `dataset/seg/export_baseline/`.
-- Necachované originály / velké produkty: `Geovap_cache/out/{identity,tw45}/`, `Geovap_cache/out/poses/`, `Geovap_cache/out/pass_reg/`, `Geovap_cache/out/dataset_e8f3e1/`, `Geovap_cache/segds/`, `Geovap_cache/segds_e8f3e1/`.
-- Vizualizace v Potree: `pointcloud-tools/` (viewer servíruje obarvené a segmentované mračno, `mapping/cli/seg_build.py` produkuje vstup).
+- Cache je `/mnt/Geovap_cache` (symlink `/home/jatuma/repos/Geovap/Geovap_cache`, env `GEOVAP_CACHE`); Potree výstupy `/mnt/Geovap_cache/TestOutput/output` (env `POTREE_OUTPUT`, `pointcloud-tools/.env`).
+- Verzované v `dataset/`: `frame_quality.csv`, `clean_frames.json` (**835 clean**, hash `34bca9`), `tile_summary.json`, mapy/statistiky, `seg/{classes,splits,bench_frames,stats,project_eomt_city}.json`, `seg/bench/` (nové pseudo-GT) + `seg/bench/export_frames/` (stejné snímky jako `05`), `seg/project_eomt_city.md`.
+- Regresní baseline (export pózy, ne živá data): `dataset/export_baseline/`, `dataset/seg/export_baseline/`; snapshot stavu před `09`: `Geovap_cache/out/pipeline/baseline/`.
+- Necachované originály / velké produkty: `out/poses/` (`poses_corrected`, `report_final`), `out/pass_reg/`, `frames/34bca9/`, `out/tw45/`, `out/dataset_34bca9/`, `segds_34bca9/`, `out/seg_eomt_34bca9/`, `out/consolidated/` (LAZ + `validation/`), `out/pipeline/` (markery, `comparison.md`).
+- Vizualizace v Potree: `TestOutput/output/consolidated/{cloud,objects,panos_*,index.html}` → `http://localhost:8080/pointclouds/consolidated/index.html`; staré `clusters/`, `eomt_city_seg/` zůstávají pro porovnání.
+
+**Oprava kamerového modelu 2026-09-16 — vše výše kromě `store`, `gray`, `vehicle_mask.npz`,
+`segds/bench` a `clusters/src` je neplatné** (počítáno se starým, zrcadleným kamerovým modelem —
+detail `09_konsolidace.md §7`). Neplatná data archivována (`mv`):
+
+- `/mnt/Geovap_cache/_invalid_2026-09-16/`: `out/{poses,pass_reg,calib,t037,diag,final,tw45,identity,
+  dataset*,seg_eomt*,consolidated}`, `frames/{34bca9,loose_export}`, `segds*` (kromě `segds/bench`),
+  markery a logy pipeline.
+- `/mnt/Geovap_cache/TestOutput/output/_invalid_2026-09-16/`: `consolidated`, `eomt_city_seg`,
+  `seg_eomt`, `seg_eomt_34bca9`, `test_drazkov`, `clusters/{colored,index.html,objects,rgb}`.
+
+Ponecháno beze změny (nezávislé na kamerovém modelu): `store`, `gray`, `vehicle_mask.npz`,
+`segds/bench`, `clusters/src`. Rerun (`uv run python -m mapping.cli.pipeline run --from align --force
+--detach`) spuštěn 2026-09-16 11:30 UTC (~5–6 h); archiv se smaže až po ověření nového běhu uživatelem.
+
+## 11. `09_konsolidace.md` — Konsolidace (jeden driver, přestavba na `34bca9`, jeden 3D produkt)
+
+Viz dokument; klíčové body: registrace 72/66 párů, RMS 0,102→0,035 m (reprodukováno); interpolace yaw 0,200° vs 5,639°;
+tw45 ΔE00 5,03 / 93,99 %; clean 835; pseudo-GT a 3D projekce v rámci ±0,1 pb oproti `e8f3e1`; `AZ_OFFSET_DEG` 180 → **0**
+(Potree koule ověřeny proti kamerovému modelu, NCC 1,000).
+
+**2026-09-17 – Potree data na rychlém disku.** Viewer servíruje `/home/jatuma/repos/Geovap/potree_output/` (env `POINTCLOUD_OUTPUT` v `pointcloud-tools/.env`, `config.POTREE_OUTPUT_DIR`); obsahuje `consolidated/{cloud,objects,vendor,panos*,index.html}` a `clusters/src`. `/mnt/Geovap_cache/TestOutput/output/consolidated` je jen starší kopie.

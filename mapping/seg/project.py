@@ -26,7 +26,7 @@ import numpy as np
 
 from .. import geometry, las_out, products, zbuffer
 from ..cloud_store import CloudStore, TileInfo, open_store
-from ..config import OUT_DIR, R_MAX, R_MIN, SCORE_R0
+from ..config import CLEAN_FRAMES_JSON, OUT_DIR, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..rig import IDENTITY
@@ -34,12 +34,16 @@ from . import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
 
 REPO_DIR = Path(__file__).resolve().parents[2]
-CLEAN_JSON = REPO_DIR / "dataset" / "clean_frames.json"
-SEG_OUT_DIR = OUT_DIR / "seg_eomt"
-LAS_DIR = REPO_DIR / "pointcloud-tools" / "output" / "seg_eomt" / "tiles"  # inside the compose-mounted ./output
+CLEAN_JSON = CLEAN_FRAMES_JSON
+# Pose-source aware, like mapping.seg.areas.SEGDS_DIR: byte-identical to today for the default
+# "export" pose table (GEOVAP_POSES unset), a hash-suffixed sibling for a corrected one. Resolved
+# once at import time -- set GEOVAP_POSES before importing mapping.seg.project.
+SEG_OUT_DIR = source_dir(OUT_DIR / "seg_eomt", load_poses())
+LAS_DIR = source_dir(POTREE_OUTPUT_DIR / "seg_eomt", load_poses()) / "tiles"
 N_CLASSES = len(T.COMMON)
 SKY_ID = T.COMMON_ID["sky"]
 EDGE_PX = 3.0
+TW45_TAG = "tw45"
 
 
 @dataclass
@@ -58,6 +62,7 @@ class Options:
     subsample: int | None = None
     frame_limit: int | None = None
     poses_source: str | None = None  # None -> env GEOVAP_POSES / "export"; explicit initarg for worker pools
+    tw45_tag: str = TW45_TAG  # colorization run tag under OUT_DIR/<tag>/tiles, used when rgb="tw45"
 
 
 @dataclass
@@ -140,7 +145,7 @@ class VoteHist:
 
 
 def _tw45_rgb(td, opt: Options) -> np.ndarray | None:
-    p = OUT_DIR / "tw45" / "tiles" / f"ID3432_000{td.info.name}_colored.laz"
+    p = OUT_DIR / opt.tw45_tag / "tiles" / f"ID3432_000{td.info.name}_colored.laz"
     if not p.exists():
         return None
     import laspy
@@ -239,13 +244,14 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
                 "bench_tag": opt.bench_tag, "checkpoint": _checkpoint(opt.bench_tag),
                 "weights": f"conf/255 * 1/(1+(r/{SCORE_R0})^2) * min(1, d_edge/{opt.edge_px}px); sky votes dropped",
                 "r_max": opt.r_max, "occlusion": opt.occlusion, "vehicle_mask": vmask is not None, "rgb": opt.rgb,
-                "git": products.git_rev(), "frames": frames,
+                "git": products.git_rev(), "frames": frames, "poses_source": fi.poses.source, "poses_hash": fi.poses.hash(),
             }
             las_out.write_tile(td, Path(opt.las_dir) / f"ID3432_000{tile.name}_seg.laz", rgb, extras, prov,
                                extra_dims=las_out.SEG_EXTRA_DIMS, classification=label, description="semantic labels provenance")
         meta = {"n": n, "seconds": time.time() - t0, "n_frames": len(frames), "coverage": coverage,
                 "counts": counts[:N_CLASSES].tolist(), "unlabelled": int(counts[T.IGNORE]), "sky_votes": n_sky, "vehicle_samples": n_veh,
-                "nviews_hist": np.bincount(out["n_views"], minlength=32)[:32].tolist(), "frames": frames}
+                "nviews_hist": np.bincount(out["n_views"], minlength=32)[:32].tolist(), "frames": frames,
+                "poses_source": fi.poses.source, "poses_hash": fi.poses.hash()}
         (lab_dir / f"{tile.name}_meta.json").write_text(json.dumps(meta))  # last: resume marker
 
     res = TileResult(name=tile.name, n=n, seconds=time.time() - t0, n_frames=len(frames), coverage=coverage,

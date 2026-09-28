@@ -104,6 +104,26 @@ class Aligner:
         e[~cv2.dilate(valid.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)] = 0.0
         return e, valid
 
+    @staticmethod
+    def shift_to_yaw_deg(sh: int, w: int = W) -> float:
+        """Cyclic column shift `sh` from `score` (defined so that ``photo == np.roll(render, sh)``,
+        e.g. photo[x] == render[x - sh]) -> the yaw offset in degrees to ADD to the yaw used to
+        render, so that re-rendering at (yaw + offset) matches the photo.
+
+        Derivation under the CURRENT pano column convention in `geometry.py`
+        (``u = ((180 - az) mod 360) / 360 * W``, az = atan2(y, x) in camera axes x-fwd/y-left, so
+        columns run clockwise with the seam at the rear): for a fixed world point, increasing the
+        render yaw by `delta` decreases az by `delta` (one-to-one, since yaw only rotates the world
+        into the vehicle frame about z before roll/pitch), hence increases u by
+        ``-(-delta) * W / 360 = +delta * W / 360``. So rendering at yaw + delta reproduces the
+        yaw-render shifted by ``np.roll(render, delta * W / 360)``. Since `score` returns `sh` such
+        that ``photo == np.roll(render, sh)``, matching the photo requires
+        ``delta = sh * 360 / W`` -- i.e. the offset has the SAME sign as `sh` under this convention
+        (this flips relative to the older ``u = (az mod 360) / 360 * W`` convention, under which the
+        correct formula would have been ``-sh * 360 / W``).
+        """
+        return sh * 360.0 / w
+
     def score(self, img, valid, photo) -> tuple[float, int]:
         """max over cyclic column shifts of zero-mean NCC of edge images, over the static mask restricted to
         pixels the render covers; multiplied by sqrt(coverage) so a pose that sees little cloud scores low."""
@@ -200,7 +220,7 @@ class Aligner:
             if (pid, round(t, 2)) in tried:
                 continue
             tried.add((pid, round(t, 2)))
-            yaw_ncc = sh * 360.0 / W
+            yaw_ncc = self.shift_to_yaw_deg(sh, W)
             for yo in (yaw_ncc, yaw_ncc - 3, yaw_ncc + 3, 0.0):
                 de = self.colour_de(k, xyz, rgb, gps, pid, t, yo)
                 if de < best[0]:

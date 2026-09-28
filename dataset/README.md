@@ -1,5 +1,11 @@
 # `dataset/` — verzované tabulky a metadata
 
+> **2026-09-16 (`09_konsolidace.md`)**: obsah promotován z `Geovap_cache/out/dataset_34bca9/` (korigované pózy
+> hash `34bca9ff23`, `mapping.quality promote`): **835 clean / 165 unverified / 304 usable / 199 reject**
+> (+17/−12 snímků proti `e8f3e1`). `seg/bench/` je vyhodnocení na novém pseudo-GT (`segds_34bca9`),
+> `seg/bench/export_frames/` na stejných 100 snímcích jako `05`. Zálohy stavu před promocí:
+> `Geovap_cache/out/pipeline/{baseline,backup}/`. Text níže popisuje předchozí přestavbu (`e8f3e1`).
+
 Těžká data (panoramata, mračno, produkty) žijí v `Geovap_cache/`; tady jsou jen malé, git-sledovatelné
 tabulky a obrázky odvozené z nich, aby šly verzovat a číst bez přístupu k cache.
 

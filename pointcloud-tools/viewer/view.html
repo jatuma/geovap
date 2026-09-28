@@ -84,19 +84,33 @@
 		// <cloud dir>/panos/ (built by `python -m mapping.cli.export_panos`) holds Potree's own
 		// coordinates.txt + one jpg per frame. Overridable with ?panos=<dir>.
 		// Two deviations from stock Potree.Images360, both needed to compare photo against cloud:
-		//  * its loader sets texture.repeat.x = -1 (mirrored panoramas); ours are not mirrored,
-		//    and mapping/panos.py derives the written angles for repeat.x = +1. Keep the two in sync.
+		//  * its loader sets texture.repeat.x = -1. That is CORRECT for our panoramas: a normal photo
+		//    (lettering readable) on the inside of a three.js sphere is mirrored, and -1 undoes it.
+		//    Verified 2026-09-16 on the "VMX-2HA" lettering. ?flip=1 forces +1 (mirrored, A/B only);
+		//    the sphere angles come from mapping/panos.py, whose POTREE_M is derived for this
+		//    default repeat.x = -1 (see its module docstring and tests/test_panos.py). Keep in sync.
 		//  * the sphere is opaque and 1000 m wide, which hides the cloud completely; we clone the
 		//    material (Potree shares one instance with the marker spheres) and make it blendable.
 		function loadPanos(dir) {
 			return fetch(dir + "/coordinates.txt", { method: "HEAD" }).then(r => {
 				if (!r.ok) return null;
 				return Potree.Images360Loader.load(dir, viewer).then(images => {
-					viewer.scene.add360Images(images);
+					// Potree's MapView (loaded with the GUI) listens to this event and calls this.toMap.forward,
+					// which is undefined when the octree carries no CRS (our LAS writer copies no CRS VLR ->
+					// metadata.json projection ""). The images are already pushed into the scene before the
+					// event fires, so swallow the map-view failure instead of aborting everything below
+					// (texture un-mirroring, blendable material, panel) -- exactly the failure that left the
+					// spheres MIRRORED in every interactive session before 2026-09-16.
+					try {
+						viewer.scene.add360Images(images);
+					} catch (err) {
+						if (!viewer.scene.images360.includes(images)) viewer.scene.images360.push(images);
+						console.warn("add360Images: map view rejected the spheres (no CRS on the octree); continuing without map markers:", err.message);
+					}
 
 					const rawLoad = images.load.bind(images);
 					images.load = img => rawLoad(img).then(v => {
-						if (img.texture) { img.texture.repeat.x = 1; img.texture.needsUpdate = true; }
+						if (img.texture && getParam("flip") === "1") { img.texture.repeat.x = 1; img.texture.needsUpdate = true; }
 						return v;
 					});
 

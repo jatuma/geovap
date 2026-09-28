@@ -14,7 +14,7 @@ import numpy as np
 
 from .. import render
 from ..cloud_store import CloudStore, open_store
-from ..config import NO_POINT
+from ..config import NO_POINT, POTREE_OUTPUT_DIR
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..products import load_products
@@ -26,7 +26,9 @@ from .project import LAS_DIR, N_CLASSES, SEG_OUT_DIR, load_mask, mask_paths
 from .render_labels import LABELS_DIR as GT_ERP_DIR, vehicle_cells
 
 REPORT_DIR = SEG_OUT_DIR / "report"
-POTREE_DIR = LAS_DIR.parents[1] / "eomt_city_seg"
+# Old (export-only, no-pose-suffix) Potree octree dir; write_potree_classes() only writes classes.json
+# there as a default -- always overridable via CLI --out (see mapping/cli/seg_project.py potree-classes).
+POTREE_DIR = POTREE_OUTPUT_DIR / "eomt_city_seg"
 PAL = T.common_palette()
 CORE_IDS = [T.COMMON_ID[n] for n in T.CORE]
 EXT_IDS = [T.COMMON_ID[n] for n in T.EXT]

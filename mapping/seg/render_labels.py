@@ -17,7 +17,7 @@ import numpy as np
 
 from .. import render, vectors
 from ..cloud_store import CloudStore, open_store
-from ..config import NO_POINT, PANO_H, PANO_W, ZB_H, ZB_W
+from ..config import CLEAN_FRAMES_JSON, NO_POINT, PANO_H, PANO_W, ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..products import FrameProducts, load_products
@@ -29,7 +29,7 @@ from .point_labels import PointLabels
 LABELS_DIR = SEGDS_DIR / "labels_erp"
 BANDS_DIR = SEGDS_DIR / "bands_erp"
 QA_DIR = SEGDS_DIR / "qa"
-CLEAN_JSON = Path(__file__).resolve().parents[2] / "dataset" / "clean_frames.json"
+CLEAN_JSON = CLEAN_FRAMES_JSON
 
 # JVF codes rasterised as evaluation bands (14 cm at range) -> band id
 BAND_IDS = {

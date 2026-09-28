@@ -87,5 +87,15 @@ def is_bad(entry: dict | None) -> bool | None:
     return entry["median_px"] > FLAG_PX
 
 
+def main() -> None:
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--poses", default=None, help='pose table: "export" (default), "corrected", or a CSV path')
+    args = ap.parse_args()
+    run(workers=args.workers, poses_source=args.poses)
+
+
 if __name__ == "__main__":
-    run()
+    main()

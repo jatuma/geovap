@@ -1,0 +1,13 @@
+{
+  "name": "geovap-pointcloud-validate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Headless Chromium driver for pointcloud-tools/consolidated/index.html screenshots (plan Part C6).",
+  "type": "commonjs",
+  "scripts": {
+    "driver": "node driver.js"
+  },
+  "dependencies": {
+    "playwright": "^1.63"
+  }
+}

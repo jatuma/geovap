@@ -25,3 +25,13 @@ cp clusters/index.html output/clusters/index.html
 Viewer: `http://localhost:8080/pointclouds/clusters/index.html` — modes RGB (vendor) / Colored
 (panoramas, run `tw45`) / Objects / Classification / Object class (keys 1–5). Octree directories are
 root-owned; remove with `docker compose run --rm --entrypoint rm potreeconverter -rf /output/clusters/<dir>`.
+
+## 2026-09-16: konsolidovaný produkt
+
+Clustery (`cluster_id`, `obj_class`, `hag` z `output/clusters/src/objects_t*.laz`) jsou od konsolidace součástí
+jednoho mračna `output/consolidated/{cloud,objects}` (registrovaný rámec, RGB z panoramat, sémantické třídy) —
+viz `geovap/09_konsolidace.md` a stránka `output/consolidated/index.html`
+(`http://localhost:8080/pointclouds/consolidated/index.html`). Tato stránka i `clusters/index.html` dostaly dvě
+opravy pro Potree 1.8: globální `THREE` neexistuje (barvy gradientu se klonují z `Potree.Gradients`) a skalární
+atributy potřebují kompenzovaný `setRange` (`scalarRange()` v stránce), jinak se `obj_class` 1–3 vykreslí
+jednou barvou. Výstupy leží v `POINTCLOUD_OUTPUT=/mnt/Geovap_cache/TestOutput/output` (`.env`).

@@ -14,13 +14,27 @@ LAZ_DIR = DATA_ROOT / "LAZ_Dražkov_ground"
 TILE_LAYOUT_GEOJSON = DATA_ROOT / "Klad_LAZ_Dražkov.geojson"
 JVF_GEOJSON = DATA_ROOT / "1_ZPS_GAD.geojson"
 
-CACHE_ROOT = Path(os.environ.get("GEOVAP_CACHE", "/home/jatuma/repos/Geovap/Geovap_cache"))
+
+def _default_cache_root() -> Path:
+    for candidate in (REPO_ROOT.parent / "Geovap_cache", Path("/mnt/Geovap_cache")):
+        if candidate.exists():
+            return candidate
+    return Path("/home/jatuma/repos/Geovap/Geovap_cache")
+
+
+CACHE_ROOT = Path(os.environ["GEOVAP_CACHE"]) if os.environ.get("GEOVAP_CACHE") else _default_cache_root()
 STORE_DIR = CACHE_ROOT / "store"
 FRAMES_DIR = CACHE_ROOT / "frames"
 GRAY_DIR = CACHE_ROOT / "gray"
 RENDERS_DIR = CACHE_ROOT / "renders"
 OUT_DIR = CACHE_ROOT / "out"
 POSES_DIR = OUT_DIR / "poses"
+PIPELINE_DIR = OUT_DIR / "pipeline"
+CONSOLIDATED_DIR = OUT_DIR / "consolidated"
+
+CLEAN_FRAMES_JSON = Path(os.environ.get("GEOVAP_CLEAN_FRAMES", REPO_ROOT / "dataset" / "clean_frames.json"))
+QUALITY_CSV = REPO_ROOT / "dataset" / "frame_quality.csv"
+POTREE_OUTPUT_DIR = Path(os.environ.get("POTREE_OUTPUT", "/home/jatuma/repos/Geovap/potree_output"))  # fast local drive since 2026-09-17; /mnt (slow) holds the cache
 
 # pose source: "export" (default, the regression anchor) or a corrected pose-table name/path.
 # override with env GEOVAP_POSES; see mapping/poses.py:load_poses.

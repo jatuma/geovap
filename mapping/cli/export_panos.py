@@ -28,7 +28,7 @@ def main() -> None:
     ap.add_argument("--image-dir", default=None, help="use f%%04d.jpg from here instead of the raw photos")
     ap.add_argument("--width", type=int, default=4096, help="downscale width, 0 = keep source")
     ap.add_argument("--quality", type=int, default=85)
-    ap.add_argument("--az-offset", type=float, default=AZ_OFFSET_DEG, help="sphere yaw offset in deg (measured, see panos.py)")
+    ap.add_argument("--az-offset", type=float, default=AZ_OFFSET_DEG, help="sphere yaw offset in deg (0 = derived + verified convention, see panos.py; 180 only for A/B sets)")
     ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
 

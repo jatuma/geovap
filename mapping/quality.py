@@ -26,7 +26,7 @@ import numpy as np
 
 from . import geometry, zbuffer
 from .cloud_store import open_store
-from .config import OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, source_dir
+from .config import OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, REPO_ROOT, source_dir
 from .frame_select import FrameIndex
 from .poses import Poses, load_poses
 from .products import TIME_WINDOW_S, frames_dir, gather_candidates
@@ -440,6 +440,61 @@ def plot_quality(csv_path: Path, poses_source: str | None, map_path: Path, stats
     plt.close(fig)
 
 
+PROMOTE_FILES = ["clean_frames.json", "frame_quality.csv", "tile_summary.json", "frame_quality_map.png", "frame_quality_stats.png"]
+
+
+def promote(poses_source: str | None, backup_dir: Path | None = None) -> None:
+    """Copy the quality outputs for `poses_source` (from `source_dir(OUT_DIR/"dataset", poses)`)
+    into the repo's `dataset/` directory, after backing up whatever is there now.
+
+    `clean_frames.json`, `frame_quality.csv` are required; `tile_summary.json` and the two PNGs are
+    optional (warn, don't fail, if missing -- e.g. `tile-summary` was not run yet). Prints an added/
+    removed summary of the clean-frame set vs. the previous `dataset/clean_frames.json`."""
+    import shutil
+
+    poses = load_poses(poses_source)
+    source = source_dir(OUT_DIR / "dataset", poses)
+    dest = REPO_ROOT / "dataset"
+    if backup_dir is None:
+        backup_dir = OUT_DIR / "pipeline" / "backup" / f"dataset_{poses.hash()[:6]}"
+    backup_dir = Path(backup_dir)
+
+    prev_clean: set[int] | None = None
+    prev_path = dest / "clean_frames.json"
+    if prev_path.exists():
+        try:
+            prev_clean = set(json.loads(prev_path.read_text())["clean"])
+        except Exception:
+            prev_clean = None
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    for name in PROMOTE_FILES:
+        p = dest / name
+        if p.exists():
+            shutil.copy2(p, backup_dir / name)
+
+    dest.mkdir(parents=True, exist_ok=True)
+    required = {"clean_frames.json", "frame_quality.csv"}
+    for name in PROMOTE_FILES:
+        src = source / name
+        if not src.exists():
+            if name in required:
+                raise FileNotFoundError(f"missing required promote source: {src}")
+            print(f"warning: {src} missing, skipping {name}")
+            continue
+        shutil.copy2(src, dest / name)
+    print(f"promoted {source} -> {dest} (backup: {backup_dir})")
+
+    new_clean_path = dest / "clean_frames.json"
+    new_clean = set(json.loads(new_clean_path.read_text())["clean"])
+    if prev_clean is None:
+        print(f"clean frames: {len(new_clean)} (no previous set to diff against)")
+    else:
+        added = new_clean - prev_clean
+        removed = prev_clean - new_clean
+        print(f"clean frames: {len(prev_clean)} -> {len(new_clean)} (+{len(added)} added, -{len(removed)} removed)")
+
+
 def main() -> None:
     import argparse
 
@@ -456,6 +511,13 @@ def main() -> None:
     t.add_argument("out_dir", type=Path, help="directory to write tile_summary.json + PNGs into")
     t.add_argument("--poses", default=None, help='pose table the csv was built against: "export" (default), "corrected", or a CSV path')
 
+    rc = sub.add_parser("reclassify", help="re-derive classes from stored frame_quality.jsonl with current thresholds (no recompute)")
+    rc.add_argument("--poses", default=None, help='pose table: "export" (default), "corrected", or a CSV path')
+
+    pr = sub.add_parser("promote", help="copy quality outputs for --poses into repo dataset/ (with backup)")
+    pr.add_argument("--poses", required=True, help='pose table: "export", "corrected", or a CSV path')
+    pr.add_argument("--backup-dir", type=Path, default=None, help="where to back up the current dataset/ files (default OUT_DIR/pipeline/backup/dataset_<poses_hash6>)")
+
     args = ap.parse_args()
     if args.cmd == "run":
         run(workers=args.workers, limit=args.limit, poses_source=args.poses)
@@ -464,6 +526,10 @@ def main() -> None:
         write_tile_summary(args.csv, args.poses, args.out_dir / "tile_summary.json")
         plot_quality(args.csv, args.poses, args.out_dir / "frame_quality_map.png", args.out_dir / "frame_quality_stats.png")
         print(f"wrote {args.out_dir}/tile_summary.json, frame_quality_map.png, frame_quality_stats.png")
+    elif args.cmd == "reclassify":
+        reclassify(poses_source=args.poses)
+    elif args.cmd == "promote":
+        promote(args.poses, backup_dir=args.backup_dir)
 
 
 if __name__ == "__main__":
