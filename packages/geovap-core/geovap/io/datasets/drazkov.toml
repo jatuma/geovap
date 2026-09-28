@@ -36,6 +36,13 @@ id_regex = 'ID\d+_\d*(?P<id>\d{3})_JTSK\.laz'
 out_name = "ID3432_000{id}{kind}.laz"
 grid = "Klad_LAZ_Dražkov.geojson"
 
+# Products whose filename is not `out_name` plus a suffix. The clustering stage is developed
+# independently of the rest (it imports no project code at all) and names its output with its
+# own prefix; naming it here keeps that literal out of the stage.
+[tiles.names]
+cluster        = "objects_t000{id}.laz"
+cluster_rgb    = "rgb_t000{id}.laz"
+
 [reference]
 adapter = "jvf_zps"
 file = "1_ZPS_GAD.geojson"

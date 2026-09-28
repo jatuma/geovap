@@ -26,6 +26,17 @@ from .frame_select import FrameIndex
 from .poses import load_poses
 from geovap.domain.model.rig import IDENTITY, RigModel
 from .sample import PanoSampler, load_pano_rgb, srgb_to_linear
+from geovap.domain.model.tiles import id_from_sidecar
+
+
+def _out_name(name: str, kind: str = "", *, variant: str | None = None) -> str:
+    """Product filename for a tile, from the dataset descriptor. Replaces the literal `ID3432_000`
+    prefix, which was Dražkov's and was duplicated across ten modules -- on another dataset it wrote
+    every product under the wrong name, with no error anywhere."""
+    from geovap.domain.model.tiles import TileId
+    from geovap.runtime import settings
+
+    return settings.get().tiles.out_name(TileId(name), kind, variant=variant)
 
 
 @dataclass
@@ -192,7 +203,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
                     "r_max": opt.r_max, "top_k": opt.top_k, "occlusion": opt.occlusion, "sampling": opt.sampling, "git": products.git_rev(),
                     "rgb_scaling": "8bit*256", "frames": [int(f) for f in frames],
                     "poses_source": fi.poses.source, "poses_hash": fi.poses.hash()}
-            las_out.write_tile(td, Path(opt.out_dir) / opt.tag / "tiles" / f"ID3432_000{tile.name}_colored.laz", fused["rgb"], extras, prov)
+            las_out.write_tile(td, Path(opt.out_dir) / opt.tag / "tiles" / _out_name(tile.name, "_colored"), fused["rgb"], extras, prov)
 
     # stratified random subsample for ad-hoc plots
     rng = np.random.default_rng(int(tile.name))
@@ -247,7 +258,7 @@ def run(tiles: list[str] | None, opt: Options, workers: int = 8) -> list[TileRes
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / opt.tag).mkdir(parents=True, exist_ok=True)
     # resume: tiles with finished stats are skipped
-    done = {p.name[:3] for p in (Path(opt.out_dir) / opt.tag / "stats").glob("*_meta.json")}
+    done = {id_from_sidecar(p) for p in (Path(opt.out_dir) / opt.tag / "stats").glob("*_meta.json")}
     if done:
         print(f"resuming: {len(done)} tiles already done")
         names = [nm for nm in names if nm not in done]

@@ -1,6 +1,6 @@
 """uv run python -m mapping.cli.merge_products run|verify|classes [options]
 
-run       merge every input product into out_dir/{tiles,objects,vendor}/ID3432_000NNN.laz + summary.json
+run       merge every input product into out_dir/{tiles,objects,vendor}/<tile out_name>.laz + summary.json
 vendor    (re)write only out_dir/vendor/ (TerraScan RGB on registered points) for an existing consolidated run
 verify    re-check every merged tile's registered XYZ / provenance against the store
 classes   write out_dir/classes.json (Potree `classes.json`, common15 palette) via

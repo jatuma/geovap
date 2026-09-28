@@ -35,7 +35,7 @@ class LazDirTileSource:
         self._id_regex = re.compile(pattern)
         if "id" not in self._id_regex.groupindex:
             raise ValueError(f"[tiles].id_regex {pattern!r} has no named group 'id'")
-        self._naming = TileNaming(template)
+        self._naming = TileNaming(template, variants=dict(table.get("names", {})))
         grid = table.get("grid")
         self._grid_path = descriptor.data_root / grid if grid else None
 
@@ -53,8 +53,12 @@ class LazDirTileSource:
             refs.append(TileRef(id=tile_id, path=path, ring=rings.get(_normalize_id(tile_id.value))))
         return refs
 
-    def out_name(self, tile: TileId, kind: str = "") -> str:
-        return self._naming.out_name(tile, kind)
+    def out_name(self, tile: TileId, kind: str = "", *, variant: str | None = None) -> str:
+        return self._naming.out_name(tile, kind, variant=variant)
+
+    @property
+    def naming(self) -> TileNaming:
+        return self._naming
 
     def describe(self) -> dict:
         if not self._dir.is_dir():

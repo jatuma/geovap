@@ -24,6 +24,7 @@ from .bench import DATASET_SEG_DIR
 from .point_labels import LABEL_DIR as GT_LABEL_DIR
 from .project import LAS_DIR, N_CLASSES, SEG_OUT_DIR, load_mask, mask_paths
 from .render_labels import LABELS_DIR as GT_ERP_DIR, vehicle_cells
+from geovap.domain.model.tiles import id_from_sidecar
 
 REPORT_DIR = SEG_OUT_DIR / "report"
 # Old (export-only, no-pose-suffix) Potree octree dir; write_potree_classes() only writes classes.json
@@ -305,7 +306,7 @@ def _pick_tiles(sl_root: Path, n_pick: int = 3) -> list[str]:
     for p in sorted(sl_root.glob("*_meta.json")):
         m = json.loads(p.read_text())
         c = np.array(m["counts"], float)
-        metas.append((p.name[:3], c))
+        metas.append((id_from_sidecar(p), c))
     if not metas:
         return []
     bid = T.COMMON_ID["building"]

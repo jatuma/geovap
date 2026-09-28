@@ -31,6 +31,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 
+def _out_name(name: str, kind: str = "", *, variant: str | None = None) -> str:
+    """Product filename for a tile, from the dataset descriptor. `name[-3:]` used to slice three
+    characters off a tile id that only happens to BE three characters on Dražkov."""
+    from geovap.domain.model.tiles import TileId
+    from geovap.runtime import settings
+
+    return settings.get().tiles.out_name(TileId(name), kind, variant=variant)
+
+
 def _try_import_mapping():
     """Import mapping lazily so --help works even if torch/laspy/etc. are unavailable."""
     from mapping import config  # noqa: F401
@@ -57,8 +66,8 @@ def _load_meta(tiles_dir: Path, name: str) -> dict | None:
 
 
 def check_cluster_ids(clusters_src: Path, consolidated_dir: Path, tile_metas: dict[str, dict]) -> list[dict]:
-    """(i) Read cluster_id from every merged objects/ID3432_000NNN.laz (source order, like the input
-    objects_t000NNN.laz) and check (a) per tile: identical to the input's cluster_id column, and
+    """(i) Read cluster_id from every merged tile in objects/ (source order, like the clustering
+    stage's own input) and check (a) per tile: identical to the input's cluster_id column, and
     (b) globally: the union of ids >= 0 equals unique(global_labels.npy) (the global id set produced
     by clusters/merge_tiles.py). Reads ~13 GB of LAZ, so it is the slowest check (minutes)."""
     checks = []
@@ -74,8 +83,8 @@ def check_cluster_ids(clusters_src: Path, consolidated_dir: Path, tile_metas: di
     union: set[int] = set()
     for name in sorted(tile_metas):
         c = {"check": "cluster_ids", "tile": name, "ok": None, "detail": ""}
-        out_p = consolidated_dir / "objects" / f"ID3432_000{name[-3:]}.laz"
-        in_p = clusters_src / f"objects_t000{name[-3:]}.laz"
+        out_p = consolidated_dir / "objects" / _out_name(name)
+        in_p = clusters_src / _out_name(name, variant="cluster")
         if not out_p.exists() or not in_p.exists():
             c["detail"] = f"missing {out_p if not out_p.exists() else in_p}"
             checks.append(c)
@@ -113,7 +122,7 @@ def check_classification_hist(seg_labels_dir: Path | None, tile_metas: dict[str,
 
     for name, meta in sorted(tile_metas.items()):
         c = {"check": "classification_hist", "tile": name, "ok": None, "detail": ""}
-        labels_path = seg_labels_dir / f"{name[-3:]}.npy"
+        labels_path = seg_labels_dir / f"{name}.npy"
         counts = meta.get("counts")
         unlabelled = meta.get("unlabelled")
         if counts is None or not labels_path.exists():
@@ -141,8 +150,7 @@ def check_de00_medians(tw45_stats_dir: Path | None, tile_metas: dict[str, dict],
 
     for name, meta in sorted(tile_metas.items()):
         c = {"check": "de00_median", "tile": name, "ok": None, "detail": ""}
-        num = name[-3:]
-        npz_path = tw45_stats_dir / f"{num}_med.npz"
+        npz_path = tw45_stats_dir / f"{name}_med.npz"
         merged_med = meta.get("dE00_med_median")
         if merged_med is None or not npz_path.exists():
             c["detail"] = f"missing {'meta de00_med_median' if merged_med is None else npz_path}"

@@ -3,10 +3,10 @@ per-tile products (tw45 colorization, projected semantic labels, object clusters
 store's row count and per-row point identity (see `las_out` and `cloud_store.TileData.orig_index`)
 into two LAS 1.4 PF7 files:
 
-    out_dir/tiles/ID3432_000NNN.laz     rgb = tw45 fused colour (TerraScan reference where n_views==0),
+    out_dir/tiles/<tile out_name>.laz   rgb = tw45 fused colour (TerraScan reference where n_views==0),
                                          classification = common15 label (255 = unlabelled),
                                          extras = las_out.CONS_EXTRA_DIMS, xyz = registered (S5)
-    out_dir/objects/ID3432_000NNN.laz   rgb = cluster palette, extras = las_out.OBJ_EXTRA_DIMS, xyz = registered
+    out_dir/objects/<tile out_name>.laz rgb = cluster palette, extras = las_out.OBJ_EXTRA_DIMS, xyz = registered
 
 Every input is checked against the store's own points (`check_same_points`) before use, and against
 the current pose table's hash where it carries one (tw45's `geovap_map` VLR); a mismatch aborts unless
@@ -28,6 +28,16 @@ from .cloud_store import SCALE, STORE_DIR, CloudStore, TileData, open_store
 from .config import EXPECTED_TOTAL_POINTS, OUT_DIR, POTREE_OUTPUT_DIR, CONSOLIDATED_DIR, source_dir
 from .poses import load_poses
 from geovap.domain.scheme import taxonomy as T
+
+
+def _out_name(name: str, kind: str = "", *, variant: str | None = None) -> str:
+    """Product filename for a tile, from the dataset descriptor. Replaces the literal `ID3432_000`
+    prefix, which was Dražkov's and was duplicated across ten modules -- on another dataset it wrote
+    every product under the wrong name, with no error anywhere."""
+    from geovap.domain.model.tiles import TileId
+    from geovap.runtime import settings
+
+    return settings.get().tiles.out_name(TileId(name), kind, variant=variant)
 
 CLUSTERS_SRC_DEFAULT = POTREE_OUTPUT_DIR / "clusters" / "src"
 
@@ -173,7 +183,7 @@ def merge_tile(name: str, store: CloudStore, inp: MergeInputs, log=print) -> dic
     col_conf = np.zeros(n, np.uint8)
     de00_med = np.full(n, np.nan, np.float32)
     if inp.tw45_tiles is not None:
-        p = Path(inp.tw45_tiles) / f"ID3432_000{name}_colored.laz"
+        p = Path(inp.tw45_tiles) / _out_name(name, "_colored")
         if p.exists():
             las = laspy.read(str(p))
             check_same_points(np.stack([np.asarray(las.X), np.asarray(las.Y), np.asarray(las.Z)], 1)[inv], np.asarray(td.xyz), f"tw45 {p.name}")
@@ -250,14 +260,14 @@ def merge_tile(name: str, store: CloudStore, inp: MergeInputs, log=print) -> dic
         "obj_class": obj_class, "hag": hag, "ref_r": ref_rgb[:, 0], "ref_g": ref_rgb[:, 1], "ref_b": ref_rgb[:, 2],
         "dE00_med": de00_med, "n_views": n_views, "col_conf": col_conf,
     }
-    tile_out = tiles_dir / f"ID3432_000{name}.laz"
+    tile_out = tiles_dir / _out_name(name)
     tile_tmp = tile_out.with_suffix(".laz.tmp")
     las_out.write_tile(td, tile_tmp, rgb, cons_extras, provenance, extra_dims=las_out.CONS_EXTRA_DIMS,
                         classification=classification, description="consolidated provenance", xyz=xyz)
     os.replace(tile_tmp, tile_out)
 
     obj_extras = {"cluster_id": cluster_id, "obj_class": obj_class}
-    obj_out = objects_dir / f"ID3432_000{name}.laz"
+    obj_out = objects_dir / _out_name(name)
     obj_tmp = obj_out.with_suffix(".laz.tmp")
     las_out.write_tile(td, obj_tmp, cluster_rgb, obj_extras, provenance, extra_dims=las_out.OBJ_EXTRA_DIMS,
                         classification=None, description="consolidated objects provenance", xyz=xyz)
@@ -288,7 +298,7 @@ def write_vendor_tile(td: TileData, out_dir: Path, provenance: dict, xyz: np.nda
     extra dims `ref_r/g/b` as a colour, and the old `clusters/rgb` octree is in the unregistered frame)."""
     vendor_dir = Path(out_dir) / "vendor"
     vendor_dir.mkdir(parents=True, exist_ok=True)
-    out = vendor_dir / f"ID3432_000{td.info.name}.laz"
+    out = vendor_dir / _out_name(td.info.name)
     tmp = out.with_suffix(".laz.tmp")
     prov = {**provenance, "product": "vendor_rgb", "rgb": "TerraScan reference (store rgb)"}
     las_out.write_tile(td, tmp, np.asarray(td.rgb).astype(np.uint8), {}, prov, extra_dims=[], classification=None,
@@ -322,7 +332,7 @@ def run_vendor(tiles: list[str] | None, inp: MergeInputs, workers: int = 6, forc
     names = [t.name for t in store.tiles] if tiles is None else list(tiles)
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)
     if not force:
-        names = [nm for nm in names if not (Path(inp.out_dir) / "vendor" / f"ID3432_000{nm}.laz").exists()]
+        names = [nm for nm in names if not (Path(inp.out_dir) / "vendor" / _out_name(nm)).exists()]
     if not names:
         return []
     with Pool(workers, initializer=_init, initargs=(inp, root)) as pool:

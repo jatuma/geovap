@@ -12,6 +12,7 @@ import numpy as np
 
 from geovap.domain.math import colour_metrics as metrics
 from .config import OUT_DIR
+from geovap.domain.model.tiles import id_from_sidecar
 
 VARIANTS = ("med", "nt", "nt_noocc")
 VARIANT_LABEL = {"med": "median top-5 (product)", "nt": "nearest in time, occlusion", "nt_noocc": "nearest in time, no occlusion"}
@@ -19,7 +20,7 @@ VARIANT_LABEL = {"med": "median top-5 (product)", "nt": "nearest in time, occlus
 
 def load_run(tag: str, out_dir: Path = OUT_DIR) -> tuple[dict, dict, dict]:
     stats_dir = Path(out_dir) / tag / "stats"
-    metas = {p.stem[:3]: json.loads(p.read_text()) for p in stats_dir.glob("*_meta.json")}
+    metas = {id_from_sidecar(p): json.loads(p.read_text()) for p in stats_dir.glob("*_meta.json")}
     hists = {}
     for v in VARIANTS + tuple(f"{x}_76" for x in VARIANTS):
         h = metrics.StrataHist()
@@ -27,7 +28,7 @@ def load_run(tag: str, out_dir: Path = OUT_DIR) -> tuple[dict, dict, dict]:
         for p in sorted(stats_dir.glob(f"*_{v}.npz")):
             t = metrics.StrataHist.load(p)
             h.merge(t)
-            per_tile[p.stem[:3]] = t
+            per_tile[id_from_sidecar(p)] = t
         hists[v] = (h, per_tile)
     samples = []
     for p in sorted(stats_dir.glob("*_sample.npz")):

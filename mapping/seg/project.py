@@ -34,6 +34,17 @@ from ..poses import load_poses
 from geovap.domain.model.rig import IDENTITY
 from geovap.domain.scheme import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
+from geovap.domain.model.tiles import id_from_sidecar
+
+
+def _out_name(name: str, kind: str = "", *, variant: str | None = None) -> str:
+    """Product filename for a tile, from the dataset descriptor. Replaces the literal `ID3432_000`
+    prefix, which was Dražkov's and was duplicated across ten modules -- on another dataset it wrote
+    every product under the wrong name, with no error anywhere."""
+    from geovap.domain.model.tiles import TileId
+    from geovap.runtime import settings
+
+    return settings.get().tiles.out_name(TileId(name), kind, variant=variant)
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 CLEAN_JSON = CLEAN_FRAMES_JSON
@@ -147,7 +158,7 @@ class VoteHist:
 
 
 def _tw45_rgb(td, opt: Options) -> np.ndarray | None:
-    p = OUT_DIR / opt.tw45_tag / "tiles" / f"ID3432_000{td.info.name}_colored.laz"
+    p = OUT_DIR / opt.tw45_tag / "tiles" / _out_name(td.info.name, "_colored")
     if not p.exists():
         return None
     import laspy
@@ -248,7 +259,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
                 "r_max": opt.r_max, "occlusion": opt.occlusion, "vehicle_mask": vmask is not None, "rgb": opt.rgb,
                 "git": products.git_rev(), "frames": frames, "poses_source": fi.poses.source, "poses_hash": fi.poses.hash(),
             }
-            las_out.write_tile(td, Path(opt.las_dir) / f"ID3432_000{tile.name}_seg.laz", rgb, extras, prov,
+            las_out.write_tile(td, Path(opt.las_dir) / _out_name(tile.name, "_seg"), rgb, extras, prov,
                                extra_dims=las_out.SEG_EXTRA_DIMS, classification=label, description="semantic labels provenance")
         meta = {"n": n, "seconds": time.time() - t0, "n_frames": len(frames), "coverage": coverage,
                 "counts": counts[:N_CLASSES].tolist(), "unlabelled": int(counts[T.IGNORE]), "sky_votes": n_sky, "vehicle_samples": n_veh,
@@ -301,7 +312,7 @@ def run(tiles: list[str] | None, opt: Options, workers: int = 5) -> list[TileRes
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / "labels").mkdir(parents=True, exist_ok=True)
     if opt.subsample is None:
-        done = {p.name[:3] for p in (Path(opt.out_dir) / "labels").glob("*_meta.json")}
+        done = {id_from_sidecar(p) for p in (Path(opt.out_dir) / "labels").glob("*_meta.json")}
         if done:
             print(f"resuming: {len(done)} tiles already done")
             names = [nm for nm in names if nm not in done]

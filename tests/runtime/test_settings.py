@@ -10,15 +10,28 @@ from geovap.io.descriptor import DescriptorError
 from geovap.runtime import settings
 
 
-def test_explicit_paths_beat_the_environment(make_descriptor_file, env_paths, tmp_path):
+def test_explicit_paths_beat_the_environment(make_descriptor_file, env_paths, tmp_path, monkeypatch):
     """The bug this prevents: a CLI flag silently ignored because `$GEOVAP_DATA` was exported in the
-    shell. Precedence is argument > env > descriptor literal."""
-    elsewhere = tmp_path / "elsewhere"
-    s = settings.configure(dataset=make_descriptor_file(), data_root=elsewhere)
-    assert s.paths.data_root == elsewhere
-    assert s.paths.data_root != Path(env_paths["TESTDS_DATA_ROOT"])
-    # the values NOT overridden still come from the environment
-    assert s.paths.workspace == Path(env_paths["TESTDS_WORKSPACE"])
+    shell. Precedence is argument > `$GEOVAP_*` > the descriptor's own value."""
+    stale, wanted = tmp_path / "stale", tmp_path / "wanted"
+    monkeypatch.setenv(settings.ENV_DATA_ROOT, str(stale))
+    monkeypatch.setenv(settings.ENV_WORKSPACE, str(stale))
+
+    s = settings.configure(dataset=make_descriptor_file(), data_root=wanted)
+    assert s.paths.data_root == wanted  # the flag wins
+    assert s.paths.workspace == stale  # what the flag did not name still comes from the environment
+
+
+def test_the_environment_can_redirect_a_dataset_without_editing_its_descriptor(
+    make_descriptor_file, env_paths, tmp_path, monkeypatch
+):
+    """`$GEOVAP_*` overrides the descriptor, which is how a CLI flag reaches a stage subprocess
+    (`runtime.procs` exports the resolved roots) and how a developer points a dataset at a copy.
+    The cost is that a stale exported variable redirects any dataset; `geovap doctor` prints the
+    resolved roots for exactly that reason."""
+    monkeypatch.setenv(settings.ENV_WORKSPACE, str(tmp_path / "scratch"))
+    s = settings.build(dataset=make_descriptor_file())
+    assert s.paths.workspace == tmp_path / "scratch"
 
 
 def test_settings_do_not_touch_the_disk(make_descriptor_file, env_paths, tmp_path):
@@ -53,20 +66,20 @@ def test_missing_environment_variable_names_itself(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.delenv("GEOVAP_NOT_SET_ANYWHERE", raising=False)
+    # No `$GEOVAP_DATA` override in play, so the descriptor's own expansion is what has to fail.
+    monkeypatch.delenv(settings.ENV_DATA_ROOT, raising=False)
     with pytest.raises(DescriptorError, match="GEOVAP_NOT_SET_ANYWHERE"):
         settings.build(dataset=d)
 
 
-def test_env_round_trips_into_a_child_process(make_descriptor_file, env_paths):
+def test_env_round_trips_into_a_child_process(make_descriptor_file, env_paths, monkeypatch):
     """`runtime.procs` hands a stage subprocess `Settings.env()`; rebuilding from exactly that
     environment must give the same dataset, or a stage could silently process a different one."""
     parent = settings.build(dataset=make_descriptor_file(), poses="corrected")
-    import os
-
-    os.environ.update(parent.env())
-    try:
-        child = settings.build()
-    finally:
-        for k in parent.env():
-            os.environ.pop(k, None)
+    # monkeypatch, not os.environ.update: these are the same variables the session fixture sets for
+    # the rest of the suite, and popping them here would break every later test that resolves a
+    # descriptor.
+    for key, value in parent.env().items():
+        monkeypatch.setenv(key, value)
+    child = settings.build()
     assert (child.name, child.paths, child.pose_table) == (parent.name, parent.paths, parent.pose_table)
