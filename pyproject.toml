@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 turbo = ["PyTurboJPEG>=1.7"]
+seg = ["transformers>=5.0", "shapely>=2.0", "huggingface-hub>=0.25"]
 
 [dependency-groups]
 dev = ["pytest>=8"]

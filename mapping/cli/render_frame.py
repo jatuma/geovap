@@ -14,11 +14,11 @@ import cv2
 import numpy as np
 
 from .. import compat, render, vectors
-from ..cloud_store import CloudStore
+from ..cloud_store import open_store
 from ..config import RENDERS_DIR
 from ..frame_select import FrameIndex
 from ..poses import load_poses
-from ..products import FrameProducts
+from ..products import load_products
 from ..rig import IDENTITY, RigModel
 
 
@@ -32,8 +32,8 @@ def main() -> None:
     ap.add_argument("--out", default=str(RENDERS_DIR))
     a = ap.parse_args()
 
-    store = CloudStore()
     poses = load_poses()
+    store = open_store(poses)
     rig = RigModel.from_json(a.rig) if a.rig else IDENTITY
     fi = FrameIndex(poses, rig)
     out = Path(a.out)
@@ -50,7 +50,7 @@ def main() -> None:
         (out / "jvf_class_ids.txt").write_text("\n".join(f"{i}\t{c}" for c, i in class_ids.items()))
 
     for k in a.frames:
-        fp = FrameProducts.load(k, rig)
+        fp = load_products(k, poses, rig)
         res = render.render_frame(store, fp, layers=a.layers, out_dir=out)
         photo = None
         if a.overlay:

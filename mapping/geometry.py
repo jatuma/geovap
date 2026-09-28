@@ -9,9 +9,23 @@ Forward chain (identity rig) is exactly `experiments/common/camera.py`, written 
     R_v = Rp @ Rr @ Ry                                  world -> vehicle body (x fwd, y left, z up)
     x_cam = R_b @ R_v @ (P - C_cam)                     R_b = boresight (identity by default)
     az = atan2(y, x), el = atan2(z, hypot(x, y))
-    u = (az mod 360) / 360 * W,  v = (90 - el) / 180 * H
+    u = ((180 - az) mod 360) / 360 * W,  v = (90 - el) / 180 * H
+    (forward az=0 -> u=W/2 [image centre]; left az=+90 -> u=W/4; right az=-90 -> u=3W/4;
+     rear az=180 -> u=0/W [the seam])
 
 Inverse: d_cam from (u, v); d_world = (R_b R_v)^T d_cam; P = C_cam + range * d_world.
+
+Convention note (2026-09-16): the real panoramas have the seam at the REAR of the vehicle
+and columns run CLOCKWISE (u increases from front, through left, to rear at the seam). The
+pilot `experiments/common/camera.py` instead uses `u = (az mod 360) / 360 * W`, which puts
+the seam at the FRONT and is reflected about the lateral axis (front/back swapped) -- that
+formula is WRONG for these panoramas. Evidence: (1) the focus of expansion of frame-to-frame
+photo motion on straight segments lies at u/W ~= 0.5, i.e. at the image centre, whereas the
+old formula predicts it at the seam (u=0/W); (2) a pinhole 3D render of the registered point
+cloud matches the real photo only under the corrected mapping; (3) the "VMX-2HA" lettering on
+the vehicle is readable in the photos, so the panorama is not mirrored; (4) TerraScan vendor
+colours agree better under the corrected mapping (CIE76 dE ~= 7-17 vs ~= 10-22 across 7 test
+frames).
 """
 from __future__ import annotations
 
@@ -52,6 +66,22 @@ def vehicle_rotation(yaw_deg, roll_deg, pitch_deg) -> np.ndarray:
     return _ry(p) @ _rx(r) @ Ry  # Rp @ Rr @ Ry  (Rr == _rx(r), Rp == _ry(p))
 
 
+def euler_from_vehicle_rotation(R: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Inverse of `vehicle_rotation`: R_v[...,3,3] -> (yaw_deg, roll_deg, pitch_deg) in the verified convention.
+
+    R_v = Ry(p) Rx(r) Rz'(y) with r = -roll, p = -pitch. Third column of R is (sp*cr, -sr, cp*cr) and
+    row 1 is (-cr*sy, cr*cy, -sr), which gives all three angles without ambiguity for |roll| < 90 deg.
+    yaw is wrapped to (-180, 180].
+    """
+    R = np.asarray(R, dtype=np.float64)
+    sr = -R[..., 1, 2]
+    r = np.arctan2(sr, np.hypot(R[..., 0, 2], R[..., 2, 2]))
+    p = np.arctan2(R[..., 0, 2], R[..., 2, 2])
+    y = np.arctan2(-R[..., 1, 0], R[..., 1, 1])
+    yaw = (np.degrees(y) + 180.0) % 360.0 - 180.0
+    return yaw, -np.degrees(r), -np.degrees(p)
+
+
 def boresight_rotation(rig: RigModel) -> np.ndarray:
     """R_b[3,3]: body -> camera. Rz(kappa) @ Ry(phi) @ Rx(omega), angles in degrees."""
     w, f, k = (np.deg2rad(np.float64(a)) for a in rig.boresight_deg)
@@ -82,7 +112,7 @@ def cam_to_pano(x_cam: np.ndarray, w: int = PANO_W, h: int = PANO_H):
     r = np.hypot(hxy, z)
     az = np.degrees(np.arctan2(y, x))
     el = np.degrees(np.arctan2(z, hxy))
-    u = np.mod(az, 360.0) / 360.0 * w
+    u = np.mod(180.0 - az, 360.0) / 360.0 * w
     v = (90.0 - el) / 180.0 * h
     return u, v, r, el
 
@@ -107,7 +137,7 @@ def pano_rays(u, v, w: int = PANO_W, h: int = PANO_H) -> np.ndarray:
     """Unit direction in CAMERA axes for pixel coordinates (u, v) (continuous; add 0.5 for cell centres)."""
     u = np.asarray(u, dtype=np.float64)
     v = np.asarray(v, dtype=np.float64)
-    az = np.deg2rad(u / w * 360.0)
+    az = np.deg2rad(180.0 - u / w * 360.0)
     el = np.deg2rad(90.0 - v / h * 180.0)
     ce = np.cos(el)
     return np.stack([ce * np.cos(az), ce * np.sin(az), np.sin(el)], -1)

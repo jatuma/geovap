@@ -14,11 +14,18 @@ Layout (`STORE_DIR`):
     tiles/NN/psid.npy      u16
     tiles/NN/orig_index.npy u32        position in the source LAZ
     tiles/NN/cell_starts.npy u32 [ny*nx+1]  CSR over the tile's dense CELL_SIZE grid (rows sorted by cell)
+    tiles/NN/user_data.npy       u8    (S1, optional - old stores open without it)
+    tiles/NN/scan_angle_rank.npy i8    (S1, optional)
+    tiles/NN/return_number.npy   u8    return_number | number_of_returns<<4 (S1, optional)
+    tiles/NN/time_order.npy      u32   argsort of gps_time (S1, optional)
+    tiles/NN/time_bucket_starts.npy u32 [n_buckets+1]  CSR over 10 ms gps_time buckets, in time_order (S1, optional)
+    tiles/NN/time_meta.json      {"t_min": float, "bucket_s": float, "n_buckets": int} (S1, optional)
 
 Global point_id = tile.row_offset + local row (fits uint32).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +36,10 @@ from .config import CELL_SIZE, LAZ_DIR, STORE_DIR, TILE_LAYOUT_GEOJSON
 
 SCALE = 0.001  # m per LAS integer unit (all tiles: scale 0.001, offset 0 - asserted at build time)
 COLUMNS = ("xyz", "intensity", "classification", "rgb", "gps_time", "psid", "orig_index")
+# S1 extra columns: lazily loaded, None if the .npy is missing (old stores keep opening fine)
+EXTRA_COLUMNS = ("user_data", "scan_angle_rank", "return_number")
+COLUMNS = COLUMNS + EXTRA_COLUMNS
+TIME_BUCKET_S = 0.01  # 10 ms buckets for the per-tile time index (S1)
 
 
 @dataclass
@@ -41,17 +52,65 @@ class TileInfo:
     polygon: np.ndarray  # [K,2] closed ring (m)
     grid_origin: tuple[float, float]  # (E0, N0) of cell (0,0), m
     grid_shape: tuple[int, int]  # (ny, nx)
+    gps_time_range: tuple[float, float] | None = None  # (min, max) gps_time in the tile, from tiles.json
 
     @property
     def dir(self) -> Path:
         return STORE_DIR / "tiles" / self.name
 
 
+class PassRegistration:
+    """S5 pass-to-pass registration applied to point coordinates: per photo-pass 4-DoF rigid
+    transform (dE, dN, dH, dyaw about a per-pass centre), selected by `poses.pass_of_time(gps_time)`.
+    Built from a `pass_transforms.json`-shaped dict (see `mapping.pass_reg`); `poses` defaults to the
+    pose table named in the transforms file (`poses_source`), else the default `load_poses()`."""
+
+    def __init__(self, transforms: dict, poses=None, poses_source: str | None = None):
+        self.transforms = {int(k): v for k, v in transforms.get("passes", transforms).items() if str(k).lstrip("-").isdigit()}
+        if poses is None:
+            from .poses import load_poses
+
+            poses = load_poses(poses_source or transforms.get("poses_source"))
+        self.poses = poses
+        self.hash = hashlib.sha1(json.dumps(transforms, sort_keys=True, default=str).encode()).hexdigest()[:10]
+
+    def apply(self, xyz: np.ndarray, gps_time: np.ndarray) -> np.ndarray:
+        if len(xyz) == 0:
+            return xyz
+        out = xyz.copy()
+        passes = self.poses.pass_of_time(np.asarray(gps_time))
+        for p in np.unique(passes):
+            tr = self.transforms.get(int(p))
+            if tr is None:
+                continue
+            m = passes == p
+            cx, cy = tr["centre"]
+            dE, dN, dH = tr["t"]
+            a = np.radians(tr["yaw_deg"])
+            c, s = np.cos(a), np.sin(a)
+            Rz = np.array([[c, -s], [s, c]])
+            xy = out[m, :2] - np.array([cx, cy])
+            out[m, :2] = xy @ Rz.T + np.array([cx, cy]) + np.array([dE, dN])
+            out[m, 2] += dH
+        return out
+
+    @staticmethod
+    def load(source) -> "PassRegistration":
+        """`source`: dict (already-loaded transforms), or a Path/str to a pass_transforms.json."""
+        if isinstance(source, PassRegistration):
+            return source
+        if isinstance(source, dict):
+            return PassRegistration(source)
+        data = json.loads(Path(source).read_text())
+        return PassRegistration(data)
+
+
 class TileData:
     """Memmapped columns of one tile (read-only)."""
 
-    def __init__(self, info: TileInfo):
+    def __init__(self, info: TileInfo, registration: "PassRegistration | None" = None):
         self.info = info
+        self.registration = registration
         d = info.dir
         self.xyz = np.load(d / "xyz.npy", mmap_mode="r")
         self.intensity = np.load(d / "intensity.npy", mmap_mode="r")
@@ -61,6 +120,14 @@ class TileData:
         self.psid = np.load(d / "psid.npy", mmap_mode="r")
         self.orig_index = np.load(d / "orig_index.npy", mmap_mode="r")
         self.cell_starts = np.load(d / "cell_starts.npy")
+        # S1 extra columns: None if the tile predates them (old stores must still open)
+        for name in EXTRA_COLUMNS:
+            p = d / f"{name}.npy"
+            setattr(self, name, np.load(p, mmap_mode="r") if p.exists() else None)
+        # S1 time index: None if not built yet
+        self.time_order = np.load(d / "time_order.npy", mmap_mode="r") if (d / "time_order.npy").exists() else None
+        self.time_bucket_starts = np.load(d / "time_bucket_starts.npy") if (d / "time_bucket_starts.npy").exists() else None
+        self._time_meta = json.loads((d / "time_meta.json").read_text()) if (d / "time_meta.json").exists() else None
 
     def __len__(self) -> int:
         return self.info.n
@@ -71,7 +138,12 @@ class TileData:
         pages in every worker's RSS, so 4 workers x an 18 GB store look like 72 GB."""
         import mmap
 
-        for a in (self.xyz, self.intensity, self.classification, self.rgb, self.gps_time, self.psid, self.orig_index):
+        arrays = [self.xyz, self.intensity, self.classification, self.rgb, self.gps_time, self.psid, self.orig_index]
+        arrays += [getattr(self, name) for name in EXTRA_COLUMNS]
+        arrays += [self.time_order]
+        for a in arrays:
+            if a is None:
+                continue
             mm = getattr(a, "_mmap", None)
             if mm is not None:
                 try:
@@ -80,7 +152,13 @@ class TileData:
                     pass
 
     def xyz_m(self, rows=slice(None)) -> np.ndarray:
-        return np.asarray(self.xyz[rows], dtype=np.float64) * SCALE
+        """Point coordinates (m). With `registration` set (S5, off by default), applies the per-pass
+        rigid transform selected by each row's gps_time; default behaviour (registration=None) is
+        byte-identical to before S5."""
+        xyz = np.asarray(self.xyz[rows], dtype=np.float64) * SCALE
+        if self.registration is None:
+            return xyz
+        return self.registration.apply(xyz, np.asarray(self.gps_time[rows]))
 
     def rows_in_disc(self, cx: float, cy: float, radius: float) -> np.ndarray:
         """Local row indices of points whose cell may intersect the disc (superset; refine by distance)."""
@@ -111,10 +189,32 @@ class TileData:
             pos += l
         return out
 
+    def rows_in_time(self, t0: float, t1: float) -> np.ndarray:
+        """Local row indices (sorted ascending) with gps_time in [t0, t1]. Requires the time index
+        (time_order.npy / time_bucket_starts.npy / time_meta.json); raises if missing."""
+        if self.time_order is None or self.time_bucket_starts is None or self._time_meta is None:
+            raise RuntimeError(f"tile {self.info.name}: time index not built (run store_add_columns)")
+        t_min = self._time_meta["t_min"]
+        bucket_s = self._time_meta["bucket_s"]
+        n_buckets = self._time_meta["n_buckets"]
+        b0 = max(0, int(np.floor((t0 - t_min) / bucket_s)))
+        b1 = min(n_buckets, int(np.floor((t1 - t_min) / bucket_s)) + 1)  # exclusive upper bucket
+        if b0 >= b1:
+            return np.empty(0, dtype=np.int64)
+        s = int(self.time_bucket_starts[b0])
+        e = int(self.time_bucket_starts[b1])
+        cand = np.asarray(self.time_order[s:e], dtype=np.int64)
+        if len(cand) == 0:
+            return cand
+        g = np.asarray(self.gps_time[cand])
+        m = (g >= t0) & (g <= t1)
+        return np.sort(cand[m])
+
 
 class CloudStore:
-    def __init__(self, root: Path = STORE_DIR):
+    def __init__(self, root: Path = STORE_DIR, registration: "Path | str | dict | PassRegistration | None" = None):
         self.root = Path(root)
+        self._registration = PassRegistration.load(registration) if registration is not None else None
         meta = json.loads((self.root / "tiles.json").read_text())
         self.tiles: list[TileInfo] = [
             TileInfo(
@@ -126,6 +226,7 @@ class CloudStore:
                 polygon=np.asarray(t["polygon"], dtype=np.float64),
                 grid_origin=tuple(t["grid_origin"]),
                 grid_shape=tuple(t["grid_shape"]),
+                gps_time_range=tuple(t["gps_time_range"]) if "gps_time_range" in t else None,
             )
             for t in meta["tiles"]
         ]
@@ -135,8 +236,16 @@ class CloudStore:
 
     def tile(self, name: str) -> TileData:
         if name not in self._data:
-            self._data[name] = TileData(self.by_name[name])
+            self._data[name] = TileData(self.by_name[name], registration=self._registration)
         return self._data[name]
+
+    @property
+    def registration_hash(self) -> str | None:
+        return self._registration.hash if self._registration is not None else None
+
+    def xyz_registered(self, tile: TileInfo, rows) -> np.ndarray:
+        """Convenience: `self.tile(tile.name).xyz_m(rows)`, honouring `registration`."""
+        return self.tile(tile.name).xyz_m(rows)
 
     def tiles_near(self, cx: float, cy: float, radius: float) -> list[TileInfo]:
         out = []
@@ -158,6 +267,24 @@ class CloudStore:
                 xy = np.asarray(td.xyz[rows, :2], dtype=np.float64) * SCALE
                 m = (xy[:, 0] - cx) ** 2 + (xy[:, 1] - cy) ** 2 <= radius * radius
                 rows = rows[m]
+            if len(rows):
+                res.append((t, rows))
+        return res
+
+    def query_time(self, t0: float, t1: float, bbox: tuple[float, float, float, float] | None = None) -> list[tuple[TileInfo, np.ndarray]]:
+        """[(tile, local_rows)] of points with gps_time in [t0, t1], restricted to tiles whose known
+        gps_time range overlaps [t0, t1] (tiles without a cached range are always checked); rows sorted.
+        `bbox` (minE, minN, maxE, maxN) additionally restricts to tiles whose bbox overlaps it."""
+        res = []
+        for t in self.tiles:
+            if t.gps_time_range is not None and (t.gps_time_range[1] < t0 or t.gps_time_range[0] > t1):
+                continue
+            if bbox is not None:
+                minE, minN, maxE, maxN = t.bbox
+                if maxE < bbox[0] or minE > bbox[2] or maxN < bbox[1] or minN > bbox[3]:
+                    continue
+            td = self.tile(t.name)
+            rows = td.rows_in_time(t0, t1)
             if len(rows):
                 res.append((t, rows))
         return res
@@ -193,6 +320,17 @@ class CloudStore:
         offs = np.array([t.row_offset for t in self.tiles] + [self.total], dtype=np.int64)
         ti = np.searchsorted(offs, point_id.astype(np.int64), side="right") - 1
         return ti, point_id.astype(np.int64) - offs[ti]
+
+
+def open_store(poses=None, root: Path = STORE_DIR) -> CloudStore:
+    """`CloudStore` honouring `poses.registration` (the S5b `pass_transforms.json` a corrected pose
+    table's poses are only geometrically consistent with -- see `poses.py` and `PassRegistration`
+    above): `poses=None` or an export-sourced table (`.registration` is None) gives a plain,
+    unregistered store, byte-identical to `CloudStore(root)`; any corrected table gives a store whose
+    `xyz_m()` applies that table's per-pass rigid transform. Use this instead of a bare `CloudStore()`
+    wherever a pose table is also in play, so the two never drift apart."""
+    registration = poses.registration if poses is not None else None
+    return CloudStore(root, registration=registration)
 
 
 # ------------------------------------------------------------------------------------- build

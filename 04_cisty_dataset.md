@@ -81,7 +81,83 @@ Doporučení:
 3. **Vzdálenost**: přesnost projekce je 0,15–0,3° (P90 u clean), tj. 3–5 cm v 10 m, 13–20 cm ve 40 m. Pro 14 cm rozpočet používat body do ~25 m od kamery.
 4. **Body**: „čistý bod" = bod, jehož nejbližší snímek v čase je `clean`/`unverified` (`nt_frame` v `colorize.py`, `src_image` ve výstupním LAZ). Tím vzniká podmnožina mračna konzistentní s výběrem snímků.
 
-## 5. Reprodukce
+## 5. Aktualizace na korigované pozice
+
+`mapping/quality.py` je od `08_korekce_poz_panoramat.md` parametrizované pózou (`poses_source`
+argument / env `GEOVAP_POSES`, viz `08 §2.4`): `run()`/`reclassify()` bez argumentu čtou/píšou přesně
+tam, kam dnes (`Geovap_cache/out/dataset/` — regresní kotva, beze změny), `GEOVAP_POSES=corrected`
+píše do `Geovap_cache/out/dataset_e8f3e1/` (`mapping.config.source_dir`, stejný vzor jako
+`products.frames_dir` v `08 §2.5` — hash-suffixovaný sourozenec, nikdy přepis exportu). `open_store`
+uvnitř `assess_frame` bere registraci automaticky z `poses_corrected.json` (`registration` pole),
+takže korigovaný běh není potřeba nijak zvlášť míchat s `CloudStore(registration=...)` — stačí
+`GEOVAP_POSES=corrected`.
+
+```
+GEOVAP_POSES=corrected uv run python -m mapping.quality 8 350   # 8 procesů, přírůstkově do dataset_e8f3e1/
+GEOVAP_POSES=corrected uv run python -c "from mapping.quality import reclassify; reclassify()"
+```
+
+Celý běh (1 503/1 503 snímků, dokončeno) proti stejnému `export.csv`-founded `frame_quality.csv` v
+`dataset/export_baseline/` (regresní referenční bod, `dataset/README.md`):
+
+| třída | export | corrected | Δ | \|du\| med [px] (exp→cor) | \|dv\| med [px] (exp→cor) | MAD du/dv (exp→cor) | inlier (exp→cor) |
+|---|---:|---:|---:|---|---|---|---|
+| clean | 825 | **830** | +5 | 0,38→0,31 | 0,78→0,74 | 8,10/11,17 → 7,75/10,84 | 0,221→0,231 |
+| unverified | 163 | 163 | 0 | 2,55→2,00 | 7,31→5,61 | 6,54/10,46 → 7,08/10,68 | 0,063→0,069 |
+| usable | 295 | **302** | +7 | 0,37→0,33 | 0,88→0,79 | 7,94/11,14 → 7,65/11,05 | 0,202→0,214 |
+| reject | 220 | **208** | −12 | 0,63→0,62 | 6,57→6,29 | 8,03/13,46 → 8,57/13,50 | 0,113→0,111 |
+
+`de_nt` (informativní barevná ΔE00) je v mezích zaokrouhlení beze změny ve všech třídách (clean
+5,03→5,03) — konzistentní se zjištěním `08 §1`, že tahle metrika sleduje volbu zdrojového snímku v
+TerraScanu, ne pózu. `clean` P90 \|du\| 1,46→**1,07 px**, P90 \|dv\| 3,44→**3,07 px** (obojí lepší);
+pokrytí zůstává 26 z 30 průjezdů (stejné dva scházející jako u exportu). Konflikty průjezdů (\|du\|
+nebo \|dv\| > 8 px vůči sousednímu průjezdu) klesly 26→**23** snímků, ale ne beze zbytku na stejných
+místech: průjezdy 4, 5, 7, 9, 11, 13, 15, 16, 26 mají konflikt v obou bězích, korigovaný běh navíc
+nově vlajkuje pár snímků v průjezdech **17 a 20** (dřív bez konfliktu) — čistý posun k lepšímu, ne
+jednosměrné vymizení. Důvody vyřazení/omezení (snímek může mít víc, počty přes celý dataset, ne jen
+`reject`): otočka 279× (beze změny), geometrie 220→**208**×, pomalá jízda 183→188× (+5, mírně hůř),
+málo hran 178→176× (−2), konflikt průjezdů 26→23×.
+
+**Kolik snímků změnilo třídu**: 99 z 1 503 (6,6 %) — ne jen posun v okolí prahu jedním směrem.
+Největší přesun je `reject → clean` (31 snímků) proti `clean → reject` (27) — čistě +4 ve prospěch
+`clean`, zbytek rozdílu (825→830 = +5) jde přes `usable`/`unverified`. Další velké skupiny:
+`reject → usable` (15) vs. `usable → reject` (9), `clean → usable` (5) vs. `usable → clean` (4). Jde
+tedy o skutečné překlápění jednotlivých snímků na obě strany prahu (geometrie posunutá o zlomek
+pixelu u snímků, které už byly blízko `6 px`/`16 px MAD`/`0,08 inlier` hranice), ne o jednosměrné
+zlepšení celé populace.
+
+Rozdělení podle průjezdu potvrzuje `07`/`04 §3` diagnózu nejhorších průjezdů beze změny: 12 (28→**31**
+clean z 56→**53** reject, pořád nejhorší bilance), 13 (4 clean, 12 reject, beze změny), 14 (23→**26**
+clean, 22→20 reject) — severovýchodní/severozápadní smyčka zůstává nejslabším místem datasetu i po
+korekci pózy, jen o pár snímků méně vyhrocená. Naopak průjezdy 0, 1, 23–25, 27, které byly v exportu
+téměř celé čisté, jsou po korekci prakticky beze změny (0: 132→134, 1: 140→**135**, mírně hůř; 23:
+35→**33**, 24: 30→**31**, 25: 38→38, 27: 29→**28**) — korekce se soustředila do stejných problémových
+smyček, ne do už dobrých úseků. `tile_summary.json` (bilance po dlaždicích, `§3`) má teď generátor
+(`mapping.quality.write_tile_summary`/`plot_quality`, CLI `uv run python -m mapping.quality
+tile-summary <csv> <out_dir> --poses {export,corrected}`) — zrekonstruovaný z ad hoc skriptu, ověřený
+proti dosavadnímu `dataset/export_baseline/tile_summary.json` na téže (export) tabulce: **17 z 38
+dlaždic přesná shoda**, zbytek se liší o pár snímků na dlaždici (bbox-distance zaokrouhlení na
+hranicích dlaždic, ne chyba generátoru — stejná hranice jako u původního ad hoc skriptu). Dnešní
+`dataset/tile_summary.json` je z korigovaného běhu (830 clean).
+
+**Verdikt**: korekce pózy čistý dataset mírně zlepšila, ne dramaticky a ne bezezbytku. `clean` +5
+snímků (0,6 %), `reject` −12 (−5,5 %), geometrická reziduua (\|du\|, \|dv\|, MAD, inlier) se zlepšila
+napříč všemi čtyřmi třídami současně (i u `reject` a `usable`, ne jen `clean`) — konzistentní s `08
+§1` zjištěním, že hlavní přínos korekce je oprava mezisnímkové interpolace v zatáčkách, kde `quality.py`
+taky měří (siluety vůči hraně fotky). Nejhorší průjezdy (12, 13, 14) zůstávají nejhoršími i po
+korekci — korekce posouvá hranici o pixely, neřeší tam strukturální problém (viz `08 §3.4`
+azimutálně strukturované reziduum, které žádná tuhá póza jednoho snímku nevysvětlí).
+
+**Promoce (od této aktualizace)**: `dataset/clean_frames.json` (použité v `mapping/README.md`,
+`seg/render_labels.py` atd.) je **promotované na korigované pózy** — kopie
+`Geovap_cache/out/dataset_e8f3e1/{frame_quality.csv,clean_frames.json}`, produkční množina je teď
+830/163/302/208. Export klasifikace (825/163/295/220) je uložená v `dataset/export_baseline/` jako
+regresní referenční bod, ne živá data; kdo ji potřebuje explicitně, čte odtud. Přechod se netýká jen
+klasifikace: `825→830 clean` je turnover 32 vypadlých + 37 nových snímků (793 společných), ne prostý
+přírůstek pěti — viz `dataset/README.md` pro rozpad podle průjezdu a dopad na segmentační dataset
+(`Geovap_cache/segds_e8f3e1/`, přestavěný na tuto novou množinu).
+
+## 6. Reprodukce
 
 ```
 uv run python -m mapping.quality 4 350     # 4 procesy, 350 snímků na běh (přírůstkově, JSONL), opakovat

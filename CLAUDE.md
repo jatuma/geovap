@@ -1,0 +1,1 @@
+Use subagents to delegate specific tasks or responsibilities within your system. Use your judgement to determine what model is best suited for each subagent. For exploration and impletation use sonnet.

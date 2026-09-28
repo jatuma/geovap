@@ -41,8 +41,85 @@ class IcpFrame:
     valid: np.ndarray  # photo validity
 
 
-def prepare_frame(frame: int, store: CloudStore, fi: FrameIndex, vmask, n_points: int = 30_000, seed: int = 0) -> IcpFrame:
-    cf = Ch.prepare_frame(frame, store, fi, vmask, n_points=10**9, use_intensity=False)
+class _PoseOverride:
+    """Minimal FrameIndex-like shim (R, C, t, poses) with one frame's pose overridden, so silhouette
+    selection (which reads `fi.R[frame]`, `fi.C[frame]`, `fi.t[frame]`) can be redone under a
+    hypothesis pose without a full `FrameIndex` rebuild. Arrays are only copied when overridden, so
+    passing R=C=t=None (the default in `prepare_frame`) never runs this path."""
+
+    __slots__ = ("R", "C", "t", "poses")
+
+    def __init__(self, fi: FrameIndex, frame: int, R: np.ndarray | None, C: np.ndarray | None, t: float | None):
+        self.R, self.C, self.t, self.poses = fi.R, fi.C, fi.t, fi.poses
+        if R is not None or C is not None:
+            self.R, self.C = fi.R.copy(), fi.C.copy()
+            if R is not None:
+                self.R[frame] = R
+            if C is not None:
+                self.C[frame] = C
+        if t is not None:
+            self.t = fi.t.copy()
+            self.t[frame] = t
+
+
+class _OwnPassGather:
+    """Context manager that temporarily restricts `calib.chamfer.fine_edge_points`'s candidate
+    gather to the photo's OWN pass (`Poses.pass_of_time` of each candidate's gps_time).
+
+    `chamfer.fine_edge_points` resolves `gather_candidates` via a local `from ..products import
+    gather_candidates` at call time, so patching the name on the `mapping.products` module (not
+    touched here otherwise -- out of scope for S4) is picked up without duplicating its ~40 lines
+    of zbuffer/edge-detection logic. S5 found 0.1-0.6 m offsets between passes; the plain ±45 s
+    time window (`products.TIME_WINDOW_S`) also admits a neighbouring pass whenever two passes are
+    < ~90 s apart in time (observed: pass 24's first frames pull 39-43% of candidates from pass 23,
+    a 24 s gap -- a double silhouette that inflates the edge residual there). Not thread-safe against
+    concurrent `prepare_frame(..., own_pass_only=True)` calls in the same process; `refine_pass`
+    only ever calls it sequentially."""
+
+    def __init__(self, poses: Poses, frame: int):
+        self.poses = poses
+        self.own_pass = int(poses.pass_id[frame])
+        self._orig = None
+
+    def _patched(self, store, C, r_max=R_MAX, t_frame=None, time_window_s=None):
+        xyz, pid = self._orig(store, C, r_max, t_frame, time_window_s)
+        if len(pid) == 0:
+            return xyz, pid
+        ti, local = store.locate(pid)
+        gps = np.empty(len(pid))
+        for t_idx in np.unique(ti):
+            m = ti == t_idx
+            gps[m] = np.asarray(store.tile(store.tiles[t_idx].name).gps_time[local[m]])
+        keep = self.poses.pass_of_time(gps) == self.own_pass
+        return xyz[keep], pid[keep]
+
+    def __enter__(self):
+        import mapping.products as _products
+
+        self._products = _products
+        self._orig = _products.gather_candidates
+        _products.gather_candidates = self._patched
+        return self
+
+    def __exit__(self, *exc):
+        self._products.gather_candidates = self._orig
+
+
+def prepare_frame(frame: int, store: CloudStore, fi: FrameIndex, vmask, n_points: int = 30_000, seed: int = 0, R: np.ndarray | None = None, C: np.ndarray | None = None, t: float | None = None, own_pass_only: bool = False) -> IcpFrame:
+    """As before; if `R`/`C`/`t` are given, silhouette selection (own-cell fine z-buffer +
+    time-windowed candidate gather) uses that hypothesis pose for this frame instead of `fi`'s
+    stored one. Passing none of them reproduces the previous behaviour exactly.
+
+    `own_pass_only=True` (default False, so rig calibration -- `calib.fit`/`calib.diagnostics` --
+    is byte-identical) additionally drops candidate points scanned during a different photo pass;
+    see `_OwnPassGather`."""
+    if R is not None or C is not None or t is not None:
+        fi = _PoseOverride(fi, frame, R, C, t)
+    if own_pass_only:
+        with _OwnPassGather(fi.poses, frame):
+            cf = Ch.prepare_frame(frame, store, fi, vmask, n_points=10**9, use_intensity=False)
+    else:
+        cf = Ch.prepare_frame(frame, store, fi, vmask, n_points=10**9, use_intensity=False)
     xyz, kind = cf.xyz, cf.kind
     if len(xyz) > n_points:
         rng = np.random.default_rng(seed + frame)
@@ -98,9 +175,15 @@ class EdgeICP:
         th[self.free] = theta_free
         return RigModel.from_vector(th, with_lever_arm=True)
 
-    def residuals(self, theta_free, window: float, return_meta: bool = False):
+    def poses_for(self, theta_free) -> tuple[np.ndarray, np.ndarray]:
+        """(R[K,3,3], C[K,3]) for `self.frames` under hypothesis `theta_free`. Overridable by
+        subclasses that parametrise pose differently (e.g. per-frame corrections instead of a
+        single rig)."""
         rig = self.rig(theta_free)
-        R, C = geometry.frame_rotations(self.poses, rig, self.idx)
+        return geometry.frame_rotations(self.poses, rig, self.idx)
+
+    def residuals(self, theta_free, window: float, return_meta: bool = False):
+        R, C = self.poses_for(theta_free)
         res = []
         meta = []
         for i, f in enumerate(self.frames):
@@ -126,8 +209,7 @@ class EdgeICP:
     # ---------------------------------------------------------------- fixed-correspondence ICP
     def associate(self, theta_free, window: float) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """Per frame: (point mask, target x, target y) in CHAM px for points whose nearest edge is within window."""
-        rig = self.rig(theta_free)
-        R, C = geometry.frame_rotations(self.poses, rig, self.idx)
+        R, C = self.poses_for(theta_free)
         out = []
         for i, f in enumerate(self.frames):
             u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], dtype=np.float64)
@@ -142,8 +224,7 @@ class EdgeICP:
         return out
 
     def residuals_fixed(self, theta_free, assoc) -> np.ndarray:
-        rig = self.rig(theta_free)
-        R, C = geometry.frame_rotations(self.poses, rig, self.idx)
+        R, C = self.poses_for(theta_free)
         res = []
         for i, f in enumerate(self.frames):
             ok, tx, ty = assoc[i]

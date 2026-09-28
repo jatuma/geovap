@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from . import geometry, zbuffer
-from .cloud_store import CloudStore
+from .cloud_store import CloudStore, open_store
 from .config import FRAMES_DIR, NO_POINT, PANO_H, PANO_W, R_MAX, R_MIN, ZB_H, ZB_W
 from .frame_select import FrameIndex
 from .poses import Poses, load_poses
@@ -35,6 +35,15 @@ def git_rev() -> str:
 
 def product_path(frame: int, root: Path = FRAMES_DIR) -> Path:
     return Path(root) / f"f{frame:04d}.npz"
+
+
+def frames_dir(poses: Poses, root: Path = FRAMES_DIR) -> Path:
+    """Products directory for a pose table: byte-identical to today (`root`) for the default
+    "export" source; a hash-suffixed subdirectory for any corrected table, so corrected products
+    never overwrite (or get mixed with) the export ones."""
+    if poses.source == "export":
+        return Path(root)
+    return Path(root) / poses.hash()[:6]
 
 
 @dataclass
@@ -74,12 +83,21 @@ class FrameProducts:
         return p
 
     @classmethod
-    def load(cls, frame: int, rig: RigModel | None = None, root: Path = FRAMES_DIR, allow_stale: bool = False) -> "FrameProducts":
+    def load(
+        cls,
+        frame: int,
+        rig: RigModel | None = None,
+        root: Path = FRAMES_DIR,
+        allow_stale: bool = False,
+        poses: Poses | None = None,
+    ) -> "FrameProducts":
         with np.load(product_path(frame, root)) as z:
             meta = json.loads(str(z["meta"]))
             fp = cls(frame=frame, depth_mm=z["depth_mm"], point_id=z["point_id"], meta=meta)
         if rig is not None and meta["rig_hash"] != rig.hash() and not allow_stale:
             raise RuntimeError(f"frame {frame}: products built for rig {meta['rig_hash']}, requested {rig.hash()}")
+        if poses is not None and meta.get("poses_hash") != poses.hash() and not allow_stale:
+            raise RuntimeError(f"frame {frame}: products built for poses {meta.get('poses_hash')}, requested {poses.hash()}")
         return fp
 
     # ----------------------------------------------------------------- inverse mapping
@@ -103,6 +121,13 @@ class FrameProducts:
         """Visibility of points at full-res (u, v) with range r."""
         s = self.scale
         return zbuffer.visible(r, np.asarray(u) * s, np.asarray(v) * s, self.depth_closed, spread_m=self.spread) & zbuffer.range_filter(r)
+
+
+def load_products(frame: int, poses: Poses, rig: RigModel | None = IDENTITY, **kw) -> FrameProducts:
+    """`FrameProducts.load` scoped to a pose table: root=`frames_dir(poses)`, `poses=poses` (so
+    products built for the wrong pose table raise loudly instead of silently mixing sources). Use
+    this instead of a bare `FrameProducts.load(k, ...)` wherever a pose table is also in play."""
+    return FrameProducts.load(frame, rig, root=frames_dir(poses), poses=poses, **kw)
 
 
 # ------------------------------------------------------------------------------------- building
@@ -143,6 +168,8 @@ def build_frame(frame: int, store: CloudStore, fi: FrameIndex, rig: RigModel = I
         "filename": str(fi.poses.filename[frame]),
         "rig_hash": rig.hash(),
         "rig": {"boresight_deg": list(rig.boresight_deg), "lever_arm_m": list(rig.lever_arm_m), "dt_s": rig.dt_s},
+        "poses_hash": fi.poses.hash(),
+        "poses_source": fi.poses.source,
         "zb": [ZB_H, ZB_W],
         "r_min": R_MIN,
         "r_max": r_max,
@@ -157,28 +184,39 @@ def build_frame(frame: int, store: CloudStore, fi: FrameIndex, rig: RigModel = I
 _G: dict = {}
 
 
-def _init_worker(rig_vec, with_la):
-    _G["store"] = CloudStore()
-    _G["poses"] = load_poses()
+def _init_worker(rig_vec, with_la, poses_source=None):
+    # explicit initarg (not just env inheritance via fork) so a poses_source given at call time
+    # is honoured even if the pool start method is not "fork".
+    _G["poses"] = load_poses(poses_source)
+    _G["store"] = open_store(_G["poses"])  # registered cloud when poses carries a "registration"
     _G["rig"] = RigModel.from_vector(rig_vec, with_lever_arm=with_la)
     _G["fi"] = FrameIndex(_G["poses"], _G["rig"])
 
 
 def _build_and_save(frame: int) -> int:
     fp = build_frame(frame, _G["store"], _G["fi"], _G["rig"])
-    fp.save()
+    fp.save(frames_dir(_G["poses"]))
     return fp.meta["n_splatted"]
 
 
-def build_all_frames(frames=None, rig: RigModel = IDENTITY, workers: int = 16) -> None:
+def build_all_frames(frames=None, rig: RigModel = IDENTITY, workers: int = 16, poses_source: str | None = None, skip_existing: bool = True) -> None:
     from multiprocessing import Pool
 
     from tqdm import tqdm
 
-    poses = load_poses()
+    poses = load_poses(poses_source)
     frames = list(range(len(poses))) if frames is None else list(frames)
-    FRAMES_DIR.mkdir(parents=True, exist_ok=True)
-    rig.to_json(FRAMES_DIR / "rig.json")
-    with Pool(workers, initializer=_init_worker, initargs=(rig.as_vector(True), True)) as pool:
+    root = frames_dir(poses)
+    root.mkdir(parents=True, exist_ok=True)
+    rig.to_json(root / "rig.json")
+    n_requested = len(frames)
+    if skip_existing:
+        frames = [f for f in frames if not product_path(f, root).exists()]
+    n_skipped = n_requested - len(frames)
+    n_built = len(frames)
+    print(f"build_all_frames: {n_requested} requested, {n_skipped} skipped (already exist), {n_built} to build")
+    if not frames:
+        return
+    with Pool(workers, initializer=_init_worker, initargs=(rig.as_vector(True), True, poses_source)) as pool:
         for _ in tqdm(pool.imap_unordered(_build_and_save, frames, chunksize=4), total=len(frames), desc="frames"):
             pass

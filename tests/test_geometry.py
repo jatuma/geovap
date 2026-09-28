@@ -109,7 +109,7 @@ def test_pose_at_dt_zero_is_exact_and_dt_interpolates():
 def test_trajectory_projects_near_horizon(poses):
     R, C = geometry.frame_rotations(poses)
     for k in (100, 400, 800, 1200):
-        for direction, expect_az in ((+1, 0.0), (-1, 180.0)):
+        for direction, expect_az in ((+1, 180.0), (-1, 0.0)):
             nb = k + direction * np.arange(1, 7)
             nb = nb[poses.pass_id[nb] == poses.pass_id[k]]
             assert len(nb) >= 2
@@ -117,7 +117,7 @@ def test_trajectory_projects_near_horizon(poses):
             assert np.all(np.abs(el) < 6.0), el  # neighbouring camera centres lie near the horizon
             az = u / PANO_W * 360.0
             daz = np.abs((az - expect_az + 180.0) % 360.0 - 180.0)
-            assert np.median(daz) < 20.0, (k, direction, az)  # ahead -> seam (az 0), behind -> az 180
+            assert np.median(daz) < 20.0, (k, direction, az)  # ahead -> image centre (180), behind -> seam (0)
 
 
 def test_nadir_projects_to_bottom_row(poses):
@@ -126,3 +126,55 @@ def test_nadir_projects_to_bottom_row(poses):
     for k in range(5):
         u, v, r, el = geometry.world_to_pano(nadir[k : k + 1], R[k], C[k])
         assert v[0] > PANO_H * (1 - 10 / 180), v  # within 10 deg of nadir (roll/pitch <= 9 deg)
+
+
+def test_euler_from_vehicle_rotation_round_trip():
+    rng = np.random.default_rng(3)
+    yaw = rng.uniform(-180, 180, 500)
+    roll = rng.uniform(-9, 9, 500)
+    pitch = rng.uniform(-9, 9, 500)
+    R = geometry.vehicle_rotation(yaw, roll, pitch)
+    y2, r2, p2 = geometry.euler_from_vehicle_rotation(R)
+    dy = (y2 - yaw + 180.0) % 360.0 - 180.0
+    np.testing.assert_allclose(dy, 0.0, atol=1e-9)
+    np.testing.assert_allclose(r2, roll, atol=1e-9)
+    np.testing.assert_allclose(p2, pitch, atol=1e-9)
+    np.testing.assert_allclose(geometry.vehicle_rotation(y2, r2, p2), R, atol=1e-12)
+
+
+# ------------------------------------------------------------------ 2026-09-16 seam-at-rear convention
+def test_forward_direction_projects_to_centre_right_to_three_quarters():
+    """u=W/2 dead ahead, u=W/4 left, u=3W/4 right, seam (u=0/W) behind; v=H/2 horizon, v=H nadir."""
+    R = geometry.vehicle_rotation(37.0, 0.0, 0.0)  # yaw only: R[0]=forward, R[1]=left in world coords
+    C = np.zeros(3)
+    fwd_world, left_world = R[0], R[1]
+
+    def u_v(direction_world, dist=10.0):
+        P = (C + direction_world * dist)[None, :]
+        u, v, r, el = geometry.world_to_pano(P, R, C)
+        return float(u[0]), float(v[0])
+
+    u, v = u_v(fwd_world)
+    assert abs(u - PANO_W / 2) < 1e-2
+    assert abs(v - PANO_H / 2) < 1e-2  # horizon
+
+    u, _ = u_v(left_world)
+    assert abs(u - PANO_W / 4) < 1e-2
+
+    u, _ = u_v(-left_world)  # right
+    assert abs(u - 3 * PANO_W / 4) < 1e-2
+
+    u, _ = u_v(-fwd_world)  # behind -> seam
+    assert min(abs(u - 0.0), abs(u - PANO_W)) < 1e-2
+
+    _, v = u_v(np.array([0.0, 0.0, -1.0]))  # straight down -> nadir
+    assert abs(v - PANO_H) < 1e-2
+
+
+def test_pano_rays_inverse_of_cam_to_pano():
+    rng = np.random.default_rng(7)
+    d = rng.normal(size=(2000, 3))
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    u, v, r, el = geometry.cam_to_pano(d)
+    d2 = geometry.pano_rays(u, v)
+    assert np.abs(d2 - d).max() < 1e-9

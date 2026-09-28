@@ -54,12 +54,33 @@ Konvence v datech nikde popsané nejsou (sloupce `Direction`, `Up` a `Omega/Phi/
 | Svislá osa | v=0 zenit vs. nadir | **6,53** vs. 39–42 | Zenit, jednoznačné |
 | Šev / offset azimutu | 0°, 90°, 180°, 270° | **6,53** / 18,66 / 18,32 / 13,81 | Offset 0, šev v azimutu = yaw |
 | Zrcadlení | `az−yaw` vs. `−(az−yaw)` | **6,53** vs. 17,05 | Bez zrcadlení |
+| **Zrcadlo + 180°** | `−(az−yaw)+180°` (netestovaná kombinace) | *nikdy nezměřeno* | **Právě tahle kombinace je správná — viz „Oprava konvence 2026-09-16" níže** |
 | Znaménka roll/pitch | 8 kombinací znamének a pořadí | **6,28** (obě záporná) vs. 6,53 (bez) vs. 7,29 (obě kladná) | Obě záporná |
 | Pořadí rotací | roll→pitch vs. pitch→roll | 6,276 vs. 6,277 | Nerozlišitelné, úhly jsou malé |
 
 Rozestupy jsou obrovské tam, kde na tom záleží (6,5 vs. 39 u svislé osy, 6,5 vs. 17 u zrcadlení), takže tyhle tři konvence jsou určené s jistotou. Znaménka roll/pitch mají slabší signál, protože |roll| ≤ 9° a |pitch| ≤ 6°, ale směr zlepšení je konzistentní.
 
+> **Oprava konvence 2026-09-16.** Sdílený kamerový model (`mapping/geometry.py::cam_to_pano`/`pano_rays`,
+> převzatý z pilotního `experiments/common/camera.py`) mapoval azimut na sloupec jako
+> `u = (az mod 360)/360·W` — šev vpředu, sloupce proti směru hodinových ručiček. Skutečná panoramata mají
+> šev **vzadu** a sloupce **po směru** hodinových ručiček: `u_true = ((180 − az) mod 360)/360·W`, tedy
+> `u_true = W/2 − u_old (mod W)` — zrcadlení kolem příčné osy (prohodí přední/zadní, zachová levou/pravou).
+> Hrubá síla výše to nenašla, protože testovala offset švu (0°/90°/180°/270°) a zrcadlení `−az` **odděleně**,
+> nikdy kombinaci „zrcadlo + 180°"; kotva na dlaždici 037 je navíc na tuhle záměnu necitlivá (symetrie
+> uličního kaňonu — viz §2.3). Opraveno v `mapping/geometry.py`, `mapping/camera.py` a
+> `experiments/common/reproject.py`; `mapping/panos.py` přepočítáno na `POTREE_M = [[1,0,0],[0,0,1],[0,-1,0]]`
+> a `AZ_OFFSET_DEG = 0` pro Potreeho výchozí `texture.repeat.x = -1` (správně — stránky si repeat ponechávají,
+> `?flip=1` slouží jen A/B). Nový export reprodukuje uživatelem potvrzenou sadu koulí (starý model, az 180,
+> repeat −1) přesně (`tests/test_panos.py::test_new_export_reproduces_user_confirmed_panos_corr180`,
+> odchylka 0). Dopad na kotvu §2.3: medián CIE76 dlaždice 037 **6,08 (starý model, před opravou)** →
+> **5,08 (nový model)**, n = 43 058.
+
 ### 2.3 Naměřená shoda
+
+> **Pre-fix.** Čísla v této sekci byla naměřena se **starým (zrcadleným) kamerovým modelem** — viz
+> „Oprava konvence 2026-09-16" v §2.2. Anchor dlaždice 037: medián CIE76 **6,08 (starý model)** →
+> **5,08 (nový model)**, n = 43 058. Zbytek rozkladu (podle vzdálenosti, klasifikace, gradientu) níže
+> je z pre-fix běhu a čeká na přeměření po dokončení rerunu (`09_konsolidace.md`).
 
 Ve výsledné konfiguraci, **bez jakéhokoli řešení okluzí**:
 

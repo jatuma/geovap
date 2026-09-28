@@ -1,0 +1,8 @@
+metric,m2f_vistas,m2f_city,oneformer_city,eomt_city,eomt_dinov3_ade,segformer_b5
+band_fence_frac_correct,0.1096,0.0691,0.0703,0.0669,0.0561,0.0707
+band_wall_frac_correct,0.0786,0.0313,0.0441,0.2119,0.116,0.0111
+band_guard_rail_frac_correct,0.0,,,,0.0003,
+band_road_boundary_median_px,19.3132,19.7231,19.6469,16.7631,25.0,18.4391
+band_road_boundary_within_14cm,0.2513,0.2256,0.2272,0.2617,0.1982,0.2359
+band_building_edge_median_px,20.3961,19.4165,20.5183,6.7082,18.0,18.0
+band_building_edge_within_14cm,0.2348,0.2435,0.2423,0.3915,0.2445,0.2334

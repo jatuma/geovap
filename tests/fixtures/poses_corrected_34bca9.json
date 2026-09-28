@@ -1,0 +1,54 @@
+{
+  "stage": "assemble (S0-S5b composition)",
+  "inputs": {
+    "base": {
+      "path": "/home/jatuma/repos/Geovap/Geovap_cache/out/poses/poses_traj_rot.csv",
+      "stage": "S3b traj_rot",
+      "poses_hash": "d347b989ef",
+      "sha1": "6e2eea9712e6ed997bbb28bffa78fd8cf55a0341",
+      "trajectory_npz_sha1": "38a644a80ecb1d8181ed1b7eca499934d9967d57"
+    },
+    "refined": {
+      "path": "/home/jatuma/repos/Geovap/Geovap_cache/out/poses/poses_refined_export.csv",
+      "stage": "S4 pose_refine",
+      "poses_hash": "e1c075789c",
+      "sha1": "6d609cf069cb7a8518c93840efa9ec9c94ec33b9"
+    },
+    "pass_transforms": {
+      "path": "/home/jatuma/repos/Geovap/Geovap_cache/out/pass_reg/pass_transforms.json",
+      "stage": "S5b pass_reg",
+      "sha1": "1e65dafc77f234312029756373263ae3acf36392",
+      "datum": "none"
+    }
+  },
+  "order": [
+    "poses_traj_rot (S3b)",
+    "overlay S4 refined rows",
+    "apply S5b pass_transforms to table and trajectory (per-sample orientation + lin_origin)"
+  ],
+  "trajectory": "trajectory_corrected.npz",
+  "registration": {
+    "path": "/home/jatuma/repos/Geovap/Geovap_cache/out/pass_reg/pass_transforms.json",
+    "sha1": "1e65dafc77f234312029756373263ae3acf36392"
+  },
+  "s4_overlay": {
+    "n_overlaid": 402,
+    "n_pass_changed": 1,
+    "dpos_median_m": 0.15625341114879915,
+    "dpos_p95_m": 0.699507761225929,
+    "dpos_max_m": 4.770346528154277,
+    "dyaw_median_deg": 0.2773486539368548,
+    "dyaw_p95_deg": 1.1458121744627405,
+    "dyaw_max_deg": 6.593271399322276
+  },
+  "status_counts": {
+    "traj_rot+reg": 1009,
+    "traj_rot+refined+reg": 364,
+    "kept+refined+reg": 38,
+    "kept+reg": 92
+  },
+  "note": "S4's refined pose is used only at the frame's own timestamp; Poses.interp between frames still gets orientation from the S3b rot-only trajectory (never merged with S4).",
+  "poses_hash": "34bca9ff23",
+  "git": "409cf17",
+  "export_csv_sha1": "ed003a8db23841bc39908a15a2d916894606bda8"
+}

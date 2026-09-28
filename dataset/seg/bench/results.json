@@ -1,0 +1,3176 @@
+{
+ "m2f_vistas": {
+  "tag": "m2f_vistas",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.6565,
+  "pixel_acc_cosw": 0.653,
+  "mIoU_core": 0.3875,
+  "mIoU_core_plain": 0.3911,
+  "mIoU_ext": 0.2931,
+  "per_class": {
+   "road": {
+    "iou": 0.5514,
+    "iou_cosw": 0.5469,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.2369,
+    "iou_cosw": 0.2267,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.4697,
+    "iou_cosw": 0.4685,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0215,
+    "iou_cosw": 0.02,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.3096,
+    "iou_cosw": 0.3043,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.5252,
+    "iou_cosw": 0.5281,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.6231,
+    "iou_cosw": 0.6177,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": 0.2187,
+    "iou_cosw": 0.2179,
+    "gt_px": 37638,
+    "predictable": true
+   },
+   "guard_rail": {
+    "iou": 0.0,
+    "iou_cosw": 0.0,
+    "gt_px": 66819,
+    "predictable": true
+   },
+   "stairs": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 3697,
+    "predictable": false
+   },
+   "pole": {
+    "iou": 0.0005,
+    "iou_cosw": 0.0006,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0206,
+   "road@4": 0.0378,
+   "road@8": 0.0671,
+   "sidewalk@2": 0.0164,
+   "sidewalk@4": 0.0295,
+   "sidewalk@8": 0.0586,
+   "building@2": 0.0222,
+   "building@4": 0.0482,
+   "building@8": 0.0942,
+   "fence@2": 0.0266,
+   "fence@4": 0.0542,
+   "fence@8": 0.0987,
+   "terrain@2": 0.026,
+   "terrain@4": 0.0514,
+   "terrain@8": 0.0954,
+   "vegetation@2": 0.0188,
+   "vegetation@4": 0.0396,
+   "vegetation@8": 0.0765
+  },
+  "class_bands": {
+   "fence": 0.1096,
+   "wall": 0.0786,
+   "guard_rail": 0.0
+  },
+  "transition_median_px": {
+   "road_boundary": 19.3132,
+   "building_edge": 20.3961
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.2513,
+   "building_edge": 0.2348
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.7339,
+    "road": 0.241,
+    "vegetation": 0.0083,
+    "sidewalk": 0.0083
+   },
+   "road_or_verge": {
+    "road": 0.9272,
+    "other": 0.0257,
+    "terrain": 0.0235,
+    "sidewalk": 0.0106
+   },
+   "paved_other": {
+    "terrain": 0.4363,
+    "road": 0.2421,
+    "fence": 0.0974,
+    "sidewalk": 0.0641
+   }
+  },
+  "confusion": [
+   [
+    2899229.0,
+    221681.0,
+    2162.0,
+    10881.0,
+    24805.0,
+    43916.0,
+    1094708.0,
+    69.0,
+    0.0,
+    0.0,
+    1408.0,
+    158.0,
+    109327.0,
+    37369.0,
+    120911.0
+   ],
+   [
+    12948.0,
+    180526.0,
+    0.0,
+    26.0,
+    4201.0,
+    1155.0,
+    7643.0,
+    0.0,
+    0.0,
+    0.0,
+    5.0,
+    0.0,
+    90.0,
+    0.0,
+    16.0
+   ],
+   [
+    2369.0,
+    1936.0,
+    1163000.0,
+    6389.0,
+    30327.0,
+    357540.0,
+    26816.0,
+    2.0,
+    0.0,
+    0.0,
+    8060.0,
+    196070.0,
+    8745.0,
+    136.0,
+    2514.0
+   ],
+   [
+    39977.0,
+    29306.0,
+    1483.0,
+    13442.0,
+    21590.0,
+    40182.0,
+    58602.0,
+    12.0,
+    30.0,
+    0.0,
+    801.0,
+    15.0,
+    502.0,
+    0.0,
+    146.0
+   ],
+   [
+    27413.0,
+    39626.0,
+    116045.0,
+    315081.0,
+    1288790.0,
+    603360.0,
+    940174.0,
+    685.0,
+    2.0,
+    0.0,
+    25125.0,
+    2781.0,
+    11112.0,
+    286.0,
+    7941.0
+   ],
+   [
+    41489.0,
+    20090.0,
+    499071.0,
+    24586.0,
+    283247.0,
+    5569513.0,
+    901549.0,
+    946.0,
+    197.0,
+    0.0,
+    43692.0,
+    1587671.0,
+    73028.0,
+    266.0,
+    22465.0
+   ],
+   [
+    566347.0,
+    242912.0,
+    52223.0,
+    60636.0,
+    372134.0,
+    473160.0,
+    8187155.0,
+    8569.0,
+    3.0,
+    0.0,
+    17091.0,
+    264.0,
+    39591.0,
+    7693.0,
+    52721.0
+   ],
+   [
+    663.0,
+    7.0,
+    0.0,
+    12.0,
+    957.0,
+    1677.0,
+    23571.0,
+    10578.0,
+    0.0,
+    0.0,
+    92.0,
+    0.0,
+    0.0,
+    0.0,
+    81.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    77.0,
+    46941.0,
+    14365.0,
+    4934.0,
+    447.0,
+    0.0,
+    0.0,
+    55.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    22.0,
+    0.0,
+    1412.0,
+    654.0,
+    178.0,
+    504.0,
+    386.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    468.0,
+    0.0,
+    73.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    25.0,
+    93.0,
+    0.0,
+    0.0,
+    0.0,
+    52.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "m2f_vistas",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.6347,
+   "pixel_acc_cosw": 0.63,
+   "mIoU_core": 0.3814,
+   "mIoU_core_plain": 0.3865,
+   "mIoU_ext": 0.2685,
+   "per_class": {
+    "road": {
+     "iou": 0.5489,
+     "iou_cosw": 0.5381,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.2481,
+     "iou_cosw": 0.2348,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.4792,
+     "iou_cosw": 0.4769,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0248,
+     "iou_cosw": 0.0232,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.2805,
+     "iou_cosw": 0.2777,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.5043,
+     "iou_cosw": 0.5073,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.6194,
+     "iou_cosw": 0.6116,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": 0.0133,
+     "iou_cosw": 0.0143,
+     "gt_px": 4223,
+     "predictable": true
+    },
+    "guard_rail": {
+     "iou": 0.0,
+     "iou_cosw": 0.0,
+     "gt_px": 65449,
+     "predictable": true
+    },
+    "stairs": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 3697,
+     "predictable": false
+    },
+    "pole": {
+     "iou": 0.0014,
+     "iou_cosw": 0.0014,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.023,
+    "road@4": 0.04,
+    "road@8": 0.0676,
+    "sidewalk@2": 0.021,
+    "sidewalk@4": 0.0349,
+    "sidewalk@8": 0.0705,
+    "building@2": 0.0213,
+    "building@4": 0.0482,
+    "building@8": 0.0974,
+    "fence@2": 0.0258,
+    "fence@4": 0.0529,
+    "fence@8": 0.0942,
+    "terrain@2": 0.0249,
+    "terrain@4": 0.0488,
+    "terrain@8": 0.089,
+    "vegetation@2": 0.0186,
+    "vegetation@4": 0.0392,
+    "vegetation@8": 0.077
+   },
+   "class_bands": {
+    "fence": 0.1058,
+    "wall": 0.1014,
+    "guard_rail": 0.0
+   },
+   "transition_median_px": {
+    "road_boundary": 18.868,
+    "building_edge": 12.083
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.237,
+    "building_edge": 0.3104
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.9044,
+     "road": 0.0702,
+     "vegetation": 0.0105,
+     "sidewalk": 0.0099
+    },
+    "road_or_verge": {
+     "road": 0.9302,
+     "other": 0.0246,
+     "terrain": 0.0204,
+     "sidewalk": 0.0121
+    },
+    "paved_other": {
+     "road": 0.3838,
+     "terrain": 0.1703,
+     "sidewalk": 0.1347,
+     "fence": 0.1327
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 5.108,
+   "peak_mib": 6585
+  },
+  "spec": {
+   "checkpoint": "facebook/mask2former-swin-large-mapillary-vistas-semantic",
+   "taxonomy": "vistas",
+   "licence": "MIT code, Vistas weights (research)",
+   "note": "E2 baseline"
+  }
+ },
+ "m2f_city": {
+  "tag": "m2f_city",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.6149,
+  "pixel_acc_cosw": 0.6125,
+  "mIoU_core": 0.3379,
+  "mIoU_core_plain": 0.3398,
+  "mIoU_ext": 0.2957,
+  "per_class": {
+   "road": {
+    "iou": 0.5025,
+    "iou_cosw": 0.4979,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.1737,
+    "iou_cosw": 0.1684,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.4246,
+    "iou_cosw": 0.4239,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0124,
+    "iou_cosw": 0.0118,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.2265,
+    "iou_cosw": 0.2246,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.4964,
+    "iou_cosw": 0.5,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.5422,
+    "iou_cosw": 0.5385,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 37638,
+    "predictable": false
+   },
+   "guard_rail": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 66819,
+    "predictable": false
+   },
+   "stairs": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 3697,
+    "predictable": false
+   },
+   "pole": {
+    "iou": 0.0003,
+    "iou_cosw": 0.0004,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0132,
+   "road@4": 0.027,
+   "road@8": 0.0529,
+   "sidewalk@2": 0.0202,
+   "sidewalk@4": 0.0357,
+   "sidewalk@8": 0.0644,
+   "building@2": 0.0186,
+   "building@4": 0.0396,
+   "building@8": 0.0787,
+   "fence@2": 0.0161,
+   "fence@4": 0.0318,
+   "fence@8": 0.0575,
+   "terrain@2": 0.019,
+   "terrain@4": 0.0389,
+   "terrain@8": 0.0753,
+   "vegetation@2": 0.0173,
+   "vegetation@4": 0.0356,
+   "vegetation@8": 0.0706
+  },
+  "class_bands": {
+   "fence": 0.0691,
+   "wall": 0.0313,
+   "guard_rail": null
+  },
+  "transition_median_px": {
+   "road_boundary": 19.7231,
+   "building_edge": 19.4165
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.2256,
+   "building_edge": 0.2435
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.6656,
+    "road": 0.312,
+    "sidewalk": 0.0082,
+    "vegetation": 0.0072
+   },
+   "road_or_verge": {
+    "road": 0.9419,
+    "terrain": 0.0258,
+    "vehicle": 0.0229,
+    "sidewalk": 0.0059
+   },
+   "paved_other": {
+    "road": 0.5611,
+    "terrain": 0.1495,
+    "fence": 0.0761,
+    "vegetation": 0.0665
+   }
+  },
+  "confusion": [
+   [
+    3476845.0,
+    73171.0,
+    9776.0,
+    2874.0,
+    16850.0,
+    53815.0,
+    711615.0,
+    0.0,
+    0.0,
+    0.0,
+    684.0,
+    292.0,
+    211768.0,
+    8872.0,
+    62.0
+   ],
+   [
+    119638.0,
+    70073.0,
+    3.0,
+    22.0,
+    3373.0,
+    1117.0,
+    12280.0,
+    0.0,
+    0.0,
+    0.0,
+    8.0,
+    0.0,
+    87.0,
+    0.0,
+    9.0
+   ],
+   [
+    3073.0,
+    2968.0,
+    1110120.0,
+    3823.0,
+    18715.0,
+    403850.0,
+    36277.0,
+    0.0,
+    0.0,
+    0.0,
+    6199.0,
+    208067.0,
+    9397.0,
+    489.0,
+    926.0
+   ],
+   [
+    108306.0,
+    7609.0,
+    1836.0,
+    6264.0,
+    6257.0,
+    38723.0,
+    35883.0,
+    0.0,
+    0.0,
+    0.0,
+    620.0,
+    15.0,
+    516.0,
+    0.0,
+    59.0
+   ],
+   [
+    150212.0,
+    29277.0,
+    167986.0,
+    227790.0,
+    857511.0,
+    561522.0,
+    1327269.0,
+    0.0,
+    0.0,
+    0.0,
+    37073.0,
+    3766.0,
+    12694.0,
+    2771.0,
+    550.0
+   ],
+   [
+    120729.0,
+    12341.0,
+    560287.0,
+    25344.0,
+    144104.0,
+    5267335.0,
+    1214317.0,
+    0.0,
+    0.0,
+    0.0,
+    38845.0,
+    1603101.0,
+    69311.0,
+    5418.0,
+    6678.0
+   ],
+   [
+    1846470.0,
+    71494.0,
+    68899.0,
+    38707.0,
+    181032.0,
+    466719.0,
+    7300667.0,
+    0.0,
+    0.0,
+    0.0,
+    19909.0,
+    587.0,
+    78951.0,
+    6087.0,
+    977.0
+   ],
+   [
+    1244.0,
+    22.0,
+    35.0,
+    0.0,
+    741.0,
+    1965.0,
+    33522.0,
+    0.0,
+    0.0,
+    0.0,
+    103.0,
+    6.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    3045.0,
+    0.0,
+    0.0,
+    71.0,
+    36609.0,
+    14242.0,
+    12798.0,
+    0.0,
+    0.0,
+    0.0,
+    54.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    109.0,
+    0.0,
+    1820.0,
+    106.0,
+    345.0,
+    506.0,
+    276.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    535.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    22.0,
+    113.0,
+    0.0,
+    0.0,
+    0.0,
+    35.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "m2f_city",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.5994,
+   "pixel_acc_cosw": 0.5958,
+   "mIoU_core": 0.3345,
+   "mIoU_core_plain": 0.3377,
+   "mIoU_ext": 0.2928,
+   "per_class": {
+    "road": {
+     "iou": 0.4873,
+     "iou_cosw": 0.4809,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.1732,
+     "iou_cosw": 0.1633,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.4286,
+     "iou_cosw": 0.4274,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0146,
+     "iou_cosw": 0.014,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.2339,
+     "iou_cosw": 0.2331,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.4789,
+     "iou_cosw": 0.4824,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.5474,
+     "iou_cosw": 0.5401,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 4223,
+     "predictable": false
+    },
+    "guard_rail": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 65449,
+     "predictable": false
+    },
+    "stairs": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 3697,
+     "predictable": false
+    },
+    "pole": {
+     "iou": 0.0009,
+     "iou_cosw": 0.0009,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.0128,
+    "road@4": 0.0256,
+    "road@8": 0.049,
+    "sidewalk@2": 0.0136,
+    "sidewalk@4": 0.0215,
+    "sidewalk@8": 0.0463,
+    "building@2": 0.0174,
+    "building@4": 0.0396,
+    "building@8": 0.0825,
+    "fence@2": 0.0147,
+    "fence@4": 0.0308,
+    "fence@8": 0.0567,
+    "terrain@2": 0.0189,
+    "terrain@4": 0.0396,
+    "terrain@8": 0.0749,
+    "vegetation@2": 0.0171,
+    "vegetation@4": 0.0351,
+    "vegetation@8": 0.0704
+   },
+   "class_bands": {
+    "fence": 0.0897,
+    "wall": 0.0394,
+    "guard_rail": null
+   },
+   "transition_median_px": {
+    "road_boundary": 18.6815,
+    "building_edge": 12.0416
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.222,
+    "building_edge": 0.3114
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.8439,
+     "road": 0.1304,
+     "sidewalk": 0.0132,
+     "vegetation": 0.0076
+    },
+    "road_or_verge": {
+     "road": 0.9473,
+     "vehicle": 0.0231,
+     "terrain": 0.0205,
+     "sidewalk": 0.0064
+    },
+    "paved_other": {
+     "road": 0.4964,
+     "fence": 0.1338,
+     "terrain": 0.1208,
+     "sidewalk": 0.085
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 4.947,
+   "peak_mib": 3569
+  },
+  "spec": {
+   "checkpoint": "facebook/mask2former-swin-large-cityscapes-semantic",
+   "taxonomy": "cityscapes",
+   "licence": "MIT code, Cityscapes weights (research)",
+   "note": ""
+  }
+ },
+ "oneformer_city": {
+  "tag": "oneformer_city",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.5926,
+  "pixel_acc_cosw": 0.5905,
+  "mIoU_core": 0.3386,
+  "mIoU_core_plain": 0.3439,
+  "mIoU_ext": 0.2963,
+  "per_class": {
+   "road": {
+    "iou": 0.445,
+    "iou_cosw": 0.4383,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.2431,
+    "iou_cosw": 0.2203,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.4407,
+    "iou_cosw": 0.4391,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0149,
+    "iou_cosw": 0.0141,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.2733,
+    "iou_cosw": 0.27,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.5163,
+    "iou_cosw": 0.5188,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.474,
+    "iou_cosw": 0.4697,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 37638,
+    "predictable": false
+   },
+   "guard_rail": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 66819,
+    "predictable": false
+   },
+   "stairs": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 3697,
+    "predictable": false
+   },
+   "pole": {
+    "iou": 0.0001,
+    "iou_cosw": 0.0002,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0117,
+   "road@4": 0.0236,
+   "road@8": 0.047,
+   "sidewalk@2": 0.015,
+   "sidewalk@4": 0.0345,
+   "sidewalk@8": 0.0769,
+   "building@2": 0.0197,
+   "building@4": 0.0423,
+   "building@8": 0.0845,
+   "fence@2": 0.018,
+   "fence@4": 0.0371,
+   "fence@8": 0.0701,
+   "terrain@2": 0.02,
+   "terrain@4": 0.0397,
+   "terrain@8": 0.0767,
+   "vegetation@2": 0.0176,
+   "vegetation@4": 0.0361,
+   "vegetation@8": 0.0711
+  },
+  "class_bands": {
+   "fence": 0.0703,
+   "wall": 0.0441,
+   "guard_rail": null
+  },
+  "transition_median_px": {
+   "road_boundary": 19.6469,
+   "building_edge": 20.5183
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.2272,
+   "building_edge": 0.2423
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.6664,
+    "road": 0.3069,
+    "sidewalk": 0.0108,
+    "vegetation": 0.008
+   },
+   "road_or_verge": {
+    "road": 0.9294,
+    "vehicle": 0.0281,
+    "terrain": 0.0219,
+    "person": 0.0114
+   },
+   "paved_other": {
+    "road": 0.5752,
+    "terrain": 0.1183,
+    "fence": 0.0826,
+    "vegetation": 0.0662
+   }
+  },
+  "confusion": [
+   [
+    3523128.0,
+    91654.0,
+    4163.0,
+    3566.0,
+    22220.0,
+    42797.0,
+    597058.0,
+    0.0,
+    0.0,
+    0.0,
+    7636.0,
+    278.0,
+    164558.0,
+    106040.0,
+    3526.0
+   ],
+   [
+    61994.0,
+    129438.0,
+    3.0,
+    153.0,
+    3515.0,
+    1121.0,
+    9957.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    425.0,
+    0.0,
+    3.0
+   ],
+   [
+    2180.0,
+    4066.0,
+    1114232.0,
+    7243.0,
+    22067.0,
+    404582.0,
+    29552.0,
+    0.0,
+    0.0,
+    0.0,
+    6523.0,
+    204100.0,
+    8636.0,
+    121.0,
+    602.0
+   ],
+   [
+    95204.0,
+    15906.0,
+    1887.0,
+    8455.0,
+    8261.0,
+    40276.0,
+    34903.0,
+    0.0,
+    0.0,
+    0.0,
+    628.0,
+    15.0,
+    500.0,
+    0.0,
+    53.0
+   ],
+   [
+    175838.0,
+    56213.0,
+    117694.0,
+    253708.0,
+    1060206.0,
+    588458.0,
+    1076745.0,
+    0.0,
+    0.0,
+    0.0,
+    32121.0,
+    3582.0,
+    10048.0,
+    2303.0,
+    1505.0
+   ],
+   [
+    122817.0,
+    22171.0,
+    552195.0,
+    30591.0,
+    161935.0,
+    5519269.0,
+    956418.0,
+    0.0,
+    0.0,
+    0.0,
+    41739.0,
+    1588396.0,
+    58081.0,
+    1056.0,
+    13142.0
+   ],
+   [
+    2890450.0,
+    135420.0,
+    47258.0,
+    67286.0,
+    234591.0,
+    528097.0,
+    6078307.0,
+    0.0,
+    0.0,
+    0.0,
+    19145.0,
+    372.0,
+    65976.0,
+    8604.0,
+    4993.0
+   ],
+   [
+    1103.0,
+    293.0,
+    3.0,
+    0.0,
+    1422.0,
+    2173.0,
+    32563.0,
+    0.0,
+    0.0,
+    0.0,
+    81.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    340.0,
+    0.0,
+    0.0,
+    68.0,
+    45190.0,
+    15089.0,
+    6085.0,
+    0.0,
+    0.0,
+    0.0,
+    47.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    138.0,
+    1179.0,
+    236.0,
+    994.0,
+    466.0,
+    198.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    486.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    28.0,
+    126.0,
+    0.0,
+    0.0,
+    0.0,
+    16.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "oneformer_city",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.5751,
+   "pixel_acc_cosw": 0.5712,
+   "mIoU_core": 0.3323,
+   "mIoU_core_plain": 0.3384,
+   "mIoU_ext": 0.2908,
+   "per_class": {
+    "road": {
+     "iou": 0.4237,
+     "iou_cosw": 0.4141,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.2284,
+     "iou_cosw": 0.2065,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.4537,
+     "iou_cosw": 0.451,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0171,
+     "iou_cosw": 0.0163,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.2697,
+     "iou_cosw": 0.2699,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.4986,
+     "iou_cosw": 0.5015,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.4773,
+     "iou_cosw": 0.467,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 4223,
+     "predictable": false
+    },
+    "guard_rail": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 65449,
+     "predictable": false
+    },
+    "stairs": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 3697,
+     "predictable": false
+    },
+    "pole": {
+     "iou": 0.0004,
+     "iou_cosw": 0.0005,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.0118,
+    "road@4": 0.0233,
+    "road@8": 0.0449,
+    "sidewalk@2": 0.0138,
+    "sidewalk@4": 0.0341,
+    "sidewalk@8": 0.0839,
+    "building@2": 0.0199,
+    "building@4": 0.044,
+    "building@8": 0.0922,
+    "fence@2": 0.0171,
+    "fence@4": 0.0361,
+    "fence@8": 0.0667,
+    "terrain@2": 0.0207,
+    "terrain@4": 0.042,
+    "terrain@8": 0.0785,
+    "vegetation@2": 0.0175,
+    "vegetation@4": 0.0358,
+    "vegetation@8": 0.0712
+   },
+   "class_bands": {
+    "fence": 0.0755,
+    "wall": 0.0566,
+    "guard_rail": null
+   },
+   "transition_median_px": {
+    "road_boundary": 18.0278,
+    "building_edge": 12.8062
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.2284,
+    "building_edge": 0.3039
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.8355,
+     "road": 0.137,
+     "sidewalk": 0.0136,
+     "vegetation": 0.0089
+    },
+    "road_or_verge": {
+     "road": 0.9335,
+     "vehicle": 0.0303,
+     "terrain": 0.0179,
+     "person": 0.0087
+    },
+    "paved_other": {
+     "road": 0.4669,
+     "fence": 0.1464,
+     "terrain": 0.119,
+     "sidewalk": 0.0975
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 5.5045,
+   "peak_mib": 4662
+  },
+  "spec": {
+   "checkpoint": "shi-labs/oneformer_cityscapes_swin_large",
+   "taxonomy": "cityscapes",
+   "licence": "MIT code, Cityscapes weights (research)",
+   "note": ""
+  }
+ },
+ "eomt_city": {
+  "tag": "eomt_city",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.748,
+  "pixel_acc_cosw": 0.7478,
+  "mIoU_core": 0.491,
+  "mIoU_core_plain": 0.4963,
+  "mIoU_ext": 0.4297,
+  "per_class": {
+   "road": {
+    "iou": 0.6263,
+    "iou_cosw": 0.6216,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.4069,
+    "iou_cosw": 0.3835,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.7245,
+    "iou_cosw": 0.7235,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0596,
+    "iou_cosw": 0.0524,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.3056,
+    "iou_cosw": 0.3047,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.6971,
+    "iou_cosw": 0.6997,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.6543,
+    "iou_cosw": 0.6519,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 37638,
+    "predictable": false
+   },
+   "guard_rail": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 66819,
+    "predictable": false
+   },
+   "stairs": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 3697,
+    "predictable": false
+   },
+   "pole": {
+    "iou": 0.0001,
+    "iou_cosw": 0.0001,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0192,
+   "road@4": 0.0395,
+   "road@8": 0.08,
+   "sidewalk@2": 0.0204,
+   "sidewalk@4": 0.0391,
+   "sidewalk@8": 0.0853,
+   "building@2": 0.0345,
+   "building@4": 0.0746,
+   "building@8": 0.1495,
+   "fence@2": 0.0241,
+   "fence@4": 0.0501,
+   "fence@8": 0.0936,
+   "terrain@2": 0.031,
+   "terrain@4": 0.0623,
+   "terrain@8": 0.1237,
+   "vegetation@2": 0.0259,
+   "vegetation@4": 0.0553,
+   "vegetation@8": 0.1098
+  },
+  "class_bands": {
+   "fence": 0.0669,
+   "wall": 0.2119,
+   "guard_rail": null
+  },
+  "transition_median_px": {
+   "road_boundary": 16.7631,
+   "building_edge": 6.7082
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.2617,
+   "building_edge": 0.3915
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.6811,
+    "road": 0.3052,
+    "vegetation": 0.0119,
+    "sidewalk": 0.0007
+   },
+   "road_or_verge": {
+    "road": 0.9664,
+    "terrain": 0.0179,
+    "vehicle": 0.0115,
+    "sidewalk": 0.0027
+   },
+   "paved_other": {
+    "road": 0.5791,
+    "terrain": 0.2238,
+    "sidewalk": 0.096,
+    "fence": 0.0296
+   }
+  },
+  "confusion": [
+   [
+    3847921.0,
+    89319.0,
+    1132.0,
+    2234.0,
+    8470.0,
+    14288.0,
+    573156.0,
+    0.0,
+    0.0,
+    0.0,
+    82.0,
+    2719.0,
+    27301.0,
+    2.0,
+    0.0
+   ],
+   [
+    12608.0,
+    182985.0,
+    42.0,
+    103.0,
+    407.0,
+    123.0,
+    10339.0,
+    0.0,
+    0.0,
+    0.0,
+    3.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    1716.0,
+    381.0,
+    1600128.0,
+    3920.0,
+    11070.0,
+    106442.0,
+    6519.0,
+    0.0,
+    0.0,
+    0.0,
+    4404.0,
+    63940.0,
+    4809.0,
+    100.0,
+    475.0
+   ],
+   [
+    35486.0,
+    18175.0,
+    102.0,
+    40167.0,
+    31100.0,
+    41225.0,
+    35703.0,
+    0.0,
+    0.0,
+    0.0,
+    1561.0,
+    0.0,
+    0.0,
+    0.0,
+    2569.0
+   ],
+   [
+    63685.0,
+    23471.0,
+    83853.0,
+    423486.0,
+    1146252.0,
+    559966.0,
+    1039513.0,
+    0.0,
+    0.0,
+    0.0,
+    34572.0,
+    0.0,
+    3558.0,
+    29.0,
+    36.0
+   ],
+   [
+    51698.0,
+    8681.0,
+    294342.0,
+    10113.0,
+    179449.0,
+    6947747.0,
+    812918.0,
+    0.0,
+    0.0,
+    0.0,
+    66959.0,
+    618285.0,
+    72548.0,
+    403.0,
+    4667.0
+   ],
+   [
+    1405226.0,
+    102801.0,
+    21870.0,
+    27849.0,
+    94138.0,
+    161741.0,
+    8239442.0,
+    0.0,
+    0.0,
+    0.0,
+    6386.0,
+    9875.0,
+    10754.0,
+    92.0,
+    325.0
+   ],
+   [
+    6165.0,
+    312.0,
+    0.0,
+    0.0,
+    1885.0,
+    237.0,
+    28968.0,
+    0.0,
+    0.0,
+    0.0,
+    71.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    412.0,
+    0.0,
+    0.0,
+    22.0,
+    46167.0,
+    14601.0,
+    5537.0,
+    0.0,
+    0.0,
+    0.0,
+    80.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    3454.0,
+    29.0,
+    67.0,
+    40.0,
+    107.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    3.0,
+    159.0,
+    0.0,
+    0.0,
+    0.0,
+    8.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "eomt_city",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.7235,
+   "pixel_acc_cosw": 0.722,
+   "mIoU_core": 0.4754,
+   "mIoU_core_plain": 0.4815,
+   "mIoU_ext": 0.416,
+   "per_class": {
+    "road": {
+     "iou": 0.6106,
+     "iou_cosw": 0.6013,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.3621,
+     "iou_cosw": 0.3398,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.7367,
+     "iou_cosw": 0.7348,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0676,
+     "iou_cosw": 0.0596,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.2704,
+     "iou_cosw": 0.2739,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.6777,
+     "iou_cosw": 0.6793,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.6453,
+     "iou_cosw": 0.6388,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 4223,
+     "predictable": false
+    },
+    "guard_rail": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 65449,
+     "predictable": false
+    },
+    "stairs": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 3697,
+     "predictable": false
+    },
+    "pole": {
+     "iou": 0.0002,
+     "iou_cosw": 0.0002,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.0193,
+    "road@4": 0.0381,
+    "road@8": 0.0729,
+    "sidewalk@2": 0.0245,
+    "sidewalk@4": 0.0487,
+    "sidewalk@8": 0.108,
+    "building@2": 0.0359,
+    "building@4": 0.0786,
+    "building@8": 0.1603,
+    "fence@2": 0.0197,
+    "fence@4": 0.0421,
+    "fence@8": 0.0828,
+    "terrain@2": 0.0308,
+    "terrain@4": 0.0607,
+    "terrain@8": 0.1207,
+    "vegetation@2": 0.0252,
+    "vegetation@4": 0.0536,
+    "vegetation@8": 0.1075
+   },
+   "class_bands": {
+    "fence": 0.0522,
+    "wall": 0.2753,
+    "guard_rail": null
+   },
+   "transition_median_px": {
+    "road_boundary": 16.5529,
+    "building_edge": 6.0828
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.2491,
+    "building_edge": 0.4152
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.8951,
+     "road": 0.0869,
+     "vegetation": 0.0174,
+     "sidewalk": 0.0006
+    },
+    "road_or_verge": {
+     "road": 0.9643,
+     "terrain": 0.0187,
+     "vehicle": 0.0127,
+     "sidewalk": 0.0031
+    },
+    "paved_other": {
+     "road": 0.4357,
+     "terrain": 0.2496,
+     "sidewalk": 0.1585,
+     "fence": 0.0666
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 4.549,
+   "peak_mib": 3844
+  },
+  "spec": {
+   "checkpoint": "tue-mps/cityscapes_semantic_eomt_large_1024",
+   "taxonomy": "cityscapes",
+   "licence": "Apache-2.0 code, Cityscapes weights (research)",
+   "note": "DINOv2-L"
+  }
+ },
+ "eomt_dinov3_ade": {
+  "tag": "eomt_dinov3_ade",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.5846,
+  "pixel_acc_cosw": 0.5774,
+  "mIoU_core": 0.3334,
+  "mIoU_core_plain": 0.3395,
+  "mIoU_ext": 0.2317,
+  "per_class": {
+   "road": {
+    "iou": 0.5029,
+    "iou_cosw": 0.4973,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.3255,
+    "iou_cosw": 0.2993,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.3671,
+    "iou_cosw": 0.3662,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0176,
+    "iou_cosw": 0.0159,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.225,
+    "iou_cosw": 0.2216,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.3501,
+    "iou_cosw": 0.3527,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.5883,
+    "iou_cosw": 0.5807,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": 0.2155,
+    "iou_cosw": 0.2138,
+    "gt_px": 37638,
+    "predictable": true
+   },
+   "guard_rail": {
+    "iou": 0.0011,
+    "iou_cosw": 0.0011,
+    "gt_px": 66819,
+    "predictable": true
+   },
+   "stairs": {
+    "iou": 0.0,
+    "iou_cosw": 0.0,
+    "gt_px": 3697,
+    "predictable": true
+   },
+   "pole": {
+    "iou": 0.0001,
+    "iou_cosw": 0.0001,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0169,
+   "road@4": 0.0294,
+   "road@8": 0.0524,
+   "sidewalk@2": 0.0195,
+   "sidewalk@4": 0.0382,
+   "sidewalk@8": 0.0783,
+   "building@2": 0.014,
+   "building@4": 0.0284,
+   "building@8": 0.0575,
+   "fence@2": 0.0191,
+   "fence@4": 0.0367,
+   "fence@8": 0.0649,
+   "terrain@2": 0.019,
+   "terrain@4": 0.0368,
+   "terrain@8": 0.0724,
+   "vegetation@2": 0.0125,
+   "vegetation@4": 0.0268,
+   "vegetation@8": 0.0545
+  },
+  "class_bands": {
+   "fence": 0.0561,
+   "wall": 0.116,
+   "guard_rail": 0.0003
+  },
+  "transition_median_px": {
+   "road_boundary": 25.0,
+   "building_edge": 18.0
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.1982,
+   "building_edge": 0.2445
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.7876,
+    "road": 0.1938,
+    "sidewalk": 0.0073,
+    "vegetation": 0.0041
+   },
+   "road_or_verge": {
+    "road": 0.9185,
+    "vehicle": 0.038,
+    "terrain": 0.0333,
+    "sidewalk": 0.0092
+   },
+   "paved_other": {
+    "terrain": 0.6355,
+    "road": 0.0716,
+    "sidewalk": 0.0704,
+    "fence": 0.0588
+   }
+  },
+  "confusion": [
+   [
+    2550686.0,
+    144027.0,
+    4821.0,
+    10545.0,
+    6179.0,
+    28366.0,
+    1553871.0,
+    308.0,
+    4849.0,
+    0.0,
+    288.0,
+    156.0,
+    257815.0,
+    0.0,
+    4713.0
+   ],
+   [
+    13694.0,
+    178002.0,
+    95.0,
+    159.0,
+    2153.0,
+    980.0,
+    11309.0,
+    0.0,
+    133.0,
+    0.0,
+    0.0,
+    0.0,
+    77.0,
+    0.0,
+    8.0
+   ],
+   [
+    4172.0,
+    658.0,
+    1170721.0,
+    6666.0,
+    19653.0,
+    283752.0,
+    62053.0,
+    57.0,
+    14.0,
+    29.0,
+    5806.0,
+    231452.0,
+    9577.0,
+    178.0,
+    9116.0
+   ],
+   [
+    38432.0,
+    13096.0,
+    3154.0,
+    11484.0,
+    5050.0,
+    31481.0,
+    101878.0,
+    245.0,
+    1.0,
+    0.0,
+    629.0,
+    15.0,
+    485.0,
+    0.0,
+    138.0
+   ],
+   [
+    19945.0,
+    33987.0,
+    186958.0,
+    334473.0,
+    847316.0,
+    392608.0,
+    1500586.0,
+    0.0,
+    8779.0,
+    195.0,
+    27006.0,
+    4126.0,
+    11323.0,
+    14.0,
+    11105.0
+   ],
+   [
+    23620.0,
+    22815.0,
+    1125679.0,
+    29193.0,
+    162859.0,
+    3514797.0,
+    1793706.0,
+    1782.0,
+    2967.0,
+    386.0,
+    31028.0,
+    2246088.0,
+    73509.0,
+    38.0,
+    39343.0
+   ],
+   [
+    404969.0,
+    125580.0,
+    62893.0,
+    66391.0,
+    162924.0,
+    223241.0,
+    8915550.0,
+    6607.0,
+    2758.0,
+    7.0,
+    12990.0,
+    266.0,
+    78474.0,
+    36.0,
+    17813.0
+   ],
+   [
+    625.0,
+    14.0,
+    0.0,
+    0.0,
+    159.0,
+    318.0,
+    25861.0,
+    10510.0,
+    0.0,
+    0.0,
+    57.0,
+    0.0,
+    0.0,
+    0.0,
+    94.0
+   ],
+   [
+    0.0,
+    0.0,
+    2.0,
+    32.0,
+    28351.0,
+    11852.0,
+    24300.0,
+    2134.0,
+    99.0,
+    0.0,
+    47.0,
+    0.0,
+    0.0,
+    0.0,
+    2.0
+   ],
+   [
+    0.0,
+    0.0,
+    1451.0,
+    103.0,
+    182.0,
+    327.0,
+    609.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    465.0,
+    0.0,
+    560.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    14.0,
+    123.0,
+    0.0,
+    0.0,
+    0.0,
+    10.0,
+    0.0,
+    0.0,
+    0.0,
+    23.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "eomt_dinov3_ade",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.5654,
+   "pixel_acc_cosw": 0.5583,
+   "mIoU_core": 0.3238,
+   "mIoU_core_plain": 0.3299,
+   "mIoU_ext": 0.2093,
+   "per_class": {
+    "road": {
+     "iou": 0.4559,
+     "iou_cosw": 0.446,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.3062,
+     "iou_cosw": 0.2823,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.4069,
+     "iou_cosw": 0.4051,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0205,
+     "iou_cosw": 0.0187,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.1913,
+     "iou_cosw": 0.193,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.3525,
+     "iou_cosw": 0.3549,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.5757,
+     "iou_cosw": 0.5669,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": 0.034,
+     "iou_cosw": 0.034,
+     "gt_px": 4223,
+     "predictable": true
+    },
+    "guard_rail": {
+     "iou": 0.0012,
+     "iou_cosw": 0.0011,
+     "gt_px": 65449,
+     "predictable": true
+    },
+    "stairs": {
+     "iou": 0.0,
+     "iou_cosw": 0.0,
+     "gt_px": 3697,
+     "predictable": true
+    },
+    "pole": {
+     "iou": 0.0004,
+     "iou_cosw": 0.0004,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.016,
+    "road@4": 0.0233,
+    "road@8": 0.0366,
+    "sidewalk@2": 0.0252,
+    "sidewalk@4": 0.0462,
+    "sidewalk@8": 0.0941,
+    "building@2": 0.0164,
+    "building@4": 0.0345,
+    "building@8": 0.071,
+    "fence@2": 0.0176,
+    "fence@4": 0.0336,
+    "fence@8": 0.0584,
+    "terrain@2": 0.0186,
+    "terrain@4": 0.0353,
+    "terrain@8": 0.0681,
+    "vegetation@2": 0.0131,
+    "vegetation@4": 0.0276,
+    "vegetation@8": 0.0556
+   },
+   "class_bands": {
+    "fence": 0.0505,
+    "wall": 0.1498,
+    "guard_rail": 0.0004
+   },
+   "transition_median_px": {
+    "road_boundary": 24.5153,
+    "building_edge": 11.7047
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.187,
+    "building_edge": 0.3084
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.9579,
+     "road": 0.0206,
+     "sidewalk": 0.0122,
+     "vegetation": 0.0057
+    },
+    "road_or_verge": {
+     "road": 0.9205,
+     "vehicle": 0.0376,
+     "terrain": 0.0305,
+     "sidewalk": 0.0107
+    },
+    "paved_other": {
+     "terrain": 0.4502,
+     "sidewalk": 0.1458,
+     "fence": 0.1296,
+     "other": 0.1118
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 7.5325,
+   "peak_mib": 14410
+  },
+  "spec": {
+   "checkpoint": "tue-mps/eomt-dinov3-ade-semantic-large-512",
+   "taxonomy": "ade",
+   "licence": "Apache-2.0 + DINOv3 licence",
+   "note": "DINOv3-L, 512 crops"
+  }
+ },
+ "segformer_b5": {
+  "tag": "segformer_b5",
+  "n_frames": 100,
+  "n_no_gt": 0,
+  "pixel_acc": 0.5528,
+  "pixel_acc_cosw": 0.5514,
+  "mIoU_core": 0.2906,
+  "mIoU_core_plain": 0.2926,
+  "mIoU_ext": 0.2543,
+  "per_class": {
+   "road": {
+    "iou": 0.4374,
+    "iou_cosw": 0.4309,
+    "gt_px": 4566624,
+    "predictable": true
+   },
+   "sidewalk": {
+    "iou": 0.1287,
+    "iou_cosw": 0.1194,
+    "gt_px": 206610,
+    "predictable": true
+   },
+   "building": {
+    "iou": 0.3987,
+    "iou_cosw": 0.3994,
+    "gt_px": 1803904,
+    "predictable": true
+   },
+   "wall": {
+    "iou": 0.0056,
+    "iou_cosw": 0.0053,
+    "gt_px": 206088,
+    "predictable": true
+   },
+   "fence": {
+    "iou": 0.2027,
+    "iou_cosw": 0.2009,
+    "gt_px": 3378421,
+    "predictable": true
+   },
+   "vegetation": {
+    "iou": 0.4356,
+    "iou_cosw": 0.442,
+    "gt_px": 9067810,
+    "predictable": true
+   },
+   "terrain": {
+    "iou": 0.4392,
+    "iou_cosw": 0.4362,
+    "gt_px": 10080499,
+    "predictable": true
+   },
+   "water": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 37638,
+    "predictable": false
+   },
+   "guard_rail": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 66819,
+    "predictable": false
+   },
+   "stairs": {
+    "iou": null,
+    "iou_cosw": null,
+    "gt_px": 3697,
+    "predictable": false
+   },
+   "pole": {
+    "iou": 0.0002,
+    "iou_cosw": 0.0002,
+    "gt_px": 170,
+    "predictable": true
+   }
+  },
+  "boundary_iou": {
+   "road@2": 0.0095,
+   "road@4": 0.0198,
+   "road@8": 0.0403,
+   "sidewalk@2": 0.0158,
+   "sidewalk@4": 0.0316,
+   "sidewalk@8": 0.0634,
+   "building@2": 0.0163,
+   "building@4": 0.0341,
+   "building@8": 0.0684,
+   "fence@2": 0.0168,
+   "fence@4": 0.0329,
+   "fence@8": 0.0587,
+   "terrain@2": 0.0176,
+   "terrain@4": 0.0361,
+   "terrain@8": 0.071,
+   "vegetation@2": 0.0149,
+   "vegetation@4": 0.031,
+   "vegetation@8": 0.0611
+  },
+  "class_bands": {
+   "fence": 0.0707,
+   "wall": 0.0111,
+   "guard_rail": null
+  },
+  "transition_median_px": {
+   "road_boundary": 18.4391,
+   "building_edge": 18.0
+  },
+  "transition_within_14cm": {
+   "road_boundary": 0.2359,
+   "building_edge": 0.2334
+  },
+  "diag_composition": {
+   "verge": {
+    "terrain": 0.5738,
+    "road": 0.3471,
+    "vegetation": 0.0733,
+    "fence": 0.0032
+   },
+   "road_or_verge": {
+    "road": 0.9452,
+    "terrain": 0.0211,
+    "vehicle": 0.0186,
+    "sidewalk": 0.0045
+   },
+   "paved_other": {
+    "road": 0.5892,
+    "terrain": 0.1879,
+    "fence": 0.0657,
+    "vegetation": 0.0616
+   }
+  },
+  "confusion": [
+   [
+    3479230.0,
+    64271.0,
+    49352.0,
+    2985.0,
+    22472.0,
+    78477.0,
+    715010.0,
+    0.0,
+    0.0,
+    0.0,
+    6662.0,
+    465.0,
+    70769.0,
+    14888.0,
+    62043.0
+   ],
+   [
+    132047.0,
+    55873.0,
+    9.0,
+    42.0,
+    2718.0,
+    1103.0,
+    14725.0,
+    0.0,
+    0.0,
+    0.0,
+    6.0,
+    0.0,
+    81.0,
+    0.0,
+    6.0
+   ],
+   [
+    2681.0,
+    810.0,
+    1122728.0,
+    6515.0,
+    23318.0,
+    385342.0,
+    34756.0,
+    0.0,
+    0.0,
+    0.0,
+    7426.0,
+    211288.0,
+    7624.0,
+    832.0,
+    584.0
+   ],
+   [
+    76412.0,
+    11472.0,
+    2199.0,
+    2376.0,
+    7702.0,
+    48101.0,
+    56681.0,
+    0.0,
+    0.0,
+    0.0,
+    585.0,
+    15.0,
+    473.0,
+    0.0,
+    72.0
+   ],
+   [
+    218506.0,
+    58189.0,
+    219204.0,
+    156084.0,
+    778377.0,
+    598663.0,
+    1307520.0,
+    0.0,
+    0.0,
+    0.0,
+    22795.0,
+    3851.0,
+    12687.0,
+    1274.0,
+    1271.0
+   ],
+   [
+    141449.0,
+    19304.0,
+    656293.0,
+    28613.0,
+    177812.0,
+    4780819.0,
+    1504553.0,
+    0.0,
+    0.0,
+    0.0,
+    40030.0,
+    1646636.0,
+    63082.0,
+    2451.0,
+    6768.0
+   ],
+   [
+    2814161.0,
+    73302.0,
+    83617.0,
+    24808.0,
+    183827.0,
+    778405.0,
+    6041633.0,
+    0.0,
+    0.0,
+    0.0,
+    16804.0,
+    544.0,
+    37607.0,
+    7011.0,
+    18780.0
+   ],
+   [
+    997.0,
+    19.0,
+    53.0,
+    88.0,
+    1016.0,
+    4141.0,
+    31226.0,
+    0.0,
+    0.0,
+    0.0,
+    98.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    612.0,
+    6.0,
+    244.0,
+    11.0,
+    42341.0,
+    13776.0,
+    9803.0,
+    0.0,
+    0.0,
+    0.0,
+    22.0,
+    0.0,
+    4.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    1310.0,
+    278.0,
+    760.0,
+    490.0,
+    393.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    466.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    17.0,
+    133.0,
+    0.0,
+    0.0,
+    0.0,
+    20.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  ],
+  "nf_ok": {
+   "tag": "segformer_b5",
+   "n_frames": 52,
+   "n_no_gt": 0,
+   "pixel_acc": 0.5356,
+   "pixel_acc_cosw": 0.5328,
+   "mIoU_core": 0.2917,
+   "mIoU_core_plain": 0.295,
+   "mIoU_ext": 0.2553,
+   "per_class": {
+    "road": {
+     "iou": 0.414,
+     "iou_cosw": 0.4049,
+     "gt_px": 1858526,
+     "predictable": true
+    },
+    "sidewalk": {
+     "iou": 0.1622,
+     "iou_cosw": 0.1503,
+     "gt_px": 141770,
+     "predictable": true
+    },
+    "building": {
+     "iou": 0.4128,
+     "iou_cosw": 0.4131,
+     "gt_px": 966751,
+     "predictable": true
+    },
+    "wall": {
+     "iou": 0.0071,
+     "iou_cosw": 0.0067,
+     "gt_px": 184865,
+     "predictable": true
+    },
+    "fence": {
+     "iou": 0.2127,
+     "iou_cosw": 0.2122,
+     "gt_px": 1795218,
+     "predictable": true
+    },
+    "vegetation": {
+     "iou": 0.4291,
+     "iou_cosw": 0.4351,
+     "gt_px": 3914462,
+     "predictable": true
+    },
+    "terrain": {
+     "iou": 0.427,
+     "iou_cosw": 0.4197,
+     "gt_px": 4692874,
+     "predictable": true
+    },
+    "water": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 4223,
+     "predictable": false
+    },
+    "guard_rail": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 65449,
+     "predictable": false
+    },
+    "stairs": {
+     "iou": null,
+     "iou_cosw": null,
+     "gt_px": 3697,
+     "predictable": false
+    },
+    "pole": {
+     "iou": 0.0005,
+     "iou_cosw": 0.0005,
+     "gt_px": 167,
+     "predictable": true
+    }
+   },
+   "boundary_iou": {
+    "road@2": 0.0093,
+    "road@4": 0.0196,
+    "road@8": 0.0393,
+    "sidewalk@2": 0.0184,
+    "sidewalk@4": 0.037,
+    "sidewalk@8": 0.073,
+    "building@2": 0.0157,
+    "building@4": 0.0351,
+    "building@8": 0.0762,
+    "fence@2": 0.0162,
+    "fence@4": 0.0317,
+    "fence@8": 0.0564,
+    "terrain@2": 0.0183,
+    "terrain@4": 0.0379,
+    "terrain@8": 0.0746,
+    "vegetation@2": 0.0141,
+    "vegetation@4": 0.0302,
+    "vegetation@8": 0.0604
+   },
+   "class_bands": {
+    "fence": 0.0861,
+    "wall": 0.0123,
+    "guard_rail": null
+   },
+   "transition_median_px": {
+    "road_boundary": 17.0,
+    "building_edge": 13.0
+   },
+   "transition_within_14cm": {
+    "road_boundary": 0.2433,
+    "building_edge": 0.2834
+   },
+   "diag_composition": {
+    "verge": {
+     "terrain": 0.7543,
+     "road": 0.1578,
+     "vegetation": 0.0822,
+     "fence": 0.0046
+    },
+    "road_or_verge": {
+     "road": 0.9487,
+     "vehicle": 0.0189,
+     "terrain": 0.0171,
+     "sidewalk": 0.0052
+    },
+    "paved_other": {
+     "road": 0.5138,
+     "fence": 0.1417,
+     "terrain": 0.1375,
+     "sidewalk": 0.0609
+    }
+   }
+  },
+  "timing": {
+   "s_per_pano_median": 4.164,
+   "peak_mib": 3821
+  },
+  "spec": {
+   "checkpoint": "nvidia/segformer-b5-finetuned-cityscapes-1024-1024",
+   "taxonomy": "cityscapes",
+   "licence": "NVIDIA non-commercial (research only)",
+   "note": ""
+  }
+ }
+}
