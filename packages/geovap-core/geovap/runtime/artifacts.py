@@ -201,8 +201,22 @@ def render_doc(existing: str) -> str:
 
 
 if __name__ == "__main__":  # `uv run python -m geovap.runtime.artifacts` regenerates the doc
-    import sys
+    import argparse
 
-    target = Path(sys.argv[1] if len(sys.argv) > 1 else "docs/artifacts.md")
-    target.write_text(render_doc(target.read_text(encoding="utf-8")), encoding="utf-8")
-    print(f"regenerated {target}")
+    parser = argparse.ArgumentParser(
+        prog="python -m geovap.runtime.artifacts",
+        description="Regenerate the table in docs/artifacts.md from the contracts declared here.",
+    )
+    parser.add_argument("target", nargs="?", default=Path("docs/artifacts.md"), type=Path,
+                        help="the document to regenerate in place")
+    parser.add_argument("--check", action="store_true",
+                        help="report whether it is up to date and exit non-zero if not, without writing")
+    args = parser.parse_args()
+
+    current = args.target.read_text(encoding="utf-8")
+    wanted = render_doc(current)
+    if args.check:
+        print(f"{args.target}: {'up to date' if current == wanted else 'STALE'}")
+        raise SystemExit(0 if current == wanted else 1)
+    args.target.write_text(wanted, encoding="utf-8")
+    print(f"regenerated {args.target}")
