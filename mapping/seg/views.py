@@ -15,7 +15,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .. import geometry
+from geovap.domain.model import geometry
 from ..config import PANO_H, PANO_W, ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..poses import load_poses

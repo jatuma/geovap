@@ -64,7 +64,7 @@ def world_to_panorama_px(
     az = torch.rad2deg(torch.atan2(y3, x3))
     el = torch.rad2deg(torch.atan2(z3, torch.hypot(x3, y3)))
 
-    # 2026-09-16: seam at the rear, columns clockwise (see mapping/geometry.py)
+    # 2026-09-16: seam at the rear, columns clockwise (see geovap/domain/model/geometry.py)
     u = torch.remainder(180.0 - az, 360.0) / 360.0 * pano_w
     v = (90.0 - el) / 180.0 * pano_h
     return u, v, el

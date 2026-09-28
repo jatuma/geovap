@@ -13,12 +13,13 @@ from pathlib import Path
 
 import numpy as np
 
-from . import geometry, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import depth as zbuffer
 from .cloud_store import CloudStore, open_store
-from .config import FRAMES_DIR, NO_POINT, PANO_H, PANO_W, R_MAX, R_MIN, ZB_H, ZB_W
+from .config import FRAMES_DIR, NO_POINT, PANO_H, PANO_W, R_MAX, R_MIN, SENSOR, TOL_ABS, TOL_REL, ZB_H, ZB_W
 from .frame_select import FrameIndex
 from .poses import Poses, load_poses
-from .rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 _GIT_REV = None
 
@@ -120,7 +121,7 @@ class FrameProducts:
     def visible(self, r: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.ndarray:
         """Visibility of points at full-res (u, v) with range r."""
         s = self.scale
-        return zbuffer.visible(r, np.asarray(u) * s, np.asarray(v) * s, self.depth_closed, spread_m=self.spread) & zbuffer.range_filter(r)
+        return zbuffer.visible(r, np.asarray(u) * s, np.asarray(v) * s, self.depth_closed, TOL_ABS, TOL_REL, spread_m=self.spread) & zbuffer.range_filter(r, R_MIN, R_MAX)
 
 
 def load_products(frame: int, poses: Poses, rig: RigModel | None = IDENTITY, **kw) -> FrameProducts:
@@ -159,10 +160,10 @@ def gather_candidates(store: CloudStore, C: np.ndarray, r_max: float = R_MAX, t_
 def build_frame(frame: int, store: CloudStore, fi: FrameIndex, rig: RigModel = IDENTITY, r_max: float = R_MAX, time_window_s: float | None = TIME_WINDOW_S) -> FrameProducts:
     R, C = fi.R[frame], fi.C[frame]
     xyz, pid = gather_candidates(store, C, r_max, fi.t[frame], time_window_s)
-    u, v, r, el = geometry.world_to_pano(xyz, R, C)
+    u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
     keep = zbuffer.range_filter(r, R_MIN, r_max)
     s = ZB_W / PANO_W
-    depth, ids = zbuffer.splat(u[keep] * s, v[keep] * s, r[keep], pid[keep])
+    depth, ids = zbuffer.splat(u[keep] * s, v[keep] * s, r[keep], pid[keep], ZB_W, ZB_H, SENSOR)
     meta = {
         "frame": frame,
         "filename": str(fi.poses.filename[frame]),

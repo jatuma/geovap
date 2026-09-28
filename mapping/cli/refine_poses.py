@@ -22,7 +22,7 @@ from ..config import POSES_DIR
 from ..frame_select import FrameIndex
 from ..pose_refine import DEFAULT_FREE, default_prior, group_by_pass, load_align, plan_frames, refine_pass
 from ..poses import Poses, load_poses, write_pose_table
-from ..rig import IDENTITY
+from geovap.domain.model.rig import IDENTITY
 from ..vehicle_mask import MASK_PATH, VehicleMask
 
 _G: dict = {}

@@ -6,9 +6,9 @@ from scipy.spatial import cKDTree
 
 from .cloud_store import TileInfo
 from .config import R_MAX
-from .geometry import frame_rotations
+from geovap.domain.model.geometry import frame_rotations
 from .poses import Poses
-from .rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 
 class FrameIndex:

@@ -12,10 +12,12 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from mapping import config, geometry, pass_reg
+from geovap.domain.model import geometry
+from mapping import config, pass_reg
 from mapping.cli.assemble_poses import META_COLS, assemble, overlay_refined, transform_trajectory
 from mapping.poses import Poses, load_poses, read_pose_table, write_pose_table
 from mapping.trajectory import CamSensorRig, Trajectory
+from mapping.config import PANO_H, PANO_W
 
 
 @pytest.fixture(scope="module")
@@ -271,10 +273,10 @@ def _worst_px_invariance(poses_a: Poses, poses_b: Poses, tq: np.ndarray, pass_id
     for k in range(len(tq)):
         P = o_a[k] + rng.uniform(-25, 25, (500, 3)) * np.array([1, 1, 0.4])
         P_t = (P - centre3) @ Rp.T + centre3 + t_vec
-        u1, v1, _, _ = geometry.world_to_pano(P, R_a[k], o_a[k], dtype=np.float64)
-        u2, v2, _, _ = geometry.world_to_pano(P_t, R_b[k], o_b[k], dtype=np.float64)
+        u1, v1, _, _ = geometry.world_to_pano(P, R_a[k], o_a[k], PANO_W, PANO_H, dtype=np.float64)
+        u2, v2, _, _ = geometry.world_to_pano(P_t, R_b[k], o_b[k], PANO_W, PANO_H, dtype=np.float64)
         du = np.abs(u1 - u2)
-        du = np.minimum(du, geometry.PANO_W - du)
+        du = np.minimum(du, PANO_W - du)
         worst = max(worst, float(du.max()), float(np.abs(v1 - v2).max()))
     return worst
 

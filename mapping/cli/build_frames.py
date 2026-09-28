@@ -15,7 +15,7 @@ from __future__ import annotations
 import argparse
 
 from ..products import build_all_frames
-from ..rig import IDENTITY
+from geovap.domain.model.rig import IDENTITY
 
 
 def main() -> None:

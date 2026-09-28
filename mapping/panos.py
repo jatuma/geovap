@@ -52,9 +52,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from . import geometry
+from geovap.domain.model import geometry
 from .poses import Poses, load_poses
-from .rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 # camera axes (x fwd, y left, z up) -> sphere-local axes, for Potree's texture.repeat.x = -1
 # (three.js: y up; POTREE_M_old @ Rz(180deg), fixed 2026-09-16 -- see the module docstring)

@@ -1,9 +1,14 @@
 [project]
-name = "geovap-mapping"
+name = "geovap-legacy"
 version = "0.1.0"
-description = "Bidirectional mapping between Ladybug equirectangular panoramas and MLS point clouds (Drazkov)"
+description = "Transitional home for `mapping/` while it is split into packages/geovap-*. Deleted in Phase 2."
 requires-python = ">=3.11,<3.12"
 dependencies = [
+    "geovap-core",
+    "geovap-semantics",
+    "geovap-deliver",
+    "geovap-app",
+    # still used by the not-yet-migrated modules under mapping/
     "numpy>=2.0,<2.3",
     "numba>=0.60",
     "scipy>=1.13",
@@ -13,19 +18,28 @@ dependencies = [
     "matplotlib>=3.8",
     "tqdm>=4.66",
     "torch>=2.6",
+    "transformers>=5.0",
+    "shapely>=2.0",
+    "huggingface-hub>=0.25",
 ]
 
 [project.optional-dependencies]
 turbo = ["PyTurboJPEG>=1.7"]
-seg = ["transformers>=5.0", "shapely>=2.0", "huggingface-hub>=0.25"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "import-linter>=2.0"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
 
 [tool.uv]
 package = true
 
 [tool.uv.sources]
+geovap-core = { workspace = true }
+geovap-semantics = { workspace = true }
+geovap-deliver = { workspace = true }
+geovap-app = { workspace = true }
 torch = [{ index = "pytorch-cu126" }]
 
 [[tool.uv.index]]

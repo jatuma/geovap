@@ -11,7 +11,7 @@ import pytest
 from mapping import cloud_store, las_out
 from mapping.cloud_store import SCALE, CloudStore, PassRegistration, build_tile
 from mapping.merge import MergeInputs, check_same_points, merge_tile, registered_xyz_int
-from mapping.poses import Poses
+from geovap.domain.model.poses import Poses
 
 NAME = "037"
 N = 30

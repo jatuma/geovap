@@ -12,7 +12,7 @@ import argparse
 from pathlib import Path
 
 from ..panos import AZ_OFFSET_DEG, cloud_bbox, export
-from ..rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 
 def main() -> None:

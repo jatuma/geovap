@@ -24,9 +24,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from . import geometry, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import depth as zbuffer
 from .cloud_store import open_store
-from .config import OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, REPO_ROOT, source_dir
+from .config import OUT_DIR, PANO_H, PANO_W, REPO_ROOT, R_MAX, R_MIN, SENSOR, source_dir
 from .frame_select import FrameIndex
 from .poses import Poses, load_poses
 from .products import TIME_WINDOW_S, frames_dir, gather_candidates
@@ -90,7 +91,7 @@ def yaw_rates(poses: Poses) -> np.ndarray:
 
 def _silhouette_points(xyz, R, C):
     """Exact-cell silhouette / depth-edge points from a fine z-buffer. Returns xyz subset."""
-    u, v, r, el = geometry.world_to_pano(xyz, R, C)
+    u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
     keep = zbuffer.range_filter(r, R_MIN, R_MAX)
     if keep.sum() < 1000:
         return xyz[:0]
@@ -101,7 +102,7 @@ def _silhouette_points(xyz, R, C):
     old = zb.SPLAT_MAX_PX
     zb.SPLAT_MAX_PX = 3
     try:
-        depth, _ = zbuffer.splat(x, y, r[keep], np.arange(keep.sum(), dtype=np.uint32), FINE_W, FINE_H)
+        depth, _ = zbuffer.splat(x, y, r[keep], np.arange(keep.sum(), dtype=np.uint32), FINE_W, FINE_H, SENSOR)
     finally:
         zb.SPLAT_MAX_PX = old
     d = zbuffer.close_depth(depth)
@@ -128,7 +129,7 @@ def _residual(xyz_edge, R, C, dt_img, edge_idx, valid, window=20.0, n_max=20000)
     if len(xyz_edge) > n_max:
         xyz_edge = xyz_edge[:: len(xyz_edge) // n_max]
     s = FINE_W / PANO_W
-    u, v, r, el = geometry.world_to_pano(xyz_edge, R, C, dtype=np.float64)
+    u, v, r, el = geometry.world_to_pano(xyz_edge, R, C, PANO_W, PANO_H, dtype=np.float64)
     x, y = u * s, v * s
     xi = np.mod(np.floor(x).astype(np.int64), FINE_W)
     yi = np.clip(np.floor(y).astype(np.int64), 0, FINE_H - 1)
@@ -293,7 +294,7 @@ def run(workers: int = 10, run_tag: str | None = "tw45", out_dir: Path | None = 
     de = np.full(len(poses), np.nan)
     if run_tag:
         try:
-            from . import metrics
+            from geovap.domain.math import colour_metrics as metrics
             from .report import load_run
 
             _, hists, _ = load_run(run_tag)

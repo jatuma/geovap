@@ -17,9 +17,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from . import geometry, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import depth as zbuffer
 from .cloud_store import CloudStore
-from .config import PANO_H, PANO_W, R_MAX, R_MIN
+from .config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from .poses import Poses
 from .products import gather_candidates
 from .sample import load_pano_rgb
@@ -91,10 +92,10 @@ class Aligner:
 
     # ------------------------------------------------------------------ rendering + scoring
     def render(self, xyz, gray, R, C) -> tuple[np.ndarray, np.ndarray]:
-        u, v, r, el = geometry.world_to_pano(xyz, R, C)
+        u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
         keep = zbuffer.range_filter(r, R_MIN, R_MAX)
         s = W / PANO_W
-        depth, ids = zbuffer.splat(u[keep] * s, v[keep] * s, r[keep], np.arange(keep.sum(), dtype=np.uint32), W, H)
+        depth, ids = zbuffer.splat(u[keep] * s, v[keep] * s, r[keep], np.arange(keep.sum(), dtype=np.uint32), W, H, SENSOR)
         valid = np.isfinite(depth)
         img = np.zeros((H, W), np.float32)
         img[valid] = gray[keep][ids[valid]]
@@ -168,12 +169,12 @@ class Aligner:
     def colour_de(self, k_photo, xyz, rgb, gps, pass_id, t, yaw_off, n=40_000) -> float:
         """Median CIE76 between the photo (nearest pixel) and the points' stored RGB, for a pose at
         (pass_id, t) turned by yaw_off. Lower is better: ~5-7 for a correct pose, 10+ for a wrong one."""
-        from . import metrics
+        from geovap.domain.math import colour_metrics as metrics
 
         o, roll, pitch, yaw = self.pose_at(pass_id, t)
         R = geometry.vehicle_rotation(np.array([yaw + yaw_off]), np.array([roll]), np.array([pitch]))[0]
         tw = np.abs(gps - t) <= 45.0
-        u, v, r, el = geometry.world_to_pano(xyz[tw], R, o)
+        u, v, r, el = geometry.world_to_pano(xyz[tw], R, o, PANO_W, PANO_H)
         ok = (r > 3.5) & (r <= R_MAX) & (el > -45) & (el < 20)
         if self.vmask is not None:
             ok &= ~self.vmask(u, v)

@@ -48,9 +48,10 @@ from scipy import ndimage
 from scipy.optimize import least_squares
 from scipy.spatial import cKDTree
 
-from . import compat, geometry
+from geovap.domain.model import geometry
+from . import compat
 from .cloud_store import CloudStore, STORE_DIR
-from .config import JVF_GEOJSON, OUT_DIR, POSES_DIR, ZB_H, ZB_W
+from .config import JVF_GEOJSON, OUT_DIR, PANO_H, PANO_W, POSES_DIR, ZB_H, ZB_W
 from .frame_select import FrameIndex
 from .poses import Poses, load_poses
 from .products import FrameProducts
@@ -651,7 +652,7 @@ def jvf_offset_photometric(
         except Exception:
             fps[k] = None
 
-    zb_scale = ZB_W / geometry.PANO_W
+    zb_scale = ZB_W / PANO_W
 
     def _project_valid(dE: float, dN: float, k: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         shifted = near
@@ -662,7 +663,7 @@ def jvf_offset_photometric(
         # FrameProducts.visible expects FULL-res (u, v) (it applies its own full-res -> z-buffer scale
         # internally, see FrameProducts.scale/visible) -- project at full res for that call, then scale
         # to z-buffer res ourselves for the row filter and the (2000x1000) dist_maps lookup.
-        u, v, r, el = geometry.world_to_pano(shifted, fi.R[k], fi.C[k])
+        u, v, r, el = geometry.world_to_pano(shifted, fi.R[k], fi.C[k], PANO_W, PANO_H)
         uz, vz = u * zb_scale, v * zb_scale
         ok = (r > 0) & (uz >= 0) & (uz < ZB_W) & (vz >= rows[0]) & (vz < rows[1])
         fp = fps[k]

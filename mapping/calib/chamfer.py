@@ -14,13 +14,13 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from .. import geometry
+from geovap.domain.model import geometry
 from ..cloud_store import CloudStore
-from ..config import PANO_H, PANO_W, R_MAX, R_MIN
+from ..config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from ..frame_select import FrameIndex
 from ..poses import Poses
 from ..products import FrameProducts
-from ..rig import RigModel
+from geovap.domain.model.rig import RigModel
 from .objective import photo_luminance
 
 CHAM_W, CHAM_H = 4000, 2000
@@ -119,15 +119,15 @@ def fine_edge_points(frame: int, store: CloudStore, fi: FrameIndex, vmask, el_mi
     """Silhouette / depth-edge 3D points selected by their OWN exact cell in a fine (FINE_W x FINE_H)
     z-buffer, so their projected position is exact (the coarse product's cell winners can come from a
     splat up to 8 cells away and jitter by ~1 deg). Returns (xyz [N,3], kind [N]: 1 depth edge, 2 sky)."""
-    from .. import zbuffer
+    from geovap.domain.math import depth as zbuffer
     from ..products import gather_candidates
 
     R, C = fi.R[frame], fi.C[frame]
     from ..products import TIME_WINDOW_S
 
     xyz, pid = gather_candidates(store, C, R_MAX, fi.t[frame], TIME_WINDOW_S)
-    u, v, r, el = geometry.world_to_pano(xyz, R, C)
-    keep = zbuffer.range_filter(r)
+    u, v, r, el = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H)
+    keep = zbuffer.range_filter(r, R_MIN, R_MAX)
     xyz, u, v, r, el = xyz[keep], u[keep], v[keep], r[keep], el[keep]
     s = FINE_W / PANO_W
     x, y = u * s, v * s
@@ -138,7 +138,7 @@ def fine_edge_points(frame: int, store: CloudStore, fi: FrameIndex, vmask, el_mi
     old = zb.SPLAT_MAX_PX
     zb.SPLAT_MAX_PX = 3
     try:
-        depth, _ = zbuffer.splat(x, y, r, np.arange(len(r), dtype=np.uint32), FINE_W, FINE_H)
+        depth, _ = zbuffer.splat(x, y, r, np.arange(len(r), dtype=np.uint32), FINE_W, FINE_H, SENSOR)
     finally:
         zb.SPLAT_MAX_PX = old
     d = zbuffer.close_depth(depth)
@@ -249,7 +249,7 @@ class ChamferObjective:
         R, C = geometry.frame_rotations(self.poses, self.rig(theta), self.idx)
         out = np.full(len(self.frames), DT_CAP_PX)
         for i, cf in enumerate(self.frames):
-            u, v, r, el = geometry.world_to_pano(cf.xyz, R[i], C[i], dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(cf.xyz, R[i], C[i], PANO_W, PANO_H, dtype=np.float64)
             m = (r >= R_MIN) & (r <= self.r_max)
             val, ok = _sample_dt(cf.dt, cf.valid, u[m], v[m])
             if ok.sum() > 50:

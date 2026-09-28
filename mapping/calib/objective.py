@@ -17,12 +17,13 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from .. import geometry, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import depth as zbuffer
 from ..cloud_store import CloudStore
-from ..config import GRAY_DIR, PANO_H, PANO_W, R_MAX, R_MIN
+from ..config import GRAY_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from ..frame_select import FrameIndex
 from ..poses import Poses
-from ..rig import RigModel
+from geovap.domain.model.rig import RigModel
 from ..sample import load_pano_rgb
 
 OBJ_W, OBJ_H = 1000, 500
@@ -100,9 +101,9 @@ def prepare_frame(frame: int, store: CloudStore, fi: FrameIndex, vmask, n_points
 
 def render_intensity(cf: CalibFrame, R: np.ndarray, C: np.ndarray, fill_px: int = 2) -> tuple[np.ndarray, np.ndarray]:
     """Intensity image [OBJ_H, OBJ_W] f32 and validity mask, under camera (R, C)."""
-    u, v, r, el = geometry.world_to_pano(cf.xyz, R, C)
+    u, v, r, el = geometry.world_to_pano(cf.xyz, R, C, PANO_W, PANO_H)
     s = OBJ_W / PANO_W
-    depth, ids = zbuffer.splat(u * s, v * s, r, np.arange(len(cf.xyz), dtype=np.uint32), OBJ_W, OBJ_H)
+    depth, ids = zbuffer.splat(u * s, v * s, r, np.arange(len(cf.xyz), dtype=np.uint32), OBJ_W, OBJ_H, SENSOR)
     valid = np.isfinite(depth)
     img = np.zeros((OBJ_H, OBJ_W), np.float32)
     img[valid] = cf.intensity[ids[valid]]

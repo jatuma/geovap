@@ -64,7 +64,7 @@ import numpy as np
 from scipy.optimize import least_squares, minimize_scalar
 from scipy.spatial.transform import Rotation
 
-from . import geometry
+from geovap.domain.model import geometry
 
 RANK_DEG_PER_UNIT = 1.02  # initial guess, refined per head
 WIN_S = 0.002  # 2 ms plane-fit window (2x the 1 ms bucket)

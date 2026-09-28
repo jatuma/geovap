@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..colorize import Options, run
 from ..config import OUT_DIR
-from ..rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 
 def main() -> None:

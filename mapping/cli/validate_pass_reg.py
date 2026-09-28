@@ -23,7 +23,8 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from .. import compat, geometry, vectors
+from geovap.domain.model import geometry
+from .. import compat, vectors
 from ..config import OUT_DIR, R_MAX, ZB_H, ZB_W
 from ..frame_select import FrameIndex
 from ..pass_reg import PASS_REG_DIR, ROAD_BOUNDARY_CODE, CLS_CURB, Patches, apply_pass_transforms

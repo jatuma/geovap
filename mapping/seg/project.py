@@ -24,12 +24,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .. import geometry, las_out, products, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import depth as zbuffer
+from .. import las_out, products
 from ..cloud_store import CloudStore, TileInfo, open_store
-from ..config import CLEAN_FRAMES_JSON, OUT_DIR, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
+from ..config import CLEAN_FRAMES_JSON, OUT_DIR, PANO_H, PANO_W, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
 from ..frame_select import FrameIndex
 from ..poses import load_poses
-from ..rig import IDENTITY
+from geovap.domain.model.rig import IDENTITY
 from . import taxonomy as T
 from .bench import BENCH_DIR, DATASET_SEG_DIR
 
@@ -194,7 +196,7 @@ def project_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Options
         sel = np.flatnonzero(d2 <= opt.r_max**2)
         if len(sel) == 0:
             continue
-        u, v, r, _el = geometry.world_to_pano(xyz[sel], R, C)
+        u, v, r, _el = geometry.world_to_pano(xyz[sel], R, C, PANO_W, PANO_H)
         inr = zbuffer.range_filter(r, R_MIN, opt.r_max)
         sel, u, v, r = sel[inr], u[inr], v[inr], r[inr]
         if len(sel) == 0:

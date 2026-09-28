@@ -25,11 +25,11 @@ import numpy as np
 from scipy import sparse
 from scipy.optimize import least_squares
 
-from . import geometry
+from geovap.domain.model import geometry
 from .calib import chamfer as Ch
 from .calib import icp as I
 from .cloud_store import CloudStore
-from .config import PANO_W, R_MAX, R_MIN
+from .config import PANO_H, PANO_W, R_MAX, R_MIN
 from .frame_select import FrameIndex
 from .poses import Poses
 from .quality import yaw_rates
@@ -200,7 +200,7 @@ class PassRefiner(I.EdgeICP):
         R, C = self.poses_for(theta_free)
         out = []
         for i, f in enumerate(self.frames):
-            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], PANO_W, PANO_H, dtype=np.float64)
             m = (r >= R_MIN) & (r <= self.r_max)
             x, y = u[m] * self.s, v[m] * self.s
             n_total = int(m.sum())

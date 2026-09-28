@@ -12,12 +12,12 @@ import numpy as np
 import pytest
 from scipy import ndimage
 
-from mapping import geometry
+from geovap.domain.model import geometry
 from mapping.calib import chamfer as Ch
 from mapping.calib.icp import EdgeICP, IcpFrame
-from mapping.config import PANO_W, R_MAX
+from mapping.config import PANO_H, PANO_W, R_MAX
 from mapping.pose_refine import DEFAULT_FREE, PARAM_NAMES, Prior, PassRefiner
-from mapping.poses import Poses
+from geovap.domain.model.poses import Poses
 
 RNG = np.random.default_rng(0)
 S = Ch.CHAM_W / PANO_W
@@ -53,7 +53,7 @@ def _edge_frame(frame_idx: int, R: np.ndarray, C: np.ndarray, n_pts: int = 300, 
     r = rng.uniform(6.0, 20.0, n_pts)
     d = np.stack([np.cos(el) * np.cos(az), np.cos(el) * np.sin(az), np.sin(el)], axis=1)  # camera-axes unit dirs
     xyz = C + r[:, None] * (d @ R)  # P = C + R^T (r d)
-    u, v, rr, el_deg = geometry.world_to_pano(xyz, R, C, dtype=np.float64)
+    u, v, rr, el_deg = geometry.world_to_pano(xyz, R, C, PANO_W, PANO_H, dtype=np.float64)
     assert np.allclose(rr, r, atol=1e-6)
     x, y = u * S, v * S
     col = np.mod(np.floor(x).astype(np.int64), Ch.CHAM_W)

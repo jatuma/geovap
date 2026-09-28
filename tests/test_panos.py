@@ -8,9 +8,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mapping import geometry, panos
+from geovap.domain.model import geometry
+from mapping import panos
 from mapping.config import PANO_H, PANO_W
-from mapping.poses import Poses
+from geovap.domain.model.poses import Poses
 
 
 def _synthetic_poses(m: int = 7, seed: int = 3) -> Poses:
@@ -64,7 +65,7 @@ def sphere_local_dir(u: float, v: float, w: int = PANO_W, h: int = PANO_H) -> np
 def test_sphere_local_dir_matches_potree_m():
     """POTREE_M is exactly the camera -> sphere-local map of the reference sphere."""
     for u, v in [(0, 0.5 * PANO_H), (1234.5, 900.0), (PANO_W * 0.75, PANO_H * 0.9), (7999.0, 10.0)]:
-        d_cam = geometry.pano_rays(u, v)
+        d_cam = geometry.pano_rays(u, v, PANO_W, PANO_H)
         assert np.allclose(panos.POTREE_M @ d_cam, sphere_local_dir(u, v), atol=1e-12)
 
 
@@ -88,7 +89,7 @@ def test_written_angles_reproduce_the_projection(az_offset):
     for k in range(len(poses)):
         mesh = potree_mesh_rotation(course[k], pitch[k], roll[k])
         for u, v in uv:
-            want = geometry.pano_to_world_ray((u + az_offset / 360.0 * PANO_W) % PANO_W, v, R[k])
+            want = geometry.pano_to_world_ray((u + az_offset / 360.0 * PANO_W) % PANO_W, v, R[k], PANO_W, PANO_H)
             got = mesh @ sphere_local_dir(u, v)
             # arccos near 1 is float-noisy; 1e-5 deg is 7e-4 px at 8000 px width
             assert np.degrees(np.arccos(np.clip(want @ got, -1, 1))) < 1e-5
@@ -153,7 +154,7 @@ def test_new_export_reproduces_user_confirmed_panos_corr180():
     same numbers -- that is the evidence that the new derivation is correct, not just self-consistent.
     """
     from mapping.poses import read_pose_table
-    from mapping.rig import IDENTITY
+    from geovap.domain.model.rig import IDENTITY
 
     fixtures = Path(__file__).parent / "fixtures"
     poses = read_pose_table(fixtures / "poses_corrected_34bca9.csv")

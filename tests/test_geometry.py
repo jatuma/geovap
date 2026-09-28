@@ -2,10 +2,11 @@
 import numpy as np
 import pytest
 
-from mapping import compat, geometry
+from geovap.domain.model import geometry
+from mapping import compat
 from mapping.config import PANO_H, PANO_W
-from mapping.poses import Poses
-from mapping.rig import IDENTITY, RigModel
+from geovap.domain.model.poses import Poses
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 
 def _synthetic_poses(m: int, seed: int = 0) -> Poses:
@@ -27,7 +28,7 @@ def _synthetic_poses(m: int, seed: int = 0) -> Poses:
 def test_forward_matches_camera_py_oracle():
     compat.ensure_experiments_on_path()
     torch = pytest.importorskip("torch")
-    from common.camera import world_to_panorama_px
+    from geovap.domain.math.camera_torch import world_to_panorama_px
 
     rng = np.random.default_rng(1)
     poses = _synthetic_poses(50)
@@ -39,7 +40,7 @@ def test_forward_matches_camera_py_oracle():
             torch.tensor(P), torch.tensor(poses.origin[k]), torch.tensor(poses.roll[k]), torch.tensor(poses.pitch[k]), torch.tensor(poses.yaw[k])
         )
         for dt in worst:
-            u, v, r, el = geometry.world_to_pano(P, R[k], C[k], dtype=dt)
+            u, v, r, el = geometry.world_to_pano(P, R[k], C[k], PANO_W, PANO_H, dtype=dt)
             du = np.abs(u.astype(np.float64) - uo.numpy())
             du = np.minimum(du, PANO_W - du)  # seam wrap
             dv = np.abs(v.astype(np.float64) - vo.numpy())
@@ -57,11 +58,11 @@ def test_inverse_ray_matches_forward():
         P = C[k] + rng.uniform(-30, 30, (5000, 3))
         # use float64 forward for a tight check
         x_cam = (P - C[k]) @ R[k].T
-        u, v, r, el = geometry.cam_to_pano(x_cam)
-        d = geometry.pano_to_world_ray(u, v, R[k])
+        u, v, r, el = geometry.cam_to_pano(x_cam, PANO_W, PANO_H)
+        d = geometry.pano_to_world_ray(u, v, R[k], PANO_W, PANO_H)
         d_true = (P - C[k]) / np.linalg.norm(P - C[k], axis=1, keepdims=True)
         assert np.abs(d - d_true).max() < 1e-9
-        P2 = geometry.pano_to_world(u, v, r, R[k], C[k])
+        P2 = geometry.pano_to_world(u, v, r, R[k], C[k], PANO_W, PANO_H)
         assert np.abs(P2 - P).max() < 1e-7
 
 
@@ -70,8 +71,8 @@ def test_round_trip_float32_forward_under_1cm():
     poses = _synthetic_poses(5)
     R, C = geometry.frame_rotations(poses)
     P = C[0] + rng.uniform(-40, 40, (20000, 3))
-    u, v, r, el = geometry.world_to_pano(P, R[0], C[0])
-    P2 = geometry.pano_to_world(u.astype(np.float64), v.astype(np.float64), r.astype(np.float64), R[0], C[0])
+    u, v, r, el = geometry.world_to_pano(P, R[0], C[0], PANO_W, PANO_H)
+    P2 = geometry.pano_to_world(u.astype(np.float64), v.astype(np.float64), r.astype(np.float64), R[0], C[0], PANO_W, PANO_H)
     assert np.linalg.norm(P2 - P, axis=1).max() < 0.01
 
 
@@ -89,8 +90,8 @@ def test_boresight_kappa_is_constant_u_shift():
     R0, C0 = geometry.frame_rotations(poses, IDENTITY)
     R1, C1 = geometry.frame_rotations(poses, rig)
     P = C0[0] + np.array([[10.0, 3.0, 1.0], [-5.0, 8.0, -2.0], [2.0, -12.0, 4.0]])
-    u0, v0, *_ = geometry.world_to_pano(P, R0[0], C0[0])
-    u1, v1, *_ = geometry.world_to_pano(P, R1[0], C1[0])
+    u0, v0, *_ = geometry.world_to_pano(P, R0[0], C0[0], PANO_W, PANO_H)
+    u1, v1, *_ = geometry.world_to_pano(P, R1[0], C1[0], PANO_W, PANO_H)
     du = (u1 - u0 + PANO_W / 2) % PANO_W - PANO_W / 2
     # +1 deg kappa rotates the camera; every point moves by the same |1 deg| in u, v unchanged
     assert np.allclose(np.abs(du), PANO_W / 360.0, atol=1e-2) and np.allclose(v1, v0, atol=1e-3)
@@ -113,7 +114,7 @@ def test_trajectory_projects_near_horizon(poses):
             nb = k + direction * np.arange(1, 7)
             nb = nb[poses.pass_id[nb] == poses.pass_id[k]]
             assert len(nb) >= 2
-            u, v, r, el = geometry.world_to_pano(poses.origin[nb], R[k], C[k])
+            u, v, r, el = geometry.world_to_pano(poses.origin[nb], R[k], C[k], PANO_W, PANO_H)
             assert np.all(np.abs(el) < 6.0), el  # neighbouring camera centres lie near the horizon
             az = u / PANO_W * 360.0
             daz = np.abs((az - expect_az + 180.0) % 360.0 - 180.0)
@@ -124,7 +125,7 @@ def test_nadir_projects_to_bottom_row(poses):
     R, C = geometry.frame_rotations(poses)
     nadir = C[:5] + np.array([0.0, 0.0, -2.0])
     for k in range(5):
-        u, v, r, el = geometry.world_to_pano(nadir[k : k + 1], R[k], C[k])
+        u, v, r, el = geometry.world_to_pano(nadir[k : k + 1], R[k], C[k], PANO_W, PANO_H)
         assert v[0] > PANO_H * (1 - 10 / 180), v  # within 10 deg of nadir (roll/pitch <= 9 deg)
 
 
@@ -151,7 +152,7 @@ def test_forward_direction_projects_to_centre_right_to_three_quarters():
 
     def u_v(direction_world, dist=10.0):
         P = (C + direction_world * dist)[None, :]
-        u, v, r, el = geometry.world_to_pano(P, R, C)
+        u, v, r, el = geometry.world_to_pano(P, R, C, PANO_W, PANO_H)
         return float(u[0]), float(v[0])
 
     u, v = u_v(fwd_world)
@@ -175,6 +176,6 @@ def test_pano_rays_inverse_of_cam_to_pano():
     rng = np.random.default_rng(7)
     d = rng.normal(size=(2000, 3))
     d /= np.linalg.norm(d, axis=1, keepdims=True)
-    u, v, r, el = geometry.cam_to_pano(d)
-    d2 = geometry.pano_rays(u, v)
+    u, v, r, el = geometry.cam_to_pano(d, PANO_W, PANO_H)
+    d2 = geometry.pano_rays(u, v, PANO_W, PANO_H)
     assert np.abs(d2 - d).max() < 1e-9

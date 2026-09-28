@@ -20,12 +20,12 @@ import numpy as np
 from scipy import ndimage
 from scipy.optimize import least_squares
 
-from .. import geometry
+from geovap.domain.model import geometry
 from ..cloud_store import CloudStore
 from ..config import DEG_PER_PX, PANO_H, PANO_W, R_MAX, R_MIN
 from ..frame_select import FrameIndex
 from ..poses import Poses
-from ..rig import RigModel
+from geovap.domain.model.rig import RigModel
 from . import chamfer as Ch
 
 NAMES = ["omega", "phi", "kappa", "dt", "lx", "ly", "lz"]
@@ -187,7 +187,7 @@ class EdgeICP:
         res = []
         meta = []
         for i, f in enumerate(self.frames):
-            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], PANO_W, PANO_H, dtype=np.float64)
             m = (r >= R_MIN) & (r <= self.r_max)
             x = u[m] * self.s
             y = v[m] * self.s
@@ -212,7 +212,7 @@ class EdgeICP:
         R, C = self.poses_for(theta_free)
         out = []
         for i, f in enumerate(self.frames):
-            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(f.xyz, R[i], C[i], PANO_W, PANO_H, dtype=np.float64)
             x = u * self.s
             y = v * self.s
             xi = np.mod(np.floor(x).astype(np.int64), Ch.CHAM_W)
@@ -230,7 +230,7 @@ class EdgeICP:
             ok, tx, ty = assoc[i]
             if ok.sum() == 0:
                 continue
-            u, v, r, el = geometry.world_to_pano(f.xyz[ok], R[i], C[i], dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(f.xyz[ok], R[i], C[i], PANO_W, PANO_H, dtype=np.float64)
             du = tx - u * self.s
             du = (du + Ch.CHAM_W / 2) % Ch.CHAM_W - Ch.CHAM_W / 2
             res.append(np.concatenate([du, ty - v * self.s]))

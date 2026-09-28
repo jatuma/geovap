@@ -10,7 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import metrics
+from geovap.domain.math import colour_metrics as metrics
 from .config import OUT_DIR
 
 VARIANTS = ("med", "nt", "nt_noocc")

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from . import geometry
+from geovap.domain.model import geometry
 from .config import PANO_H, PANO_W, R_MAX, R_MIN, TOL_ABS, TOL_REL
 from .products import FrameProducts
 
@@ -87,7 +87,7 @@ def project_polyline(coords: np.ndarray, R: np.ndarray, C: np.ndarray, fp: Frame
     if np.isnan(coords).any():
         return []
     pts = subdivide_3d(coords, C)
-    u, v, r, el = geometry.world_to_pano(pts, R, C, dtype=np.float64)
+    u, v, r, el = geometry.world_to_pano(pts, R, C, PANO_W, PANO_H, dtype=np.float64)
     inr = (r >= R_MIN) & (r <= r_max)
     if fp is not None:
         # a vector lies ON the surface: allow the surface itself (tolerance) but reject what is behind nearer geometry
@@ -135,7 +135,7 @@ def render_objects(objects, R: np.ndarray, C: np.ndarray, fp: FrameProducts | No
         if cid == 0:
             continue
         if obj.geom_type == "Point":
-            u, v, r, el = geometry.world_to_pano(obj.coords, R, C, dtype=np.float64)
+            u, v, r, el = geometry.world_to_pano(obj.coords, R, C, PANO_W, PANO_H, dtype=np.float64)
             if not (R_MIN <= r[0] <= r_max):
                 continue
             vis = fp.visible(r.astype(np.float32), u, v)[0] if fp is not None else True

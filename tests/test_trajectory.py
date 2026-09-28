@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from mapping import geometry
-from mapping.poses import Poses
+from geovap.domain.model import geometry
+from geovap.domain.model.poses import Poses
 from mapping.trajectory import (
     CamSensorRig,
     Trajectory,

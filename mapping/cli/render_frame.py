@@ -19,7 +19,7 @@ from ..config import RENDERS_DIR
 from ..frame_select import FrameIndex
 from ..poses import load_poses
 from ..products import load_products
-from ..rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 
 
 def main() -> None:

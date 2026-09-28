@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import POSES_DIR, REPO_ROOT
+from .config import PANO_H, PANO_W, POSES_DIR, REPO_ROOT, R_MAX
 
 YAW_RATE_THRESH_DEG_S = 8.0
 DEFAULT_CSV = REPO_ROOT / "dataset" / "frame_quality.csv"
@@ -120,7 +120,7 @@ def main() -> None:
 # `mapping/cli/build_trajectory.py`) -- no edit to quality.py was needed or made here; this module
 # only calls them with poses from two different sources.
 # =============================================================================================
-from . import geometry  # noqa: E402
+from geovap.domain.model import geometry
 from .config import OUT_DIR, R_MAX  # noqa: E402
 from .poses import Poses, load_poses, read_pose_table  # noqa: E402
 from .products import TIME_WINDOW_S, gather_candidates  # noqa: E402
@@ -639,10 +639,10 @@ def _invariance_worst_px(poses_pre: Poses, poses_post: Poses, tq: np.ndarray, pa
     for k in range(len(tq)):
         P = o_a[k] + rng.uniform(-25, 25, (n_pts, 3)) * np.array([1, 1, 0.4])
         P_t = (P - centre3) @ Rp.T + centre3 + t_vec
-        u1, v1, _, _ = geometry.world_to_pano(P, R_a[k], o_a[k], dtype=np.float64)
-        u2, v2, _, _ = geometry.world_to_pano(P_t, R_b[k], o_b[k], dtype=np.float64)
+        u1, v1, _, _ = geometry.world_to_pano(P, R_a[k], o_a[k], PANO_W, PANO_H, dtype=np.float64)
+        u2, v2, _, _ = geometry.world_to_pano(P_t, R_b[k], o_b[k], PANO_W, PANO_H, dtype=np.float64)
         du = np.abs(u1 - u2)
-        du = np.minimum(du, geometry.PANO_W - du)
+        du = np.minimum(du, PANO_W - du)
         worst = max(worst, float(du.max()), float(np.abs(v1 - v2).max()))
     return worst
 

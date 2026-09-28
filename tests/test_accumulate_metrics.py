@@ -1,6 +1,6 @@
 import numpy as np
 
-from mapping import metrics
+from geovap.domain.math import colour_metrics as metrics
 from mapping.accumulate import ColourTopK, NearestInTime
 from mapping.sample import linear_to_srgb_u8, srgb_to_linear
 

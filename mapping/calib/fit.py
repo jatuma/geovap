@@ -16,7 +16,7 @@ from ..cloud_store import CloudStore
 from ..config import DEG_PER_PX, OUT_DIR
 from ..frame_select import FrameIndex
 from ..poses import Poses, load_poses
-from ..rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 from . import icp as I
 
 

@@ -12,10 +12,10 @@ import cv2
 import numpy as np
 from skimage.registration import phase_cross_correlation
 
-from .. import geometry
-from ..config import DEG_PER_PX, OUT_DIR, PANO_W
+from geovap.domain.model import geometry
+from ..config import DEG_PER_PX, OUT_DIR, PANO_H, PANO_W
 from ..poses import Poses
-from ..rig import RigModel
+from geovap.domain.model.rig import RigModel
 from .objective import OBJ_H, OBJ_W, CalibFrame, render_intensity
 
 N_AZ_SECTORS = 8
@@ -53,7 +53,7 @@ def _sector_shift(a: np.ndarray, b: np.ndarray, m: np.ndarray) -> tuple[float, f
 def frame_shifts(cf: CalibFrame, poses: Poses, rig: RigModel) -> list[SectorShift]:
     R, C = geometry.frame_rotations(poses, rig, np.array([cf.frame]))
     img, valid = render_intensity(cf, R[0], C[0])
-    u, v, r, el = geometry.world_to_pano(cf.xyz, R[0], C[0])
+    u, v, r, el = geometry.world_to_pano(cf.xyz, R[0], C[0], PANO_W, PANO_H)
     gx, gy = cv2.Sobel(img, cv2.CV_32F, 1, 0, 3) / 8, cv2.Sobel(img, cv2.CV_32F, 0, 1, 3) / 8
     ga = np.hypot(gx, gy)
     gb = np.hypot(cf.photo_gx, cf.photo_gy)
@@ -201,7 +201,7 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
     from ..cloud_store import CloudStore
     from ..frame_select import FrameIndex
     from ..poses import load_poses
-    from ..rig import IDENTITY
+    from geovap.domain.model.rig import IDENTITY
     from ..vehicle_mask import MASK_PATH, VehicleMask
     from . import icp as I
     from .fit import select_frames

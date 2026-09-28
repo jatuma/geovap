@@ -5,8 +5,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from mapping import config, geometry, pass_reg as pr
+from geovap.domain.model import geometry
+from mapping import config, pass_reg as pr
 from mapping.poses import Poses, load_poses
+from mapping.config import PANO_H, PANO_W
 
 
 # --------------------------------------------------------------------------------- register_pair
@@ -191,10 +193,10 @@ def test_apply_pass_transforms_invariant_world_to_pano():
         P = poses.origin[k] + rng.uniform(-25, 25, (2000, 3)) * np.array([1, 1, 0.4])
         P_t = (P - centre3) @ Rp.T + centre3 + t
 
-        u1, v1, r1, el1 = geometry.world_to_pano(P, R[k], C[k], dtype=np.float64)
-        u2, v2, r2, el2 = geometry.world_to_pano(P_t, R2[k], C2[k], dtype=np.float64)
+        u1, v1, r1, el1 = geometry.world_to_pano(P, R[k], C[k], PANO_W, PANO_H, dtype=np.float64)
+        u2, v2, r2, el2 = geometry.world_to_pano(P_t, R2[k], C2[k], PANO_W, PANO_H, dtype=np.float64)
         du = np.abs(u1 - u2)
-        du = np.minimum(du, geometry.PANO_W - du)  # seam wrap
+        du = np.minimum(du, PANO_W - du)  # seam wrap
         worst = max(worst, du.max(), np.abs(v1 - v2).max())
     assert worst < 1e-6, worst
 

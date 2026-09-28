@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from mapping import geometry
+from geovap.domain.model import geometry
 from mapping.config import PANO_H, PANO_W
 from mapping.seg import views
 
@@ -20,7 +20,7 @@ def test_round_trip_off_centre_both_axes(view):
     # pick off-centre pixels in both axes and map them back
     ys = np.array([50, 100, 400, 460])
     xs = np.array([60, 450, 120, 500])
-    d_cam = geometry.pano_rays(mu[ys, xs], mv[ys, xs])
+    d_cam = geometry.pano_rays(mu[ys, xs], mv[ys, xs], PANO_W, PANO_H)
     x, y, ok = views.pano_to_view_xy(d_cam, R_cam, R_lev, view)
     assert ok.all()
     px = (x + 0.5) * size - 0.5
@@ -44,7 +44,7 @@ def test_view_centre_direction():
     R_cam, R_lev = _frame(yaw=30.0, roll=3.0, pitch=2.0)
     for yaw, pitch in [(0.0, 0.0), (90.0, 0.0), (180.0, -45.0)]:
         mu, mv = views.view_to_pano_maps(R_cam, R_lev, (yaw, pitch, 90.0), 64)
-        d_cam = geometry.pano_rays(mu[31:33, 31:33].ravel(), mv[31:33, 31:33].ravel()).mean(0)  # average directions, not seam-crossing pixels
+        d_cam = geometry.pano_rays(mu[31:33, 31:33].ravel(), mv[31:33, 31:33].ravel(), PANO_W, PANO_H).mean(0)  # average directions, not seam-crossing pixels
         d_world = d_cam @ R_cam
         az = np.degrees(np.arctan2(d_world[1], d_world[0])) % 360
         el = np.degrees(np.arcsin(np.clip(d_world[2], -1, 1)))
@@ -58,7 +58,7 @@ def test_operational_band_coverage():
     v = np.linspace((90 - 45) / 180 * PANO_H, (90 + 55) / 180 * PANO_H, 60)
     u = np.linspace(0, PANO_W, 240, endpoint=False)
     uu, vv = np.meshgrid(u, v)
-    d_cam = geometry.pano_rays(uu.ravel(), vv.ravel())
+    d_cam = geometry.pano_rays(uu.ravel(), vv.ravel(), PANO_W, PANO_H)
     covered = np.zeros(d_cam.shape[0], bool)
     for view in views.VIEWS:
         x, y, ok = views.pano_to_view_xy(d_cam, R_cam, R_lev, view)

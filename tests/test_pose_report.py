@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from mapping import pose_report as pr
-from mapping.poses import Poses
+from geovap.domain.model.poses import Poses
 
 
 # ------------------------------------------------------------------------------------- baseline (S2)

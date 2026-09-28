@@ -1,4 +1,8 @@
-"""Forward and inverse mapping between world (S-JTSK E,N,H) and equirectangular pixels.
+"""Forward and inverse mapping between world (E, N, H) and equirectangular pixels.
+
+Pure geometry: panorama dimensions arrive as arguments (`*sensor.pano` / `*sensor.zb`), never
+from module-level constants. The world frame is whatever CRS the dataset declares -- Drazkov is
+S-JTSK/Krovak (EPSG:5514), but nothing here depends on that.
 
 Forward chain (identity rig) is exactly `experiments/common/camera.py`, written as matrices:
 
@@ -31,7 +35,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from .config import PANO_H, PANO_W
 from .poses import Poses
 from .rig import IDENTITY, RigModel
 
@@ -105,7 +108,7 @@ def frame_rotations(poses: Poses, rig: RigModel = IDENTITY, idx=None) -> tuple[n
 
 
 # ---------------------------------------------------------------------------------- forward
-def cam_to_pano(x_cam: np.ndarray, w: int = PANO_W, h: int = PANO_H):
+def cam_to_pano(x_cam: np.ndarray, w: int, h: int):
     """x_cam[...,3] (float32 ok) -> (u, v, r, el_deg). u in [0,W), v in [0,H]."""
     x, y, z = x_cam[..., 0], x_cam[..., 1], x_cam[..., 2]
     hxy = np.hypot(x, y)
@@ -127,13 +130,13 @@ def world_to_cam(P: np.ndarray, R: np.ndarray, C: np.ndarray, dtype=np.float32) 
     return d @ R.astype(dtype).T
 
 
-def world_to_pano(P: np.ndarray, R: np.ndarray, C: np.ndarray, w: int = PANO_W, h: int = PANO_H, dtype=np.float32):
+def world_to_pano(P: np.ndarray, R: np.ndarray, C: np.ndarray, w: int, h: int, dtype=np.float32):
     """P[N,3] world -> (u, v, r, el) for one frame. Outputs [N] in `dtype`."""
     return cam_to_pano(world_to_cam(P, R, C, dtype), w, h)
 
 
 # ---------------------------------------------------------------------------------- inverse
-def pano_rays(u, v, w: int = PANO_W, h: int = PANO_H) -> np.ndarray:
+def pano_rays(u, v, w: int, h: int) -> np.ndarray:
     """Unit direction in CAMERA axes for pixel coordinates (u, v) (continuous; add 0.5 for cell centres)."""
     u = np.asarray(u, dtype=np.float64)
     v = np.asarray(v, dtype=np.float64)
@@ -143,12 +146,12 @@ def pano_rays(u, v, w: int = PANO_W, h: int = PANO_H) -> np.ndarray:
     return np.stack([ce * np.cos(az), ce * np.sin(az), np.sin(el)], -1)
 
 
-def pano_to_world_ray(u, v, R: np.ndarray, w: int = PANO_W, h: int = PANO_H) -> np.ndarray:
+def pano_to_world_ray(u, v, R: np.ndarray, w: int, h: int) -> np.ndarray:
     """Unit direction in WORLD axes for pixel (u, v) of a frame with rotation R (world->camera)."""
     return pano_rays(u, v, w, h) @ R  # R^T applied to row vectors == d @ R
 
 
-def pano_to_world(u, v, rng, R: np.ndarray, C: np.ndarray, w: int = PANO_W, h: int = PANO_H) -> np.ndarray:
+def pano_to_world(u, v, rng, R: np.ndarray, C: np.ndarray, w: int, h: int) -> np.ndarray:
     """World point at Euclidean range `rng` along the pixel ray. rng[N] or scalar."""
     d = pano_to_world_ray(u, v, R, w, h)
     return C + d * np.asarray(rng, dtype=np.float64)[..., None]

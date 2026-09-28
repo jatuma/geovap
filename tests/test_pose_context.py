@@ -14,8 +14,8 @@ import numpy as np
 import pytest
 
 from mapping import cloud_store, config, products
-from mapping.poses import Poses
-from mapping.rig import IDENTITY
+from geovap.domain.model.poses import Poses
+from geovap.domain.model.rig import IDENTITY
 
 
 def _synthetic_poses(source: str, registration: Path | None = None) -> Poses:

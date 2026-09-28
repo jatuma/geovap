@@ -11,7 +11,7 @@ import pytest
 
 from mapping import cloud_store, las_out
 from mapping.cloud_store import SCALE, PassRegistration, TileData, TileInfo, build_tile
-from mapping.poses import Poses
+from geovap.domain.model.poses import Poses
 
 
 N = 40

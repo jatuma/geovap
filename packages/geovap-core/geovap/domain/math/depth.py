@@ -1,7 +1,10 @@
 """Spherical z-buffer: scatter-min splatting of points into a reduced-resolution depth panorama.
 
-Coordinates here are z-buffer pixels (ZB_W x ZB_H), i.e. full-res u,v scaled by ZB_W/PANO_W.
+Coordinates here are z-buffer pixels (`sensor.zb`), i.e. full-res u,v scaled by `sensor.zb_scale`.
 Depth is Euclidean range in metres (float32 while splatting, uint16 millimetres when stored).
+
+Pure: splat geometry comes from a `Sensor` value object and tolerances arrive as arguments, rather
+than from the module-level constants this used to import from `mapping/config.py`.
 """
 from __future__ import annotations
 
@@ -9,7 +12,7 @@ import numpy as np
 from numba import njit
 from scipy import ndimage
 
-from .config import NO_POINT, POINT_SPACING, R_MAX, R_MIN, SPLAT_K, SPLAT_MAX_PX, SPLAT_MIN_PX, TOL_ABS, TOL_REL, ZB_H, ZB_W
+from ..model.sensor import NO_POINT, Sensor
 
 
 @njit(cache=True)
@@ -54,11 +57,15 @@ def _splat_min(u, v, r, pid, depth, ids, zb_w, zb_h, rad_scale, rmin_px, rmax_px
                     ids[row, col] = pid[i]
 
 
-def splat(u_zb: np.ndarray, v_zb: np.ndarray, r: np.ndarray, pid: np.ndarray, zb_w: int = ZB_W, zb_h: int = ZB_H) -> tuple[np.ndarray, np.ndarray]:
-    """Scatter-min of ranges. Returns (depth_m float32 [H,W] with inf for empty, point_id uint32 [H,W])."""
+def splat(u_zb: np.ndarray, v_zb: np.ndarray, r: np.ndarray, pid: np.ndarray, zb_w: int, zb_h: int, sensor: Sensor) -> tuple[np.ndarray, np.ndarray]:
+    """Scatter-min of ranges. Returns (depth_m float32 [H,W] with inf for empty, point_id uint32 [H,W]).
+
+    `zb_w`/`zb_h` are explicit rather than taken from `sensor.zb`: callers splat at several
+    resolutions (the calibration and frame-screening code use their own finer grids).
+    """
     depth = np.full((zb_h, zb_w), np.inf, dtype=np.float32)
     ids = np.full((zb_h, zb_w), NO_POINT, dtype=np.uint32)
-    rad_scale = SPLAT_K * POINT_SPACING * zb_w / (2 * np.pi)  # px * m
+    rad_scale = sensor.splat_k * sensor.point_spacing * zb_w / (2 * np.pi)  # px * m
     _splat_min(
         np.ascontiguousarray(u_zb, dtype=np.float32),
         np.ascontiguousarray(v_zb, dtype=np.float32),
@@ -69,18 +76,18 @@ def splat(u_zb: np.ndarray, v_zb: np.ndarray, r: np.ndarray, pid: np.ndarray, zb
         zb_w,
         zb_h,
         np.float32(rad_scale),
-        np.float32(SPLAT_MIN_PX),
-        np.float32(SPLAT_MAX_PX),
+        np.float32(sensor.splat_min_px),
+        np.float32(sensor.splat_max_px),
     )
     return depth, ids
 
 
-def range_filter(r: np.ndarray, r_min: float = R_MIN, r_max: float = R_MAX) -> np.ndarray:
+def range_filter(r: np.ndarray, r_min: float, r_max: float) -> np.ndarray:
     return (r >= r_min) & (r <= r_max)
 
 
 def depth_to_mm(depth_m: np.ndarray) -> np.ndarray:
-    """inf -> 0; otherwise round(m*1000) as uint16 (65.535 m max, > R_MAX)."""
+    """inf -> 0; otherwise round(m*1000) as uint16 (65.535 m max, above any usable range)."""
     out = np.zeros(depth_m.shape, dtype=np.uint16)
     ok = np.isfinite(depth_m)
     out[ok] = np.clip(np.rint(depth_m[ok] * 1000.0), 1, 65535).astype(np.uint16)
@@ -122,7 +129,7 @@ def depth_spread(depth_closed_m: np.ndarray, size: int = 3) -> np.ndarray:
     return out
 
 
-def visible(r: np.ndarray, u_zb: np.ndarray, v_zb: np.ndarray, depth_closed_m: np.ndarray, tol_abs: float = TOL_ABS, tol_rel: float = TOL_REL, spread_m: np.ndarray | None = None) -> np.ndarray:
+def visible(r: np.ndarray, u_zb: np.ndarray, v_zb: np.ndarray, depth_closed_m: np.ndarray, tol_abs: float, tol_rel: float, spread_m: np.ndarray | None = None) -> np.ndarray:
     """r <= depth + tol at the point's z-buffer cell, tol = max(tol_abs, tol_rel*r, K*local depth spread).
     The slope term keeps ground seen at grazing angles (depth changes by ~0.5 m per cell at 20 m)
     from being 'occluded' by its own nearer neighbours. Empty cell -> not visible."""

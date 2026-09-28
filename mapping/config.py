@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from geovap.domain.model.sensor import NO_POINT, Sensor, Tuning  # noqa: F401  (NO_POINT re-exported)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXPERIMENTS_DIR = REPO_ROOT / "experiments"
 
@@ -75,7 +77,17 @@ MAD_CUTOFF = 2.5
 CELL_SIZE = 4.0  # m
 EXPECTED_TOTAL_POINTS = 584_809_840
 
-NO_POINT = 0xFFFFFFFF  # uint32 sentinel in point_id panoramas
+# NO_POINT now lives in geovap.domain.model.sensor and is re-exported above.
+
+# Transitional: the same numbers as the constants above, as the value object `geovap.domain` takes.
+# Disappears with this module once every caller reads them from `geovap.runtime.settings`.
+SENSOR = Sensor(
+    pano_w=PANO_W, pano_h=PANO_H, zb_w=ZB_W, zb_h=ZB_H,
+    r_min=R_MIN, r_max=R_MAX, point_spacing=POINT_SPACING, cell_size=CELL_SIZE,
+    tol_abs=TOL_ABS, tol_rel=TOL_REL,
+    splat_k=SPLAT_K, splat_min_px=SPLAT_MIN_PX, splat_max_px=SPLAT_MAX_PX,
+)
+TUNING = Tuning(score_r0=SCORE_R0, incidence_max_deg=INCIDENCE_MAX_DEG, top_k=TOP_K, mad_cutoff=MAD_CUTOFF)
 
 
 def source_dir(base: Path, poses) -> Path:

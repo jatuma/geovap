@@ -5,7 +5,8 @@ anchor was insensitive to the front/back reflection (corridor symmetry). Mirrore
 import numpy as np
 import pytest
 
-from mapping import config, metrics
+from geovap.domain.math import colour_metrics as metrics
+from mapping import config
 from mapping.cloud_store import CloudStore
 from mapping.colorize import Options, colorize_tile
 from mapping.frame_select import FrameIndex

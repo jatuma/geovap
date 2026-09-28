@@ -15,13 +15,16 @@ from pathlib import Path
 
 import numpy as np
 
-from . import geometry, las_out, metrics, products, zbuffer
+from geovap.domain.model import geometry
+from geovap.domain.math import colour_metrics as metrics
+from geovap.domain.math import depth as zbuffer
+from . import las_out, products
 from .accumulate import ColourTopK, NearestInTime
 from .cloud_store import CloudStore, TileInfo, open_store
-from .config import INCIDENCE_MAX_DEG, OUT_DIR, R_MAX, R_MIN, SCORE_R0, TOP_K
+from .config import INCIDENCE_MAX_DEG, OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SCORE_R0, TOP_K
 from .frame_select import FrameIndex
 from .poses import load_poses
-from .rig import IDENTITY, RigModel
+from geovap.domain.model.rig import IDENTITY, RigModel
 from .sample import PanoSampler, load_pano_rgb, srgb_to_linear
 
 
@@ -101,7 +104,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
         is_nt_any = nt_frame == k
         if len(sel) == 0 and not is_nt_any.any():
             continue
-        u, v, r, el = geometry.world_to_pano(xyz[sel], R, C)
+        u, v, r, el = geometry.world_to_pano(xyz[sel], R, C, PANO_W, PANO_H)
         if opt.mirror:
             u = np.mod(-u, 8000.0)
         inr = zbuffer.range_filter(r, R_MIN, opt.r_max)
