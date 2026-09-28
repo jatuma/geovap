@@ -56,6 +56,11 @@ class Stage(Protocol):
 
     spec: StageSpec
 
+    #: Extra argv the driver appends when launching this stage, for the case where one module
+    #: declares several stages (`prepare/store.py` exports both `store` and `store-columns`) and the
+    #: module's own CLI needs telling which one to run. Empty for the usual one-module-one-stage case.
+    cli_args: tuple[str, ...]
+
     def available(self, s: Settings) -> bool:
         """False when this stage cannot run against this dataset at all -- e.g. no `[reference]`
         adapter is configured, so there is nothing to derive pseudo-ground-truth from. Distinct
@@ -147,6 +152,21 @@ class StageRegistry:
             for deps in pending.values():
                 deps.difference_update(ready)
         return out
+
+
+def command_for(stage: Stage) -> list[str]:
+    """The argv that runs this stage in its own process.
+
+    Derived from where the stage class is defined, so a stage is launched by the same command a
+    developer would type -- `python -m geovap.stages.colour.colorize` -- rather than through a table
+    in the driver that has to be kept in sync. That table is what this refactor removed.
+    """
+    from geovap.runtime.procs import mod_cmd
+
+    module = type(stage).__module__
+    if module == "__main__":  # the stage is already running as its own entry point
+        raise RuntimeError(f"cannot derive a command for {stage.spec.name!r} from __main__")
+    return mod_cmd(module, *getattr(stage, "cli_args", ()))
 
 
 def _source_of(stage: Stage) -> str:

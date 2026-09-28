@@ -174,6 +174,8 @@ class StoreColumns:
         name="store-columns", after=("store",), est_min=20,
         summary="S1 extra columns (user_data/scan_angle_rank/return_number) + time index + pass/psid crosstab",
     )
+    #: This module declares two stages, so the driver has to say which one it means.
+    cli_args = ("--stage", "columns")
 
     def available(self, s: "Settings") -> bool:
         return True

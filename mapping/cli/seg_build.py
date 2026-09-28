@@ -13,7 +13,7 @@ uv run python -m mapping.cli.seg_build [--poses ...] dataset
 `rasters`/`points` read the cloud through it (registered when corrected); `labels` and everything
 downstream additionally uses it for per-frame products. Ignored by `areas` (JVF-only, no cloud or
 poses involved). Outputs land under a hash-suffixed sibling of the default segds root for any
-non-export table (see `mapping.seg.areas.SEGDS_DIR`), so a corrected run never overwrites the
+non-export table (see `mapping.seg.areas.segds_dir()`), so a corrected run never overwrites the
 export one.
 """
 from __future__ import annotations
@@ -43,12 +43,12 @@ def main() -> None:
     # behaviour). "rasters"/"points" pull points through the REGISTERED cloud when set; "labels" and
     # anything downstream of per-frame products (point_id panoramas) picks up both the registered
     # cloud and the corrected camera geometry. Segds outputs land under a hash-suffixed sibling of
-    # the default segds root (see mapping.seg.areas.SEGDS_DIR) so a corrected run never overwrites
+    # the default segds root (see mapping.seg.areas.segds_dir()) so a corrected run never overwrites
     # the export one.
     ap.add_argument("--poses", default=None, help='pose table: "export" (default), "corrected", or a CSV path')
     args = ap.parse_args()
 
-    # `mapping.seg.areas.SEGDS_DIR` (and every output-dir constant derived from it in the seg
+    # `mapping.seg.areas.segds_dir()` (and every output-dir constant derived from it in the seg
     # submodules below) is resolved once at import time from `config.POSES_SOURCE` (env
     # `GEOVAP_POSES`), not from `--poses`. Set the env var here, before any `mapping.seg.*` import
     # below, so a `--poses corrected` run (used instead of exporting GEOVAP_POSES) writes into the
@@ -62,7 +62,7 @@ def main() -> None:
 
         faces, rep = areas.build(all_lines=not args.hard_only)
         print(json.dumps({k: v for k, v in rep.items() if k not in ("conflicts", "unresolved_largest")}, indent=1, ensure_ascii=False))
-        print(f"conflicts: {len(rep['conflicts'])}, unresolved listed: {len(rep['unresolved_largest'])} -> {areas.AREAS_DIR}")
+        print(f"conflicts: {len(rep['conflicts'])}, unresolved listed: {len(rep['unresolved_largest'])} -> {areas.areas_dir()}")
     elif args.cmd == "rasters":
         from ..seg import rasters
 

@@ -19,9 +19,10 @@ import numpy as np
 
 from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
-from .cloud_store import CloudStore
+from geovap.runtime.store import CloudStore
 from .config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
-from .poses import Poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.panos import pano_path
 from geovap.stages.prepare.products import gather_candidates
 from geovap.io.images import load_pano_rgb
 
@@ -73,7 +74,7 @@ class Aligner:
 
     def photo_gray(self, k: int) -> np.ndarray:
         """Edge-magnitude image of the photo (the comparison feature)."""
-        g = cv2.cvtColor(load_pano_rgb(self.poses.path(k)), cv2.COLOR_RGB2GRAY)
+        g = cv2.cvtColor(load_pano_rgb(pano_path(self.poses, k)), cv2.COLOR_RGB2GRAY)
         g = cv2.resize(g, (W, H), interpolation=cv2.INTER_AREA).astype(np.float32)
         return self._edges(g)
 
@@ -192,7 +193,7 @@ class Aligner:
 
         photo = self.photo_gray(k)
         xyz, gray, gps, rgb = self.gather(k)
-        self.ps = PanoSampler(load_pano_rgb(self.poses.path(k)), footprint=False, gradient=False)
+        self.ps = PanoSampler(load_pano_rgb(pano_path(self.poses, k)), footprint=False, gradient=False)
         p = self.poses
         pass0, t0 = int(p.pass_id[k]), float(p.t[k])
 

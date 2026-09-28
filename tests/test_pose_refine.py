@@ -138,9 +138,9 @@ def test_recovers_perturbation_real_frame():
     nearest-edge correspondence on real (not synthetic-sparse) data, not a bug in this refactor --
     flagged here as an open issue rather than silently asserted away."""
     from mapping.calib import icp as I
-    from mapping.cloud_store import CloudStore
+    from geovap.runtime.store import open_store
     from geovap.domain.model.frames import FrameIndex
-    from mapping.poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
     from mapping.quality import yaw_rates
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
@@ -162,7 +162,7 @@ def test_recovers_perturbation_real_frame():
         R = geometry.vehicle_rotation(y + dyaw_true, r, p + dpitch_true)[0]
         return R, o[0], t_q
 
-    store = CloudStore()
+    store = open_store(poses=poses)
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask
     vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None

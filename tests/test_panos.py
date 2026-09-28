@@ -153,7 +153,7 @@ def test_new_export_reproduces_user_confirmed_panos_corr180():
     The new camera model + new POTREE_M, at the new default az offset of 0, must write the exact
     same numbers -- that is the evidence that the new derivation is correct, not just self-consistent.
     """
-    from mapping.poses import read_pose_table
+    from geovap.runtime.pose_tables import read as read_pose_table
     from geovap.domain.model.rig import IDENTITY
 
     fixtures = Path(__file__).parent / "fixtures"

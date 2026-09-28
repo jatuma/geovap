@@ -18,12 +18,14 @@ import cv2
 import numpy as np
 from scipy import ndimage
 
-from ..cloud_store import CloudStore, open_store
-from ..poses import load_poses
+from geovap.runtime.store import CloudStore, open_store
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.scheme import classes as C
-from .areas import AREAS_DIR, SEGDS_DIR, load_faces, load_objects
+from .areas import areas_dir, segds_dir, load_faces, load_objects
 
-RASTER_DIR = SEGDS_DIR / "rasters"
+def raster_dir() -> Path:
+    return segds_dir() / "rasters"
+
 CELL = 0.1
 DTM_CELL = 0.5
 PAD_M = 5.0
@@ -135,15 +137,16 @@ def build_dtm(store: CloudStore, grid: Grid, cell: float = DTM_CELL, chunk: int 
     return dtm, g
 
 
-def build(out_dir: Path = RASTER_DIR, poses_source: str | None = None) -> dict:
+def build(out_dir: Path | None = None, poses_source: str | None = None) -> dict:
     """DTM and face/line rasters are built from the REGISTERED cloud (`open_store`): the DTM's ground
     height and every line-group distance/height must sit at the same S5b-corrected positions the
     corrected poses assume, or point_labels (which reads these rasters back against `xyz_m()` of the
     same store) would compare unregistered rasters against registered points."""
+    out_dir = raster_dir() if out_dir is None else out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    store = open_store(load_poses(poses_source))
+    store = open_store(poses=load_poses(poses_source))
     grid = grid_from_store(store)
-    faces = load_faces(AREAS_DIR / "faces.geojson")
+    faces = load_faces(areas_dir() / "faces.geojson")
     objects = load_objects()
     print(f"grid {grid.nx}x{grid.ny} @ {grid.cell} m")
     np.save(out_dir / "face_class.npy", rasterize_faces(faces, grid))
@@ -168,7 +171,8 @@ def build(out_dir: Path = RASTER_DIR, poses_source: str | None = None) -> dict:
 class Rasters:
     """Memmapped access for the labelling workers."""
 
-    def __init__(self, root: Path = RASTER_DIR):
+    def __init__(self, root: Path | None = None):
+        root = raster_dir() if root is None else root
         self.root = Path(root)
         meta = json.loads((self.root / "meta.json").read_text())
         self.meta = meta

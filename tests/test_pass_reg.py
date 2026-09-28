@@ -7,7 +7,8 @@ import pytest
 
 from geovap.domain.model import geometry
 from mapping import config, pass_reg as pr
-from mapping.poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
 from mapping.config import PANO_H, PANO_W
 
 
@@ -112,12 +113,14 @@ def test_cloud_store_registration_hook_transforms_only_target_pass():
     docstring) and leaves rows from any other pass byte-identical. Real store test -- narrow
     `query_time` windows keep it well under 5 s even though the store is 18 GB; tile "011" and the two
     windows below were found (empirically, on this dataset) to each fall cleanly inside one pass."""
-    if not (config.STORE_DIR / "tiles.json").exists():
+    from geovap.runtime import settings
+    from geovap.runtime.store import CloudStore
+
+    if not (settings.get().workspace.store / "tiles.json").exists():
         pytest.skip("store not built")
-    from mapping.cloud_store import CloudStore
 
     poses = load_poses()
-    store = CloudStore()
+    store = CloudStore(settings.get().workspace.store)
     name = "011"
     win_target = (301660.0, 301662.0)  # lands entirely in pass 11
     win_other = (301900.0, 301902.0)  # lands entirely in pass 12
@@ -135,7 +138,7 @@ def test_cloud_store_registration_hook_transforms_only_target_pass():
     cy = float(poses.origin[poses.pass_id == 11, 1].mean())
     transforms = {"passes": {"11": {"yaw_deg": dyaw, "t": [dE, dN, dH], "centre": [cx, cy]}}}
 
-    store_reg = CloudStore(registration=transforms)
+    store_reg = CloudStore(settings.get().workspace.store, registration=transforms)
     xyz_target_raw = td.xyz_m(rows_target)
     xyz_target_reg = store_reg.tile(name).xyz_m(rows_target)
     xyz_other_raw = td.xyz_m(rows_other)

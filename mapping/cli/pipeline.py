@@ -89,7 +89,7 @@ class Ctx:
     dry_run: bool = False
 
     def corrected_hash(self) -> str:
-        from ..poses import load_poses
+        from geovap.runtime.pose_tables import load as load_poses
 
         return load_poses("corrected").hash()[:6]
 
@@ -99,7 +99,7 @@ class Ctx:
         so a `--dry-run` or `status` before stage `assemble` has run can still print/inspect later
         stages' commands and outputs without a real `poses_corrected.csv` on disk."""
         try:
-            from ..poses import load_poses
+            from geovap.runtime.pose_tables import load as load_poses
 
             return config.source_dir(base, load_poses(self.poses))
         except Exception:
@@ -414,7 +414,7 @@ def _products_dir(ctx: Ctx) -> Path:
     """Per-frame products use the SUBDIRECTORY convention (`Workspace.frames_dir`: `frames/<hash6>`), not the
     `_<hash6>` sibling that `config.source_dir` gives the other datasets."""
     try:
-        from ..poses import load_poses
+        from geovap.runtime.pose_tables import load as load_poses
         from geovap.runtime import settings
 
         return settings.get().workspace.frames_dir(load_poses(ctx.poses))
@@ -927,7 +927,7 @@ def _git_rev() -> str:
 
 def _poses_hash_safe(ctx: Ctx) -> str | None:
     try:
-        from ..poses import load_poses
+        from geovap.runtime.pose_tables import load as load_poses
 
         return load_poses(ctx.poses).hash()
     except Exception:  # noqa: BLE001
@@ -1009,7 +1009,7 @@ def _run_one(stage_name: str, idx: int, cmd: list[str], ctx: Ctx, cwd: Path = RE
 
 
 def _run_quality_stage(ctx: Ctx) -> tuple[int, list[dict]]:
-    from ..poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
 
     cwd = get_stage("quality").cwd
     n_total = len(load_poses(ctx.poses))

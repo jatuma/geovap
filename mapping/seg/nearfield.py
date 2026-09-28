@@ -21,15 +21,21 @@ import numpy as np
 from scipy import ndimage
 
 from ..config import ZB_H, ZB_W
-from ..poses import load_poses
-from .areas import SEGDS_DIR
-from .render_labels import BANDS_DIR, clean_frames
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
+from .areas import segds_dir
+from .render_labels import bands_dir, clean_frames
 
 ROWS = (500, 850)  # elevation 0 .. -63 deg
 BAND_ID = 1  # road boundary
 MIN_PX = 200
 FLAG_PX = 20.0  # median band-to-edge distance above which the frame is flagged `nearfield_bad`
-OUT = SEGDS_DIR / "nearfield.json"
+
+
+def out_path() -> Path:
+    return segds_dir() / "nearfield.json"
+
+
 _G: dict = {}
 
 
@@ -54,12 +60,13 @@ def _init(poses_source=None):
 
 
 def _work(k: int):
-    photo = cv2.imread(_G["poses"].path(k))
-    bands = cv2.imread(str(BANDS_DIR / f"f{k:04d}.png"), 0)
+    photo = cv2.imread(pano_path(_G["poses"], k))
+    bands = cv2.imread(str(bands_dir() / f"f{k:04d}.png"), 0)
     return k, band_edge_distance(photo, bands)
 
 
-def run(frames: list[int] | None = None, workers: int = 8, out: Path = OUT, poses_source: str | None = None) -> dict:
+def run(frames: list[int] | None = None, workers: int = 8, out: Path | None = None, poses_source: str | None = None) -> dict:
+    out = out_path() if out is None else out
     frames = frames if frames is not None else clean_frames()
     res = {}
     with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool:
@@ -75,9 +82,10 @@ def run(frames: list[int] | None = None, workers: int = 8, out: Path = OUT, pose
 
 
 def load() -> dict[int, dict]:
-    if not OUT.exists():
+    out = out_path()
+    if not out.exists():
         return {}
-    return {int(k): v for k, v in json.loads(OUT.read_text())["frames"].items()}
+    return {int(k): v for k, v in json.loads(out.read_text())["frames"].items()}
 
 
 def is_bad(entry: dict | None) -> bool | None:

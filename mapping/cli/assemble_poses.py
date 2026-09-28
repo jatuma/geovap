@@ -1,5 +1,5 @@
 """S_assemble: compose the validated correction layers into the final `poses_corrected` pose table
--- the one `mapping.poses.load_poses("corrected")` returns.
+-- the one `geovap.runtime.pose_tables.load("corrected")` returns.
 
 Order (`07_revize_geometrie_a_data.md`, plan step "ASSEMBLE"):
 
@@ -45,7 +45,8 @@ import numpy as np
 
 from .. import pass_reg
 from ..config import OUT_DIR, POSES_DIR
-from ..poses import Poses, read_pose_table, write_pose_table
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import read as read_pose_table, write as write_pose_table
 from ..trajectory import CamSensorRig, Trajectory
 
 DEFAULT_BASE = POSES_DIR / "poses_traj_rot.csv"
@@ -295,7 +296,7 @@ def assemble(
         "order": ["poses_traj_rot (S3b)", "overlay S4 refined rows", "apply S5b pass_transforms to table and trajectory (per-sample orientation + lin_origin)"],
         "trajectory": traj_out_path.name,
         # the pass_transforms this table's points are registered against -- `Poses.registration`
-        # (mapping.poses.read_pose_table) and `mapping.cloud_store.open_store` read this back so a
+        # (geovap.runtime.pose_tables.read) and `geovap.runtime.store.open_store` read this back so a
         # `CloudStore` opened for this pose table applies the same S5b transform the poses assume.
         "registration": {"path": str(transforms_path), "sha1": _sha1_file(transforms_path)},
         "s4_overlay": refine_stats,

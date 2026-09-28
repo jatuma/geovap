@@ -114,6 +114,7 @@ def circ_diff_frac(a_frac: float, b_frac: float) -> float:
 def check_frame(poses, k: int, w: int, h: int) -> dict:
     from mapping import geometry
     from geovap.domain.model.rig import IDENTITY
+    from geovap.runtime.panos import pano_path
 
     row: dict = {"frame": k, "frame_next": k + 1}
     try:
@@ -136,8 +137,8 @@ def check_frame(poses, k: int, w: int, h: int) -> dict:
     try:
         import cv2
 
-        a = cv2.imread(poses.path(k), cv2.IMREAD_GRAYSCALE)
-        b = cv2.imread(poses.path(k + 1), cv2.IMREAD_GRAYSCALE)
+        a = cv2.imread(pano_path(poses, k), cv2.IMREAD_GRAYSCALE)
+        b = cv2.imread(pano_path(poses, k + 1), cv2.IMREAD_GRAYSCALE)
         if a is None or b is None:
             row.update(status="skipped", reason="photo missing/unreadable")
             return row
@@ -186,7 +187,7 @@ def main(argv=None) -> int:
     frames = [int(x) for x in args.frames.split(",") if x.strip()]
 
     try:
-        from mapping.poses import load_poses
+        from geovap.runtime.pose_tables import load as load_poses
 
         poses = load_poses(args.poses)
     except Exception as e:  # noqa: BLE001

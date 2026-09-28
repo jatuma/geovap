@@ -189,7 +189,8 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     from mapping import geometry
-    from mapping.poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
+    from geovap.runtime.panos import pano_path
     from geovap.domain.model.rig import IDENTITY
 
     do_pinhole = not args.no_pinhole
@@ -198,9 +199,9 @@ def main(argv=None) -> int:
 
     def get_store(src: str):
         if src not in store_cache:
-            from mapping.cloud_store import open_store
+            from geovap.runtime.store import open_store
 
-            store_cache[src] = open_store(poses_cache[src])
+            store_cache[src] = open_store(poses=poses_cache[src])
         return store_cache[src]
 
     def get_pinhole(src: str, k: int, C: np.ndarray, yaw: float, w: int, h: int) -> np.ndarray:
@@ -227,9 +228,9 @@ def main(argv=None) -> int:
             k, yaw_deg = int(m.group(1)), float(m.group(2))
             R, C = geometry.frame_rotations(poses, IDENTITY, [k])
             R, C = R[0], C[0]
-            pano_path = Path(args.panos_dir) / f"f{k:04d}.jpg" if args.panos_dir else Path(poses.path(k))
+            pano_file = Path(args.panos_dir) / f"f{k:04d}.jpg" if args.panos_dir else Path(pano_path(poses, k))
             yaw_rad = np.deg2rad(yaw_deg)
-            res = compare(png, pano_path, R, yaw_rad, args.pitch, args.fov)
+            res = compare(png, pano_file, R, yaw_rad, args.pitch, args.fov)
             if args.save_offline:
                 import cv2
 

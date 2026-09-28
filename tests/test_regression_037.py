@@ -7,7 +7,8 @@ import pytest
 
 from geovap.domain.math import colour_metrics as metrics
 from mapping import config
-from mapping.cloud_store import CloudStore
+from geovap.runtime import settings
+from geovap.runtime.store import CloudStore, open_store
 from mapping.colorize import Options, colorize_tile
 from geovap.domain.model.frames import FrameIndex
 
@@ -16,12 +17,12 @@ pytestmark = pytest.mark.slow
 
 @pytest.fixture(scope="module")
 def env():
-    if not (config.STORE_DIR / "tiles.json").exists() or not (config.FRAMES_DIR / "f0367.npz").exists():
+    if not (settings.get().workspace.store / "tiles.json").exists() or not (settings.get().workspace.frames / "f0367.npz").exists():
         pytest.skip("store/frames not built")
-    from mapping.poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
 
-    store = CloudStore()
     poses = load_poses()
+    store = open_store(poses=poses)
     return store, FrameIndex(poses)
 
 
@@ -83,7 +84,7 @@ def env_corrected():
     the camera by a per-pass rigid transform -- a *rotation about the pass centroid*, which for a long
     pass can be a multi-metre shift at frames far from that centroid (e.g. frame 0 of pass 0 shifts by
     0.86 m for a mere 0.10 deg pass-yaw correction, 470 m from the centroid) even though the local,
-    within-pass geometry it targets is fine. `mapping.cloud_store.CloudStore`'s default (`registration
+    within-pass geometry it targets is fine. `geovap.runtime.store.CloudStore`'s default (`registration
     =None`) leaves point XYZ exactly as scanned. Without also registering the cloud, tile 037's points
     stay in their original places while the camera moves independently by that same multi-metre
     amount, producing a spurious camera-vs-cloud offset the correction was never meant to introduce --
@@ -94,13 +95,13 @@ def env_corrected():
     per-frame products need to be built for the corrected poses (`FrameProducts` is only touched on
     the `occlusion=True` path) -- `frames_dir(poses)` exists for exactly that case, but this test does
     not need it."""
-    if not (config.STORE_DIR / "tiles.json").exists():
+    if not (settings.get().workspace.store / "tiles.json").exists():
         pytest.skip("store/frames not built")
     if not CORRECTED_TRANSFORMS.exists():
         pytest.skip(f"{CORRECTED_TRANSFORMS} not found")
-    from mapping.poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
 
-    store = CloudStore(registration=CORRECTED_TRANSFORMS)
+    store = CloudStore(settings.get().workspace.store, registration=CORRECTED_TRANSFORMS)
     poses = load_poses("corrected")
     return store, FrameIndex(poses)
 

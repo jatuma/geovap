@@ -13,21 +13,24 @@ import cv2
 import numpy as np
 
 from geovap.stages.prepare import render
-from ..cloud_store import CloudStore, open_store
+from geovap.runtime.store import CloudStore, open_store
 from ..config import NO_POINT, POTREE_OUTPUT_DIR
 from geovap.domain.model.frames import FrameIndex
 from geovap.runtime import settings
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.stages.prepare.products import load_products
 from geovap.stages.prepare.masks import VehicleMask
 from geovap.domain.scheme import taxonomy as T
 from .bench import DATASET_SEG_DIR
-from .point_labels import LABEL_DIR as GT_LABEL_DIR
-from .project import LAS_DIR, N_CLASSES, SEG_OUT_DIR, load_mask, mask_paths
-from .render_labels import LABELS_DIR as GT_ERP_DIR, vehicle_cells
+from .point_labels import label_dir as gt_label_dir
+from .project import N_CLASSES, las_dir, load_mask, mask_paths, seg_out_dir
+from .render_labels import labels_dir as gt_erp_dir, vehicle_cells
 from geovap.domain.model.tiles import id_from_sidecar
 
-REPORT_DIR = SEG_OUT_DIR / "report"
+def report_dir() -> Path:
+    return seg_out_dir() / "report"
+
 # Old (export-only, no-pose-suffix) Potree octree dir; write_potree_classes() only writes classes.json
 # there as a default -- always overridable via CLI --out (see mapping/cli/seg_project.py potree-classes).
 POTREE_DIR = POTREE_OUTPUT_DIR / "eomt_city_seg"
@@ -39,7 +42,8 @@ EXT_IDS = [T.COMMON_ID[n] for n in T.EXT]
 class SegLabels:
     """Store-aligned reader of the projected labels; tiles without output read as 255."""
 
-    def __init__(self, store: CloudStore, root: Path = SEG_OUT_DIR / "labels", suffix: str = ""):
+    def __init__(self, store: CloudStore, root: Path | None = None, suffix: str = ""):
+        root = seg_out_dir() / "labels" if root is None else root
         self.store = store
         self.arrays = []
         for t in store.tiles:
@@ -68,8 +72,9 @@ def _iou(cm: np.ndarray) -> np.ndarray:
         return np.where(den > 0, tp / den, np.nan)
 
 
-def evaluate(out_dir: Path = SEG_OUT_DIR, poses_source: str | None = None) -> dict:
-    store = open_store(load_poses(poses_source))
+def evaluate(out_dir: Path | None = None, poses_source: str | None = None) -> dict:
+    out_dir = seg_out_dir() if out_dir is None else out_dir
+    store = open_store(poses=load_poses(poses_source))
     lut = T.gt_to_common_lut()
     cm = np.zeros((N_CLASSES, N_CLASSES), np.float64)
     cm_ground = np.zeros_like(cm)
@@ -88,7 +93,7 @@ def evaluate(out_dir: Path = SEG_OUT_DIR, poses_source: str | None = None) -> di
         pred = np.load(p)
         conf = np.load(Path(out_dir) / "labels" / f"{t.name}_conf.npy")
         nv = np.load(Path(out_dir) / "labels" / f"{t.name}_nviews.npy")
-        gt = lut[np.load(GT_LABEL_DIR / f"{t.name}.npy", mmap_mode="r")]
+        gt = lut[np.load(gt_label_dir() / f"{t.name}.npy", mmap_mode="r")]
         td = store.tile(t.name)
         src = np.asarray(td.classification)
         store.release()
@@ -155,14 +160,14 @@ def erp_roundtrip(k: int, store: CloudStore, sl: SegLabels, fi: FrameIndex, pose
     """photo | EoMT mask | labels re-rendered from the cloud | JVF pseudo-GT, cropped to the elevation band `crop`."""
     from .render_labels import gather_labels
 
-    photo = cv2.imread(poses.path(k))
+    photo = cv2.imread(pano_path(poses, k))
     fp = load_products(k, poses)
     common, _conf, _ = load_mask(tag, k, 0)
     cloud_lab, valid = gather_labels(store, sl, fp)
     cloud_lab[~valid] = T.IGNORE
     cloud_lab[vm_cells] = T.IGNORE
     cloud_lab[valid & (fp.depth_m > 40)] = T.IGNORE
-    gt_p = GT_ERP_DIR / f"f{k:04d}.png"
+    gt_p = gt_erp_dir() / f"f{k:04d}.png"
     gt = T.gt_to_common_lut()[cv2.imread(str(gt_p), cv2.IMREAD_GRAYSCALE)] if gt_p.exists() else np.full(common.shape, T.IGNORE, np.uint8)
     h = common.shape[0]
     a, b = int(crop[0] * h), int(crop[1] * h)
@@ -204,7 +209,7 @@ def bev(store: CloudStore, sl_root: Path, tile_name: str, out: Path, res_m: floa
     ref = np.asarray(td.rgb)
     pred = np.load(sl_root / f"{tile_name}.npy")
     conf = np.load(sl_root / f"{tile_name}_conf.npy")
-    gt = T.gt_to_common_lut()[np.load(GT_LABEL_DIR / f"{tile_name}.npy", mmap_mode="r")]
+    gt = T.gt_to_common_lut()[np.load(gt_label_dir() / f"{tile_name}.npy", mmap_mode="r")]
     store.release()
     minE, minN, maxE, maxN = td.info.bbox
     w, h = int((maxE - minE) / res_m) + 1, int((maxN - minN) / res_m) + 1
@@ -321,12 +326,13 @@ def _pick_tiles(sl_root: Path, n_pick: int = 3) -> list[str]:
     return picks[:n_pick]
 
 
-def render_all(frames: list[int] | None = None, tiles: list[str] | None = None, tag: str = "eomt_city", out_dir: Path = SEG_OUT_DIR, poses_source: str | None = None) -> dict:
+def render_all(frames: list[int] | None = None, tiles: list[str] | None = None, tag: str = "eomt_city", out_dir: Path | None = None, poses_source: str | None = None) -> dict:
+    out_dir = seg_out_dir() if out_dir is None else out_dir
     out = Path(out_dir) / "report"
     out.mkdir(parents=True, exist_ok=True)
     sl_root = Path(out_dir) / "labels"
     poses = load_poses(poses_source)
-    store = open_store(poses)
+    store = open_store(poses=poses)
     fi = FrameIndex(poses)
     sl = SegLabels(store, sl_root)
     _s = settings.get()

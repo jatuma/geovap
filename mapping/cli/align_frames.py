@@ -20,7 +20,8 @@ import numpy as np
 
 from .. import align as A
 from ..config import CLEAN_FRAMES_JSON, POSES_DIR
-from ..poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
 from ..quality import yaw_rates
 
 YAW_RATE_THRESH_DEG_S = 8.0
@@ -33,12 +34,12 @@ _G: dict = {}
 
 
 def _init() -> None:
-    from ..cloud_store import CloudStore
+    from geovap.runtime.store import open_store
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
 
-    _G["store"] = CloudStore()
     _G["poses"] = load_poses()
+    _G["store"] = open_store(poses=_G["poses"])
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask
     vmask = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None

@@ -1,0 +1,45 @@
+# Containers the delivery stage uses. Every path comes from the environment, which is the same
+# environment the Python side resolves a dataset from -- so `docker compose` and `geovap run` cannot
+# disagree about where the data is.
+#
+#   export GEOVAP_DATA=...  GEOVAP_WORKSPACE=...  GEOVAP_PUBLISH=...
+#   docker compose -f packages/geovap-deliver/geovap/infra/containers/compose.yml up viewer
+#
+# `.env.example` in this directory shows one working set. The previous version of this file
+# hardcoded `../Geovap_data` and named Dražkov's tile files in its own comments.
+
+services:
+  # Command-line point cloud processing / classification (PDAL pipelines).
+  # No long-running process; exec into it to run pdal commands:
+  #   docker compose exec pdal pdal info /data/<your tile>.laz
+  pdal:
+    image: pdal/pdal:latest
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - ${GEOVAP_DATA:?set GEOVAP_DATA to the dataset root}:/data:ro
+      - ${GEOVAP_PUBLISH:?set GEOVAP_PUBLISH to the publish root}:/output
+    working_dir: /data
+
+  # Converts LAS/LAZ into Potree's web-viewable octree format. Built from PotreeConverter's own
+  # source, since there is no official prebuilt image. Run with:
+  #   docker compose run --rm potreeconverter "/cache_out/consolidated/tiles/<tile>.laz" -o /output/<name>
+  potreeconverter:
+    build:
+      context: .
+      dockerfile: potreeconverter.Dockerfile
+    volumes:
+      - ${GEOVAP_DATA:?set GEOVAP_DATA to the dataset root}:/data:ro
+      - ${GEOVAP_PUBLISH:?set GEOVAP_PUBLISH to the publish root}:/output
+      - ${GEOVAP_WORKSPACE:?set GEOVAP_WORKSPACE to the workspace root}/out:/cache_out:ro
+
+  # Web viewer: serves the publish root as browsable point clouds.
+  viewer:
+    build:
+      context: .
+      dockerfile: viewer.Dockerfile
+      additional_contexts:
+        pages: ../viewer
+    ports:
+      - "${GEOVAP_VIEWER_PORT:-8080}:80"
+    volumes:
+      - ${GEOVAP_PUBLISH:?set GEOVAP_PUBLISH to the publish root}:/usr/share/nginx/html/pointclouds:ro

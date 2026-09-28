@@ -53,7 +53,9 @@ import cv2
 import numpy as np
 
 from geovap.domain.model import geometry
-from .poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.domain.model.rig import IDENTITY, RigModel
 
 # camera axes (x fwd, y left, z up) -> sphere-local axes, for Potree's texture.repeat.x = -1
@@ -145,7 +147,7 @@ def _resize_one(job: tuple[int, str]) -> tuple[str, bool]:
 def source_path(poses: Poses, k: int, image_dir: Path | None) -> str:
     """Photo used as the sphere texture: the pose table's own file, or f%04d.jpg in `image_dir`
     (e.g. a segds `qa/` directory -- the label overlay is the best alignment target there is)."""
-    return poses.path(k) if image_dir is None else str(Path(image_dir) / f"f{k:04d}.jpg")
+    return pano_path(poses, k) if image_dir is None else str(Path(image_dir) / f"f{k:04d}.jpg")
 
 
 def export(

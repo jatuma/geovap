@@ -1,6 +1,6 @@
 """C2: consolidated 3D product. Merges, per tile, the store's own reference columns with three
 per-tile products (tw45 colorization, projected semantic labels, object clusters) that all share the
-store's row count and per-row point identity (see `las_out` and `cloud_store.TileData.orig_index`)
+store's row count and per-row point identity (see `las_out` and `geovap.runtime.store.TileData.orig_index`)
 into two LAS 1.4 PF7 files:
 
     out_dir/tiles/<tile out_name>.laz   rgb = tw45 fused colour (TerraScan reference where n_views==0),
@@ -24,9 +24,9 @@ from pathlib import Path
 import numpy as np
 
 from . import las_out
-from .cloud_store import SCALE, STORE_DIR, CloudStore, TileData, open_store
-from .config import EXPECTED_TOTAL_POINTS, OUT_DIR, POTREE_OUTPUT_DIR, CONSOLIDATED_DIR, source_dir
-from .poses import load_poses
+from geovap.runtime.store import SCALE, CloudStore, TileData
+from .config import EXPECTED_TOTAL_POINTS, OUT_DIR, POTREE_OUTPUT_DIR, CONSOLIDATED_DIR, STORE_DIR, source_dir
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.scheme import taxonomy as T
 
 
@@ -82,7 +82,7 @@ def _default_dir(base: Path, tail: str, what: str, poses=None) -> Path:
 @dataclass
 class MergeInputs:
     """Resolved inputs for one `run`/`merge_tile` call. `poses` is the loaded `Poses` table the
-    consolidated product is registered against (see `cloud_store.open_store`); `poses_hash` is a
+    consolidated product is registered against (see `geovap.runtime.store.open_store`); `poses_hash` is a
     convenience for provenance."""
 
     poses: object
@@ -133,7 +133,7 @@ def check_same_points(a: np.ndarray, b: np.ndarray, name: str = "input") -> None
 
 def registered_xyz_int(td: TileData) -> np.ndarray:
     """int32 [n,3] LAS integers of `td.xyz_m()` (honours `td.registration`), STORE row order. Registered
-    mm coordinates fit int32 at the store's scale (0.001 m, see `cloud_store.SCALE`)."""
+    mm coordinates fit int32 at the store's scale (0.001 m, see `geovap.runtime.store.SCALE`)."""
     xyz = np.round(td.xyz_m() / SCALE)
     out = xyz.astype(np.int32)
     assert np.array_equal(out, xyz), "registered coordinates overflow int32 at 1 mm scale"
@@ -328,7 +328,7 @@ def _run_vendor_tile(name: str) -> dict:
 def run_vendor(tiles: list[str] | None, inp: MergeInputs, workers: int = 6, force: bool = False, root: Path = STORE_DIR) -> list[dict]:
     from multiprocessing import Pool
 
-    store = open_store(inp.poses, root=root)
+    store = CloudStore(root, registration=inp.poses.registration if inp.poses is not None else None)
     names = [t.name for t in store.tiles] if tiles is None else list(tiles)
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)
     if not force:
@@ -357,7 +357,7 @@ _G: dict = {}
 
 
 def _init(inp: MergeInputs, root: Path):
-    _G["store"] = open_store(inp.poses, root=root)
+    _G["store"] = CloudStore(root, registration=inp.poses.registration if inp.poses is not None else None)
     _G["inp"] = inp
 
 
@@ -370,7 +370,7 @@ def run(tiles: list[str] | None, inp: MergeInputs, workers: int = 6, force: bool
     `out_dir/tiles/NNN_meta.json` unless `force`. Writes `out_dir/summary.json`."""
     from multiprocessing import Pool
 
-    store = open_store(inp.poses, root=root)
+    store = CloudStore(root, registration=inp.poses.registration if inp.poses is not None else None)
     names = [t.name for t in store.tiles] if tiles is None else list(tiles)
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)
     meta_dir = Path(inp.out_dir) / "tiles"

@@ -98,7 +98,7 @@ def padded(tmp_path: Path):
 
 
 def _legacy_name(path: Path) -> str:
-    """`mapping/cloud_store.py:_tile_name_from_laz` -- the behaviour the products were written under."""
+    """The pre-refactor `mapping/cloud_store.py:_tile_name_from_laz` -- the behaviour the products were written under."""
     return path.stem.split("_")[1][-3:]
 
 

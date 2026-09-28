@@ -7,7 +7,7 @@ from pathlib import Path
 import laspy
 import numpy as np
 
-from .cloud_store import SCALE, TileData
+from geovap.runtime.store import SCALE, TileData
 
 EXTRA_DIMS = [
     ("ref_r", np.uint8, "TerraScan RGB (reference), 8 bit"),
@@ -70,7 +70,7 @@ def write_tile(td: TileData, out_path: Path, product_rgb: np.ndarray, extras: di
     `classification` replaces the source classification when given (e.g. semantic labels); otherwise it is copied bit-exact.
     `product_rgb` is u8 [n,3] (scaled to 16 bit, `*256`) unless it is already `uint16` (e.g. a cluster palette), in which
     case it passes through unchanged.
-    `xyz` is int32 [n,3] LAS integers (same scale/offset as the source, see `cloud_store.SCALE`); when given it replaces
+    `xyz` is int32 [n,3] LAS integers (same scale/offset as the source, see `geovap.runtime.store.SCALE`); when given it replaces
     the bit-exact source copy (e.g. the S5 per-pass registered coordinates); otherwise `src.X/Y/Z` is copied bit-exact.
     """
     src = laspy.read(td.info.laz)

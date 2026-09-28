@@ -122,7 +122,8 @@ def main() -> None:
 # =============================================================================================
 from geovap.domain.model import geometry
 from .config import OUT_DIR, R_MAX  # noqa: E402
-from .poses import Poses, load_poses, read_pose_table  # noqa: E402
+from geovap.domain.model.poses import Poses  # noqa: E402
+from geovap.runtime.pose_tables import load as load_poses, read as read_pose_table  # noqa: E402
 from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates  # noqa: E402
 from .quality import _photo_edges, _residual, _silhouette_points  # noqa: E402
 
@@ -210,13 +211,13 @@ _CG: dict = {}
 
 
 def _init_compare(a: str, b: str) -> None:
-    from .cloud_store import CloudStore
+    from geovap.runtime.store import CloudStore
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
 
-    store = CloudStore()
-    poses_a, poses_b = load_poses(a), load_poses(b)
     _s = settings.get()
+    store = CloudStore(_s.workspace.store)
+    poses_a, poses_b = load_poses(a), load_poses(b)
     _mask_path = _s.workspace.vehicle_mask
     vm = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _CG["store"], _CG["poses_a"], _CG["poses_b"], _CG["vm"] = store, poses_a, poses_b, vm
@@ -354,13 +355,13 @@ _DG: dict = {}
 
 def _init_colour(a: str, b: str) -> None:
     from .align import Aligner
-    from .cloud_store import CloudStore
+    from geovap.runtime.store import CloudStore
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
 
-    store = CloudStore()
-    poses_a, poses_b = load_poses(a), load_poses(b)
     _s = settings.get()
+    store = CloudStore(_s.workspace.store)
+    poses_a, poses_b = load_poses(a), load_poses(b)
     _mask_path = _s.workspace.vehicle_mask
     vm = VehicleMask(_mask_path, *_s.sensor.pano) if _mask_path.exists() else None
     _DG["poses_a"], _DG["poses_b"] = poses_a, poses_b
@@ -371,10 +372,11 @@ def _init_colour(a: str, b: str) -> None:
 def _colour_job(k: int) -> dict:
     from geovap.domain.math.sampling import PanoSampler
     from geovap.io.images import load_pano_rgb
+    from geovap.runtime.panos import pano_path
 
     al_a, al_b = _DG["al_a"], _DG["al_b"]
     poses_a, poses_b = _DG["poses_a"], _DG["poses_b"]
-    al_a.ps = PanoSampler(load_pano_rgb(poses_a.path(k)), footprint=False, gradient=False)
+    al_a.ps = PanoSampler(load_pano_rgb(pano_path(poses_a, k)), footprint=False, gradient=False)
     xyz, gray, gps, rgb = al_a.gather(k)
     al_b.ps = al_a.ps
     de_a = al_a.colour_de(k, xyz, rgb, gps, int(poses_a.pass_id[k]), float(poses_a.t[k]), 0.0)
@@ -697,13 +699,15 @@ def slow_regression_037(
     concrete rather than asserted -- also for `corrected` with an *unregistered* cloud, reproducing the
     false-alarm regression that motivated requiring `registration=` alongside `load_poses("corrected")`.
     Returns `{"skipped": reason}` if the store/frames cache isn't built."""
-    from .cloud_store import CloudStore
+    from geovap.runtime.store import CloudStore
     from .colorize import Options, colorize_tile
-    from .config import STORE_DIR
     from geovap.domain.model.frames import FrameIndex
+    from geovap.runtime import settings
 
-    if not (STORE_DIR / "tiles.json").exists():
-        return {"skipped": f"{STORE_DIR / 'tiles.json'} not found (store not built)"}
+    _s = settings.get()
+    store_root = _s.workspace.store
+    if not (store_root / "tiles.json").exists():
+        return {"skipped": f"{store_root / 'tiles.json'} not found (store not built)"}
     if not Path(transforms_path).exists():
         return {"skipped": f"{transforms_path} not found"}
 
@@ -718,9 +722,9 @@ def slow_regression_037(
     poses_export = load_poses("export")
     poses_corrected = load_poses("corrected")
 
-    med_export, n_export = _median(CloudStore(), poses_export)
-    med_corrected, n_corrected = _median(CloudStore(registration=transforms_path), poses_corrected)
-    med_corrected_unreg, n_unreg = _median(CloudStore(), poses_corrected)
+    med_export, n_export = _median(CloudStore(store_root), poses_export)
+    med_corrected, n_corrected = _median(CloudStore(store_root, registration=transforms_path), poses_corrected)
+    med_corrected_unreg, n_unreg = _median(CloudStore(store_root), poses_corrected)
     log(f"[slow_037] export={med_export:.3f} (n={n_export}) corrected(registered)={med_corrected:.3f} (n={n_corrected}) "
         f"corrected(unregistered)={med_corrected_unreg:.3f} (n={n_unreg})")
 

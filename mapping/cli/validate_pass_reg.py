@@ -24,25 +24,27 @@ import numpy as np
 from scipy import ndimage
 
 from geovap.domain.model import geometry
-from .. import compat, vectors
+from .. import vectors
 from ..config import OUT_DIR, R_MAX, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
 from geovap.runtime import settings
 from ..pass_reg import PASS_REG_DIR, ROAD_BOUNDARY_CODE, CLS_CURB, Patches, apply_pass_transforms
-from ..poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.stages.prepare.products import FrameProducts
 from geovap.stages.prepare.render import overlay_on_photo
 from ..seg.nearfield import ROWS, FLAG_PX
+from geovap.runtime.panos import pano_path
 
-QA_DIR = PASS_REG_DIR / "qa"
+PASS_REG_QA_DIR = PASS_REG_DIR / "qa"
 
 
 def _road_objects():
-    compat.ensure_experiments_on_path()
-    from common import io_data
-
-    objs = io_data.load_jvf_objects()
-    return [o for o in objs if o.jvfcode == ROAD_BOUNDARY_CODE and o.geom_type == "LineString" and len(o.coords) >= 2]
+    ref = settings.get().reference
+    if ref is None:
+        return []
+    objs = ref.objects()
+    return [o for o in objs if o.code == ROAD_BOUNDARY_CODE and o.geom_type == "LineString" and len(o.coords) >= 2]
 
 
 def _band_mask(objs, R, C, fp, scale: float) -> np.ndarray:
@@ -64,7 +66,7 @@ def _draw_curb_points(photo: np.ndarray, u: np.ndarray, v: np.ndarray, ok: np.nd
     return out
 
 
-def render_qa(pass_ids: list[int] = (0, 5), n_frames: int = 3, rows: tuple[int, int] = ROWS, out_dir: Path = QA_DIR) -> list[dict]:
+def render_qa(pass_ids: list[int] = (0, 5), n_frames: int = 3, rows: tuple[int, int] = ROWS, out_dir: Path = PASS_REG_QA_DIR) -> list[dict]:
     """For each pass, `n_frames` evenly spaced frames: three stacked crops (ground rows only) --
     (a) photo + JVF road boundary projected with the EXPORT pose, (b) photo + this pass' own curb
     points (also export pose -- curb points are raw store coordinates, never shifted), (c) photo +
@@ -89,7 +91,7 @@ def render_qa(pass_ids: list[int] = (0, 5), n_frames: int = 3, rows: tuple[int, 
         curb = patches.select(patches.cls == CLS_CURB)
         tr = transforms.get("passes", transforms).get(str(pid))
         for k in picks.tolist():
-            photo = cv2.imread(poses.path(k))
+            photo = cv2.imread(pano_path(poses, k))
             photo = cv2.resize(photo, (ZB_W, ZB_H), interpolation=cv2.INTER_AREA)
             try:
                 fp = FrameProducts.load(k, root=settings.get().workspace.frames_dir(poses))
@@ -164,7 +166,7 @@ def run_metric(frames: list[int] | None = None, n_subset: int = 200, out: Path =
 
     per_frame = {}
     for k in frames:
-        photo = cv2.imread(poses.path(k))
+        photo = cv2.imread(pano_path(poses, k))
         photo = cv2.resize(photo, (ZB_W, ZB_H), interpolation=cv2.INTER_AREA)
         try:
             fp = FrameProducts.load(k, root=settings.get().workspace.frames_dir(poses))
@@ -246,8 +248,8 @@ _CG: dict = {}
 
 
 def _conflict_init(transforms_path: str) -> None:
-    from ..cloud_store import CloudStore, PassRegistration
-    from ..poses import load_poses as _lp
+    from geovap.runtime.store import CloudStore, PassRegistration
+    from geovap.runtime.pose_tables import load as _lp
     from geovap.stages.prepare.masks import VehicleMask
 
     poses = _lp()
@@ -256,7 +258,7 @@ def _conflict_init(transforms_path: str) -> None:
     _CG["fi"] = FrameIndex(poses)
     poses_corr = apply_pass_transforms(poses, transforms)
     _CG["fi_corr"] = FrameIndex(poses_corr)
-    _CG["store"] = CloudStore()
+    _CG["store"] = CloudStore(settings.get().workspace.store)
     _CG["reg"] = PassRegistration(transforms, poses=poses)
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask

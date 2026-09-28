@@ -3,8 +3,8 @@
 uv run python -m mapping.cli.refine_poses --poses export --passes all --workers 8 \
     --out Geovap_cache/out/poses/poses_refined.csv
 
-`--poses` accepts "export", "corrected", or a path (any `mapping.poses.load_poses` source) so the
-same CLI runs on the dense S3 trajectory once it exists. Frames not covered by `--passes` (or
+`--poses` accepts "export", "corrected", or a path (any `geovap.runtime.pose_tables.load` source) so
+the same CLI runs on the dense S3 trajectory once it exists. Frames not covered by `--passes` (or
 rejected by acceptance) keep their input pose with status "kept".
 """
 from __future__ import annotations
@@ -17,11 +17,12 @@ from pathlib import Path
 
 import numpy as np
 
-from ..cloud_store import CloudStore
+from geovap.runtime.store import open_store
 from ..config import POSES_DIR
 from geovap.domain.model.frames import FrameIndex
 from ..pose_refine import DEFAULT_FREE, default_prior, group_by_pass, load_align, plan_frames, refine_pass
-from ..poses import Poses, load_poses, write_pose_table
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses, write as write_pose_table
 from geovap.domain.model.rig import IDENTITY
 from geovap.runtime import settings
 from geovap.stages.prepare.masks import VehicleMask
@@ -30,8 +31,8 @@ _G: dict = {}
 
 
 def _init_worker(poses_source, n_points, free, prior_kind, own_pass_only):
-    _G["store"] = CloudStore()
     _G["poses"] = load_poses(poses_source)
+    _G["store"] = open_store(poses=_G["poses"])
     _G["fi"] = FrameIndex(_G["poses"], IDENTITY)
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask

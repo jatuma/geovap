@@ -38,7 +38,8 @@ from pathlib import Path
 import numpy as np
 
 from ..config import CLEAN_FRAMES_JSON, POSES_DIR, R_MAX
-from ..poses import Poses, load_poses, write_pose_table
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses, write as write_pose_table
 from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates
 from ..quality import _photo_edges, _residual, _silhouette_points, yaw_rates
 from ..trajectory import (
@@ -60,11 +61,11 @@ YAW_RATE_TURNING_VALIDATE = 8.0  # S3b step 4: the validation set (matches quali
 
 def _run_one(args) -> tuple[int, np.ndarray, np.ndarray, np.ndarray, list, dict]:
     pass_id, stride = args
-    from ..cloud_store import CloudStore  # re-imported per worker (fork-safe)
-    from ..poses import load_poses as _load_poses
+    from geovap.runtime.store import open_store  # re-imported per worker (fork-safe)
+    from geovap.runtime.pose_tables import load as _load_poses
 
-    store = CloudStore()
     poses = _load_poses("export")
+    store = open_store(poses=poses)
     t0 = time.time()
     t_out, S_out, R_out, segments, diag = build_pass_trajectory(store, poses, pass_id, stride=stride)
     diag["wall_s"] = time.time() - t0
@@ -74,11 +75,11 @@ def _run_one(args) -> tuple[int, np.ndarray, np.ndarray, np.ndarray, list, dict]
 
 def _run_one_rot(args) -> tuple[int, np.ndarray, np.ndarray, list, dict]:
     (pass_id,) = args
-    from ..cloud_store import CloudStore  # re-imported per worker (fork-safe)
-    from ..poses import load_poses as _load_poses
+    from geovap.runtime.store import open_store  # re-imported per worker (fork-safe)
+    from geovap.runtime.pose_tables import load as _load_poses
 
-    store = CloudStore()
     poses = _load_poses("export")
+    store = open_store(poses=poses)
     t0 = time.time()
     t_out, quat_out, segments, diag = build_pass_orientation(store, poses, pass_id)
     diag["wall_s"] = time.time() - t0
@@ -633,12 +634,12 @@ def _init_validate(rot_csv_str: str) -> None:
     """Pool worker init: build the per-worker global state once (CloudStore, both pose tables, the
     vehicle mask, two `Aligner`s, own-pass time bounds) rather than per frame."""
     from ..align import Aligner
-    from ..cloud_store import CloudStore
-    from ..poses import load_poses as _load_poses
+    from geovap.runtime.store import CloudStore
+    from geovap.runtime.pose_tables import load as _load_poses
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
 
-    store = CloudStore()
+    store = CloudStore(settings.get().workspace.store)
     poses_exp = _load_poses("export")
     poses_rot = _load_poses(rot_csv_str)
     _s = settings.get()
@@ -678,6 +679,7 @@ def _validate_job(k: int) -> dict:
     from geovap.domain.model import geometry
     from geovap.domain.math.sampling import PanoSampler
     from geovap.io.images import load_pano_rgb
+    from geovap.runtime.panos import pano_path
 
     store = _VG["store"]
     poses_exp, poses_rot = _VG["poses_exp"], _VG["poses_rot"]
@@ -688,7 +690,7 @@ def _validate_job(k: int) -> dict:
     pass_id = int(poses_exp.pass_id[k])
     t_frame = float(poses_exp.t[k])
 
-    al_exp.ps = PanoSampler(load_pano_rgb(poses_exp.path(k)), footprint=False, gradient=False)
+    al_exp.ps = PanoSampler(load_pano_rgb(pano_path(poses_exp, k)), footprint=False, gradient=False)
     xyz, gray, gps, rgb = al_exp.gather(k)
     al_rot.ps = al_exp.ps
     de_export = al_exp.colour_de(k, xyz, rgb, gps, pass_id, t_frame, 0.0)

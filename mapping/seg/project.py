@@ -29,13 +29,13 @@ from geovap.domain.math import depth as zbuffer
 from .. import las_out
 from geovap.runtime import manifest, settings
 from geovap.stages.prepare import products
-from ..cloud_store import CloudStore, TileInfo, open_store
+from geovap.runtime.store import CloudStore, TileInfo, open_store
 from ..config import CLEAN_FRAMES_JSON, OUT_DIR, PANO_H, PANO_W, POTREE_OUTPUT_DIR, R_MAX, R_MIN, SCORE_R0, source_dir
 from geovap.domain.model.frames import FrameIndex
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.model.rig import IDENTITY
 from geovap.domain.scheme import taxonomy as T
-from .bench import BENCH_DIR, DATASET_SEG_DIR
+from .bench import bench_dir, DATASET_SEG_DIR
 from geovap.domain.model.tiles import id_from_sidecar
 
 
@@ -50,11 +50,25 @@ def _out_name(name: str, kind: str = "", *, variant: str | None = None) -> str:
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 CLEAN_JSON = CLEAN_FRAMES_JSON
-# Pose-source aware, like mapping.seg.areas.SEGDS_DIR: byte-identical to today for the default
-# "export" pose table (GEOVAP_POSES unset), a hash-suffixed sibling for a corrected one. Resolved
-# once at import time -- set GEOVAP_POSES before importing mapping.seg.project.
-SEG_OUT_DIR = source_dir(OUT_DIR / "seg_eomt", load_poses())
-LAS_DIR = source_dir(POTREE_OUTPUT_DIR / "seg_eomt", load_poses()) / "tiles"
+# Pose-source aware, like `areas.segds_dir()`: the plain path for the default "export" pose table,
+# a hash-suffixed sibling for a corrected one, so the two runs' outputs never mix. Functions, not
+# constants: resolving them at import time is what made the old code unable to choose a dataset
+# after argparse had run, and made merely importing this module fail on a machine with none
+# configured.
+
+
+def seg_out_dir(s=None) -> Path:
+    from geovap.runtime import settings
+
+    s = s or settings.get()
+    return s.workspace.source_dir(s.workspace.out / "seg_eomt", load_poses(s=s))
+
+
+def las_dir(s=None) -> Path:
+    from geovap.runtime import settings
+
+    s = s or settings.get()
+    return s.workspace.source_dir(s.paths.publish / "seg_eomt", load_poses(s=s)) / "tiles"
 N_CLASSES = len(T.COMMON)
 SKY_ID = T.COMMON_ID["sky"]
 EDGE_PX = 3.0
@@ -71,8 +85,8 @@ class Options:
     min_conf: int = 0
     edge_px: float = EDGE_PX
     rgb: str = "ref"  # ref = TerraScan RGB from the store | tw45 = colorization product
-    out_dir: Path = SEG_OUT_DIR
-    las_dir: Path = LAS_DIR
+    out_dir: Path = field(default_factory=seg_out_dir)
+    las_dir: Path = field(default_factory=las_dir)
     write_las: bool = True
     subsample: int | None = None
     frame_limit: int | None = None
@@ -97,7 +111,7 @@ def clean_frames() -> list[int]:
 
 
 def mask_paths(tag: str, k: int) -> tuple[Path, Path]:
-    d = BENCH_DIR / tag
+    d = bench_dir() / tag
     return d / f"f{k:04d}_common.png", d / f"f{k:04d}_conf.png"
 
 
@@ -298,7 +312,7 @@ def _init(opt: Options):
     # explicit poses_source on opt (not just env inheritance via fork) so it is honoured even if
     # the pool start method is not "fork".
     poses = load_poses(opt.poses_source)
-    _G["store"] = open_store(poses)
+    _G["store"] = open_store(poses=poses)
     _G["fi"] = FrameIndex(poses, IDENTITY)
     _G["opt"] = opt
 
@@ -311,7 +325,7 @@ def _run_tile(name: str) -> TileResult:
 def run(tiles: list[str] | None, opt: Options, workers: int = 5) -> list[TileResult]:
     from multiprocessing import Pool
 
-    store = open_store(load_poses(opt.poses_source))
+    store = open_store(poses=load_poses(opt.poses_source))
     names = [t.name for t in store.tiles] if tiles is None else list(tiles)
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / "labels").mkdir(parents=True, exist_ok=True)

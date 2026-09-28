@@ -2,17 +2,18 @@
 import numpy as np
 import pytest
 
-from mapping import config
-from mapping.cloud_store import EXTRA_COLUMNS, CloudStore
+from geovap.runtime import settings
+from geovap.runtime.store import EXTRA_COLUMNS, CloudStore
 
 
 @pytest.fixture(scope="module")
 def store():
-    if not (config.STORE_DIR / "tiles.json").exists():
-        pytest.skip("store not built")
-    s = CloudStore()
+    root = settings.get().workspace.store
+    if not (root / "tiles.json").exists():
+        pytest.skip(f"store not built at {root}")
+    s = CloudStore(root)
     if s.tile(s.tiles[0].name).user_data is None:
-        pytest.skip("S1 columns not built (run mapping.cli.store_add_columns)")
+        pytest.skip("S1 columns not built (run `geovap run --only store-columns`)")
     return s
 
 

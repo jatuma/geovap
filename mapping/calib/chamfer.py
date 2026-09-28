@@ -16,10 +16,10 @@ import cv2
 import numpy as np
 
 from geovap.domain.model import geometry
-from ..cloud_store import CloudStore
+from geovap.runtime.store import CloudStore
 from ..config import PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from geovap.domain.model.frames import FrameIndex
-from ..poses import Poses
+from geovap.domain.model.poses import Poses
 from geovap.stages.prepare.products import FrameProducts
 from geovap.domain.model.rig import RigModel
 from .objective import photo_luminance

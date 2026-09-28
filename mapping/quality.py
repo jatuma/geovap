@@ -28,11 +28,13 @@ import numpy as np
 from geovap.domain.math import edges as edges_math
 from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
-from .cloud_store import open_store
+from geovap.runtime.store import open_store
 from .config import OUT_DIR, PANO_H, PANO_W, REPO_ROOT, R_MAX, R_MIN, SENSOR, source_dir
 from geovap.domain.model.frames import FrameIndex
 from geovap.runtime import settings as _settings
-from .poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.stages.prepare.products import TIME_WINDOW_S, gather_candidates
 from geovap.io.images import load_pano_rgb
 
@@ -117,7 +119,7 @@ def _photo_edges(poses: Poses, k: int, vmask):
 
 
 def sharpness(poses: Poses, k: int) -> float:
-    g = cv2.cvtColor(load_pano_rgb(poses.path(k)), cv2.COLOR_RGB2GRAY)
+    g = cv2.cvtColor(load_pano_rgb(pano_path(poses, k)), cv2.COLOR_RGB2GRAY)
     g = cv2.resize(g, (2000, 1000), interpolation=cv2.INTER_AREA)
     band = g[int(1000 * 60 / 180) : int(1000 * 125 / 180)]
     return float(cv2.Laplacian(band, cv2.CV_32F).var())
@@ -132,7 +134,7 @@ def _init(poses_source=None):
     from geovap.stages.prepare.masks import VehicleMask
 
     _G["poses"] = load_poses(poses_source)
-    _G["store"] = open_store(_G["poses"])  # registered cloud when poses carries a "registration"
+    _G["store"] = open_store(poses=_G["poses"])  # registered cloud when poses carries a "registration"
     _G["fi"] = FrameIndex(_G["poses"])
     _s = _settings.get()
     _mask_path = _s.workspace.vehicle_mask
@@ -276,7 +278,7 @@ def run(workers: int = 10, run_tag: str | None = "tw45", out_dir: Path | None = 
     if limit is not None:
         jobs = jobs[:limit]
     if jobs:
-        open_store(poses).drop_cache((_settings.get().workspace.frames_dir(poses),))
+        open_store(poses=poses).drop_cache((_settings.get().workspace.frames_dir(poses),))
         with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool, open(jl, "a") as f:
             for r in tqdm(pool.imap_unordered(_job, jobs, chunksize=2), total=len(jobs), desc="frames"):
                 done[r.frame] = r
@@ -319,14 +321,12 @@ def write_tile_summary(csv_path: Path, poses_source: str | None, out_path: Path)
     tile_summary.json: {"tiles": [[name, n_near, n_clean, n_unverified, n_usable, n_reject], ...]}.
     Reconstructed from an ad hoc script (no such generator existed before); matches
     dataset/export_baseline/tile_summary.json byte-for-byte on the export csv."""
-    from .cloud_store import _load_layout
-
     d = _read_quality_csv(csv_path)
     poses = load_poses(poses_source)
     if not np.array_equal(d["frame"], np.arange(len(poses))):
         raise ValueError(f"{csv_path}: frame column must be 0..N-1 matching poses order")
     E, N = poses.origin[:, 0], poses.origin[:, 1]
-    layout = sorted(_load_layout(), key=lambda x: x[0])
+    layout = sorted(((ref.id.value, ref.ring) for ref in _settings.get().tiles.tiles() if ref.ring is not None), key=lambda x: x[0])
     tiles = []
     for name, ring in layout:
         xmin, ymin = ring.min(axis=0)
@@ -347,12 +347,10 @@ def plot_quality(csv_path: Path, poses_source: str | None, map_path: Path, stats
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    from .cloud_store import _load_layout
-
     d = _read_quality_csv(csv_path)
     poses = load_poses(poses_source)
     E, N = poses.origin[:, 0], poses.origin[:, 1]
-    layout = _load_layout()
+    layout = [(ref.id.value, ref.ring) for ref in _settings.get().tiles.tiles() if ref.ring is not None]
 
     fig, ax = plt.subplots(figsize=(14, 11))
     for name, ring in layout:

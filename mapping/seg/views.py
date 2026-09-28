@@ -18,12 +18,15 @@ import numpy as np
 from geovap.domain.model import geometry
 from ..config import PANO_H, PANO_W, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.domain.scheme import classes as C
-from .areas import SEGDS_DIR
-from .render_labels import LABELS_DIR, frames_arg
+from .areas import segds_dir
+from .render_labels import labels_dir, frames_arg
 
-VIEWS_DIR = SEGDS_DIR / "views"
+def views_dir() -> Path:
+    return segds_dir() / "views"
+
 VIEW_SIZE = 1024
 FOV = 90.0
 # ring (8) + down ring (4, roads) + up ring (4, offset by 45 deg): the +35..+45 deg band at the ring seams is
@@ -120,11 +123,12 @@ def _init(poses_source=None):
     _G["fi"] = FrameIndex(_G["poses"])
 
 
-def export_frame(k: int, poses=None, fi=None, size: int = VIEW_SIZE, out_dir: Path = VIEWS_DIR, with_labels: bool = True) -> dict:
+def export_frame(k: int, poses=None, fi=None, size: int = VIEW_SIZE, out_dir: Path | None = None, with_labels: bool = True) -> dict:
+    out_dir = views_dir() if out_dir is None else out_dir
     poses = poses or _G["poses"]
     fi = fi or _G["fi"]
-    photo = cv2.imread(poses.path(k))
-    lab = cv2.imread(str(LABELS_DIR / f"f{k:04d}.png"), 0) if with_labels else None
+    photo = cv2.imread(pano_path(poses, k))
+    lab = cv2.imread(str(labels_dir() / f"f{k:04d}.png"), 0) if with_labels else None
     R_lev = level_rotation(poses, k)
     stats = {}
     for view in VIEWS:
@@ -143,10 +147,10 @@ def _work(k):
     return export_frame(k)
 
 
-def build(frames: str = "clean", workers: int = 8, limit: int | None = None, out_dir: Path = VIEWS_DIR, poses_source: str | None = None) -> None:
+def build(frames: str = "clean", workers: int = 8, limit: int | None = None, out_dir: Path | None = None, poses_source: str | None = None) -> None:
     (out_dir / "images").mkdir(parents=True, exist_ok=True)
     (out_dir / "labels").mkdir(parents=True, exist_ok=True)
-    ks = [k for k in frames_arg(frames) if (LABELS_DIR / f"f{k:04d}.png").exists()][:limit]
+    ks = [k for k in frames_arg(frames) if (labels_dir() / f"f{k:04d}.png").exists()][:limit]
     res = []
     with Pool(workers, initializer=_init, initargs=(poses_source,)) as pool:
         for i, r in enumerate(pool.imap_unordered(_work, ks, chunksize=2)):

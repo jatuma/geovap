@@ -189,6 +189,56 @@ def _print_report(report: dict) -> None:
 
 
 # ------------------------------------------------------------------------------------------ stage
+def checks_for(s: "Settings", poses, tile_refs, tile_errors: dict[str, str] | None = None) -> dict[str, dict]:
+    """Every soft check, each individually fault-tolerant: one unreadable input yields one failed
+    check, never a traceback, because the whole point is to list everything wrong in a single pass.
+
+    Public because `geovap doctor` runs exactly these. A doctor that disagreed with the stage --
+    passing where the stage then fails -- would be worse than no doctor at all.
+    """
+    tile_errors = tile_errors or {}
+    checks: dict[str, dict] = {
+        "frames_vs_panoramas": _check(lambda: _check_frames_vs_panoramas(s, poses)),
+        "pose_time_span": _check(lambda: _check_pose_time_span(poses)),
+        "tiles_extent": _check(lambda: _check_tiles_extent(tile_refs)),
+        "crs": _check(lambda: {"epsg": s.crs.epsg, "proj4": s.crs.proj4, "axes": s.crs.axes}),
+        "reference_coverage": _check(lambda: _check_reference_coverage(s)),
+        "disk_free": _check(lambda: _check_disk_free(s)),
+        "cuda": _check(_check_cuda),
+    }
+    checks["tile_headers"] = (
+        {"ok": False, "unreadable": tile_errors, "n_unreadable": len(tile_errors), "n_tiles": len(tile_refs)}
+        if tile_errors else {"ok": True, "n_tiles": len(tile_refs)}
+    )
+    return checks
+
+
+def checks(s: "Settings") -> dict[str, dict]:
+    """`checks_for` with the inputs resolved, each failure contained. Writes nothing -- this is what
+    `geovap doctor` calls."""
+    try:
+        poses = s.poses.load()
+    except Exception as e:  # noqa: BLE001
+        poses = None
+        loaded = {"ok": False, "error": f"cannot load poses: {type(e).__name__}: {e}"}
+    else:
+        loaded = {"ok": True, "n_frames": len(poses)}
+    try:
+        tile_refs = s.tiles.tiles()
+    except Exception as e:  # noqa: BLE001
+        tile_refs = []
+        tiles_ok = {"ok": False, "error": f"cannot list tiles: {type(e).__name__}: {e}"}
+    else:
+        tiles_ok = {"ok": bool(tile_refs), "n_tiles": len(tile_refs)}
+        if not tile_refs:
+            tiles_ok["error"] = "dataset has no tiles -- nothing to build a store from"
+
+    out = {"poses_load": loaded, "tiles_list": tiles_ok}
+    if poses is not None and tile_refs:
+        out.update(checks_for(s, poses, tile_refs))
+    return out
+
+
 class Ingest:
     spec = StageSpec(
         name="ingest", after=(), est_min=2,
@@ -274,19 +324,7 @@ class Ingest:
         }
 
         # -- soft checks: each individually fault-tolerant ----------------------------------------
-        checks: dict[str, dict] = {
-            "frames_vs_panoramas": _check(lambda: _check_frames_vs_panoramas(s, poses)),
-            "pose_time_span": _check(lambda: _check_pose_time_span(poses)),
-            "tiles_extent": _check(lambda: _check_tiles_extent(tile_refs)),
-            "crs": _check(lambda: {"epsg": s.crs.epsg, "proj4": s.crs.proj4, "axes": s.crs.axes}),
-            "reference_coverage": _check(lambda: _check_reference_coverage(s)),
-            "disk_free": _check(lambda: _check_disk_free(s)),
-            "cuda": _check(_check_cuda),
-        }
-        checks["tile_headers"] = (
-            {"ok": False, "unreadable": tile_errors, "n_unreadable": len(tile_errors), "n_tiles": n_tiles}
-            if tile_errors else {"ok": True, "n_tiles": n_tiles}
-        )
+        checks = checks_for(s, poses, tile_refs, tile_errors)
 
         failed_checks = sorted(k for k, v in checks.items() if not v.get("ok", True))
 

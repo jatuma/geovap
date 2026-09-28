@@ -12,10 +12,11 @@ from pathlib import Path
 
 import numpy as np
 
-from ..cloud_store import CloudStore
+from geovap.runtime.store import open_store
 from ..config import DEG_PER_PX, OUT_DIR
 from geovap.domain.model.frames import FrameIndex
-from ..poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.model.rig import IDENTITY, RigModel
 from . import icp as I
 
@@ -48,8 +49,8 @@ def run(n_frames: int = 120, n_points: int = 30_000, free=("omega", "phi", "kapp
 
     out = Path(out_dir) / tag
     out.mkdir(parents=True, exist_ok=True)
-    store = CloudStore()
     poses = load_poses()
+    store = open_store(poses=poses)
     fi = FrameIndex(poses, IDENTITY)
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask

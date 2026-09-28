@@ -18,14 +18,14 @@ import numpy as np
 from scipy import ndimage
 
 from ..config import ZB_H, ZB_W
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.stages.prepare.products import load_products
 from geovap.domain.scheme import classes as C
 from geovap.domain.scheme import taxonomy as T
-from .bench import BENCH_DIR, DATASET_SEG_DIR
+from .bench import bench_dir, DATASET_SEG_DIR
 from .dataset import BAND_ROWS
 from .models import SPECS
-from .render_labels import BANDS_DIR, BAND_NAMES, LABELS_DIR
+from .render_labels import bands_dir, BAND_NAMES, labels_dir
 
 OUT_DIR = DATASET_SEG_DIR / "bench"
 NC = len(T.COMMON)
@@ -107,16 +107,16 @@ def evaluate_model(tag: str, frames: list[int], lut: np.ndarray, W: np.ndarray, 
     r0, r1 = BAND_ROWS
     n_no_gt = 0
     for k in frames:
-        pp = BENCH_DIR / tag / f"f{k:04d}_common.png"
+        pp = bench_dir() / tag / f"f{k:04d}_common.png"
         if not pp.exists():
             continue
-        if not (LABELS_DIR / f"f{k:04d}.png").exists() or not (BANDS_DIR / f"f{k:04d}.png").exists():
+        if not (labels_dir() / f"f{k:04d}.png").exists() or not (bands_dir() / f"f{k:04d}.png").exists():
             n_no_gt += 1  # frame not in this pose source's clean set -> no pseudo-GT rendered for it
             continue
         n_frames += 1
         pred = cv2.imread(str(pp), 0)
-        gt_raw = cv2.imread(str(LABELS_DIR / f"f{k:04d}.png"), 0)
-        bands = cv2.imread(str(BANDS_DIR / f"f{k:04d}.png"), 0)
+        gt_raw = cv2.imread(str(labels_dir() / f"f{k:04d}.png"), 0)
+        bands = cv2.imread(str(bands_dir() / f"f{k:04d}.png"), 0)
         gt = lut[gt_raw]
         band_rows = np.zeros((ZB_H, ZB_W), bool)
         band_rows[r0:r1] = True
@@ -199,7 +199,7 @@ def _f(x) -> float | None:
 
 
 def timing(tag: str) -> dict:
-    p = BENCH_DIR / tag / "timing.csv"
+    p = bench_dir() / tag / "timing.csv"
     if not p.exists():
         return {}
     rows = list(csv.DictReader(p.open()))
@@ -224,7 +224,7 @@ def run(tags: list[str], frames: list[int], poses_source: str | None = None, out
     subsets = {"all": frames, "nf_ok": [k for k in frames if nearfield.is_bad(nf.get(k)) is False]}
     results = {}
     for tag in tags:
-        if not (BENCH_DIR / tag).exists():
+        if not (bench_dir() / tag).exists():
             print(f"[{tag}] no predictions, skipped")
             continue
         r = evaluate_model(tag, subsets["all"], lut, W, poses)

@@ -20,13 +20,15 @@ from pathlib import Path
 
 import numpy as np
 
-from ..cloud_store import CloudStore, open_store
-from ..poses import load_poses
+from geovap.runtime.store import CloudStore, open_store
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.scheme import classes as C
-from .areas import SEGDS_DIR
+from .areas import segds_dir
 from .rasters import Rasters
 
-LABEL_DIR = SEGDS_DIR / "point_labels"
+def label_dir() -> Path:
+    return segds_dir() / "point_labels"
+
 CHUNK = 5_000_000
 
 _R: Rasters | None = None
@@ -87,7 +89,7 @@ def _init(root, poses_source=None):
     _R = Rasters(root)
     # registered cloud: the rasters (see `rasters.build`) are built from the same registered
     # positions, so points must be compared against them at those positions too.
-    _STORE = open_store(load_poses(poses_source))
+    _STORE = open_store(poses=load_poses(poses_source))
 
 
 def _label_tile(name: str) -> tuple[str, np.ndarray]:
@@ -98,14 +100,15 @@ def _label_tile(name: str) -> tuple[str, np.ndarray]:
         rows = slice(s, min(n, s + CHUNK))
         out[rows] = label_points(td.xyz_m(rows), _R)
     td.release()
-    LABEL_DIR.mkdir(parents=True, exist_ok=True)
-    np.save(LABEL_DIR / f"{name}.npy", out)
+    label_dir().mkdir(parents=True, exist_ok=True)
+    np.save(label_dir() / f"{name}.npy", out)
     return name, np.bincount(out, minlength=256)
 
 
-def build(workers: int = 4, out_dir: Path = LABEL_DIR, poses_source: str | None = None) -> dict:
+def build(workers: int = 4, out_dir: Path | None = None, poses_source: str | None = None) -> dict:
+    out_dir = label_dir() if out_dir is None else out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    store = open_store(load_poses(poses_source))
+    store = open_store(poses=load_poses(poses_source))
     names = [t.name for t in store.tiles]
     hist = np.zeros(256, np.int64)
     with Pool(workers, initializer=_init, initargs=(Rasters().root, poses_source)) as pool:
@@ -125,7 +128,8 @@ def build(workers: int = 4, out_dir: Path = LABEL_DIR, poses_source: str | None 
 class PointLabels:
     """Per-tile memmaps aligned with the store; `at(point_id)` for global ids."""
 
-    def __init__(self, store: CloudStore, root: Path = LABEL_DIR):
+    def __init__(self, store: CloudStore, root: Path | None = None):
+        root = label_dir() if root is None else root
         self.store = store
         self.arrays = [np.load(Path(root) / f"{t.name}.npy", mmap_mode="r") for t in store.tiles]
 

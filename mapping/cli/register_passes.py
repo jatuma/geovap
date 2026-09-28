@@ -24,7 +24,7 @@ import numpy as np
 
 import mapping.pass_reg as pr
 from geovap.domain.model.frames import FrameIndex
-from mapping.poses import load_poses, write_pose_table
+from geovap.runtime.pose_tables import load as load_poses, write as write_pose_table
 
 PASS_REG_DIR = pr.PASS_REG_DIR
 

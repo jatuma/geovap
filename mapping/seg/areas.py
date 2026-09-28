@@ -22,21 +22,39 @@ from shapely.geometry import LineString, Point, Polygon, mapping
 from shapely.ops import polygonize_full, unary_union
 from shapely.strtree import STRtree
 
-from .. import compat
-from ..config import CACHE_ROOT, source_dir
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.domain.scheme import classes as C
 
-# The segds root is pose-source aware: byte-identical to today (SEGDS_ROOT) for the default
-# "export" pose table (env GEOVAP_POSES unset -- the regression anchor), a hash-suffixed sibling
-# for a corrected one, so a corrected-poses run's ERP labels/views/bench outputs (which pass
-# through per-frame products, hence the pose table) never land in the same tree as the export
-# ones. Face/point rasters here are cloud-only (not pose-dependent) but still live under this same
-# root for a single, consistent segds tree per run. Resolved once at import time, like
-# `config.POSES_SOURCE` -- set GEOVAP_POSES before importing `mapping.seg.*`.
-SEGDS_ROOT = CACHE_ROOT / "segds"
-SEGDS_DIR = source_dir(SEGDS_ROOT, load_poses())
-AREAS_DIR = SEGDS_DIR / "areas"
+# The segds root is pose-source aware: byte-identical to the plain root for the default "export"
+# pose table (the regression anchor), a hash-suffixed sibling for a corrected one, so a
+# corrected-poses run's ERP labels/views/bench outputs -- which pass through per-frame products,
+# hence the pose table -- never land in the same tree as the export ones. Face/point rasters here
+# are cloud-only (not pose-dependent) but still live under this same root, for a single consistent
+# segds tree per run.
+#
+# These are FUNCTIONS, not constants. They used to be resolved once at import time, which is
+# precisely what made the old code unable to choose a dataset from the command line: importing
+# `mapping.seg.areas` read a pose table, so by the time argparse ran the answer was already fixed --
+# and on a machine with no dataset configured, merely importing the module raised.
+
+
+def segds_root(s=None) -> Path:
+    from geovap.runtime import settings
+
+    return (s or settings.get()).workspace.segds
+
+
+def segds_dir(s=None) -> Path:
+    from geovap.runtime import settings
+
+    s = s or settings.get()
+    return s.workspace.source_dir(segds_root(s), load_poses(s=s))
+
+
+def areas_dir(s=None) -> Path:
+    return segds_dir(s) / "areas"
+
+
 PRECISION_M = 0.01
 
 
@@ -59,10 +77,10 @@ class Face:
 
 
 def load_objects():
-    compat.ensure_experiments_on_path()
-    from common import io_data
+    from geovap.runtime import settings
 
-    return io_data.load_jvf_objects()
+    ref = settings.get().reference
+    return ref.objects() if ref is not None else []
 
 
 def boundary_lines(objects, all_lines: bool = False) -> list[LineString]:
@@ -70,7 +88,7 @@ def boundary_lines(objects, all_lines: bool = False) -> list[LineString]:
     for o in objects:
         if o.geom_type not in ("LineString", "Polygon") or len(o.coords) < 2:
             continue
-        if not all_lines and o.jvfcode not in C.HARD_BOUNDARY_CODES:
+        if not all_lines and o.code not in C.HARD_BOUNDARY_CODES:
             continue
         xy = o.coords[:, :2]
         if o.geom_type == "Polygon" and not np.allclose(xy[0], xy[-1]):
@@ -83,7 +101,7 @@ def boundary_lines(objects, all_lines: bool = False) -> list[LineString]:
 
 def definition_points(objects) -> list[tuple[str, Point]]:
     """(jvf base code, point) of area definition points: Point geometries whose code is an area code."""
-    return [(o.jvfcode, Point(o.coords[0, :2])) for o in objects if o.geom_type == "Point" and o.jvfcode in C.AREA_CLASS]
+    return [(o.code, Point(o.coords[0, :2])) for o in objects if o.geom_type == "Point" and o.code in C.AREA_CLASS]
 
 
 def polygonize_faces(lines: list[LineString], precision_m: float = PRECISION_M) -> tuple[list[Face], dict]:
@@ -159,7 +177,8 @@ def _inherit_slivers(faces: list[Face]) -> None:
                 break
 
 
-def build(all_lines: bool = True, out_dir: Path = AREAS_DIR, objects=None) -> tuple[list[Face], dict]:
+def build(all_lines: bool = True, out_dir: Path | None = None, objects=None) -> tuple[list[Face], dict]:
+    out_dir = areas_dir() if out_dir is None else out_dir
     objects = objects if objects is not None else load_objects()
     lines = boundary_lines(objects, all_lines)
     faces, stats = polygonize_faces(lines)
@@ -215,7 +234,8 @@ def write_geojson(faces: list[Face], path: Path) -> None:
     path.write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
 
 
-def load_faces(path: Path = AREAS_DIR / "faces.geojson") -> list[Face]:
+def load_faces(path: Path | None = None) -> list[Face]:
+    path = areas_dir() / "faces.geojson" if path is None else path
     d = json.loads(Path(path).read_text())
     out = []
     for ft in d["features"]:

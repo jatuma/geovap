@@ -14,7 +14,7 @@ from skimage.registration import phase_cross_correlation
 
 from geovap.domain.model import geometry
 from ..config import DEG_PER_PX, OUT_DIR, PANO_H, PANO_W
-from ..poses import Poses
+from geovap.domain.model.poses import Poses
 from geovap.domain.model.rig import RigModel
 from .objective import OBJ_H, OBJ_W, CalibFrame, render_intensity
 
@@ -198,9 +198,9 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
     stitching-seam parallax: a periodic du(az) with ~5-6 sign flips whose amplitude grows with
     1/r. Returns the summary dict (also the `verdict`: "present" / "absent" / "inconclusive").
     """
-    from ..cloud_store import CloudStore
+    from geovap.runtime.store import open_store
     from geovap.domain.model.frames import FrameIndex
-    from ..poses import load_poses
+    from geovap.runtime.pose_tables import load as load_poses
     from geovap.domain.model.rig import IDENTITY
     from geovap.runtime import settings
     from geovap.stages.prepare.masks import VehicleMask
@@ -209,8 +209,8 @@ def residual_maps(n_frames: int = 120, seed: int = 0, n_points: int = 30_000, wi
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    store = CloudStore()
     poses = load_poses()
+    store = open_store(poses=poses)
     fi = FrameIndex(poses, IDENTITY)
     _s = settings.get()
     _mask_path = _s.workspace.vehicle_mask

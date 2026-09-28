@@ -22,10 +22,10 @@ from scipy.optimize import least_squares
 
 from geovap.domain.math import edges as edges_math
 from geovap.domain.model import geometry
-from ..cloud_store import CloudStore
+from geovap.runtime.store import CloudStore
 from ..config import DEG_PER_PX, PANO_H, PANO_W, R_MAX, R_MIN
 from geovap.domain.model.frames import FrameIndex
-from ..poses import Poses
+from geovap.domain.model.poses import Poses
 from geovap.domain.model.rig import RigModel
 from . import chamfer as Ch
 

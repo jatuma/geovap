@@ -1,6 +1,6 @@
 """C1: `las_out.write_tile`'s `xyz=` override, `product_rgb` uint16 passthrough and
-`verify(xyz_mode=...)`. Fully synthetic (a tiny hand-built LAZ + `cloud_store.build_tile`); no
-dependency on the real store."""
+`verify(xyz_mode=...)`. Fully synthetic (a tiny hand-built LAZ + `geovap.runtime.store.build_tile`);
+no dependency on the real store."""
 from __future__ import annotations
 
 import json
@@ -9,8 +9,8 @@ import laspy
 import numpy as np
 import pytest
 
-from mapping import cloud_store, las_out
-from mapping.cloud_store import SCALE, PassRegistration, TileData, TileInfo, build_tile
+from mapping import las_out
+from geovap.runtime.store import SCALE, PassRegistration, TileData, TileInfo, build_tile
 from geovap.domain.model.poses import Poses
 
 
@@ -38,17 +38,17 @@ def _write_source_laz(path, seed=0) -> None:
 
 
 @pytest.fixture
-def td(tmp_path, monkeypatch):
-    # `TileInfo.dir` resolves against the module-global `cloud_store.STORE_DIR` (not a per-instance
-    # root), so a synthetic tile must patch that global to its own tmp store to avoid reading the real
-    # cache's tile "037".
+def td(tmp_path):
+    # `TileInfo.dir` is derived from `TileInfo.root` (a per-instance field, not a global), so a
+    # synthetic tile just points that at its own tmp store.
     store_root = tmp_path / "store"
-    monkeypatch.setattr(cloud_store, "STORE_DIR", store_root)
     src = tmp_path / "ID3432_000037_JTSK.laz"
     _write_source_laz(src)
-    meta = build_tile(str(src), str(store_root / "tiles" / "037"))
+    meta = build_tile(str(src), str(store_root / "tiles" / "037"), 4.0, "037")
     meta["row_offset"] = 0
     meta.pop("classes", None)
+    meta["root"] = store_root
+    meta["cell_size"] = 4.0
     meta["polygon"] = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 0.0]])
     info = TileInfo(**meta)
     return TileData(info)

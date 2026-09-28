@@ -19,10 +19,11 @@ from scipy import ndimage
 
 from geovap.domain.model import geometry
 from geovap.domain.math import depth as zbuffer
-from ..cloud_store import CloudStore
+from geovap.runtime.store import CloudStore
 from ..config import GRAY_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SENSOR
 from geovap.domain.model.frames import FrameIndex
-from ..poses import Poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.panos import pano_path
 from geovap.domain.model.rig import RigModel
 from geovap.io.images import load_pano_rgb
 
@@ -62,7 +63,7 @@ def photo_luminance(poses: Poses, frame: int, w: int = OBJ_W, h: int = OBJ_H) ->
     if p.exists():
         g = np.load(p)
     else:
-        rgb = load_pano_rgb(poses.path(frame))
+        rgb = load_pano_rgb(pano_path(poses, frame))
         g = cv2.resize(cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY), (w, h), interpolation=cv2.INTER_AREA)
         np.save(p, g)
     return g.astype(np.float32) / 255.0

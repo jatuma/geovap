@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 
 from geovap.domain.model import geometry
-from mapping import compat
 from mapping.config import PANO_H, PANO_W
 from geovap.domain.model.poses import Poses
 from geovap.domain.model.rig import IDENTITY, RigModel
@@ -26,7 +25,6 @@ def _synthetic_poses(m: int, seed: int = 0) -> Poses:
 
 
 def test_forward_matches_camera_py_oracle():
-    compat.ensure_experiments_on_path()
     torch = pytest.importorskip("torch")
     from geovap.domain.math.camera_torch import world_to_panorama_px
 

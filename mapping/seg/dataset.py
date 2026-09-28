@@ -11,14 +11,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from ..cloud_store import open_store
+from geovap.runtime.store import open_store
 from ..config import QUALITY_CSV as _QUALITY_CSV
 from ..config import ZB_H
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
 from geovap.runtime.manifest import git_rev
 from geovap.domain.scheme import classes as C
-from .areas import SEGDS_DIR
-from .render_labels import BANDS_DIR, LABELS_DIR, clean_frames
+from .areas import segds_dir
+from .render_labels import bands_dir, labels_dir, clean_frames
 from .views import VIEW_SIZE, VIEWS
 from . import nearfield
 
@@ -35,11 +35,11 @@ MIN_LABELLED_FRAC = 0.15
 def frame_stats(frames: list[int]) -> dict[int, dict]:
     out = {}
     for k in frames:
-        lab = cv2.imread(str(LABELS_DIR / f"f{k:04d}.png"), 0)
+        lab = cv2.imread(str(labels_dir() / f"f{k:04d}.png"), 0)
         band = lab[BAND_ROWS[0] : BAND_ROWS[1]]
         c_full = np.bincount(lab.ravel(), minlength=256)
         c_band = np.bincount(band.ravel(), minlength=256)
-        bands = cv2.imread(str(BANDS_DIR / f"f{k:04d}.png"), 0)
+        bands = cv2.imread(str(bands_dir() / f"f{k:04d}.png"), 0)
         out[k] = {
             "counts_full": c_full[: C.N_CLASSES].tolist(),
             "counts_band": c_band[: C.N_CLASSES].tolist(),
@@ -50,7 +50,7 @@ def frame_stats(frames: list[int]) -> dict[int, dict]:
 
 
 def camera_tiles(poses, frames: list[int]) -> dict[int, str]:
-    store = open_store(poses)
+    store = open_store(poses=poses)
     tiles = {}
     for k in frames:
         e, n = poses.origin[k][:2]
@@ -148,7 +148,7 @@ def select_bench_frames(poses, frames: list[int], stats: dict, tiles: dict[int, 
 def build(out_dir: Path = DATASET_SEG_DIR, poses_source: str | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     poses = load_poses(poses_source)
-    frames = [k for k in clean_frames() if (LABELS_DIR / f"f{k:04d}.png").exists()]
+    frames = [k for k in clean_frames() if (labels_dir() / f"f{k:04d}.png").exists()]
     quality = {int(r["frame"]): r for r in csv.DictReader(QUALITY_CSV.open())}
     stats = frame_stats(frames)
     tiles = camera_tiles(poses, frames)
@@ -192,7 +192,7 @@ def build(out_dir: Path = DATASET_SEG_DIR, poses_source: str | None = None) -> d
         "per_frame": {str(k): {"tile": tiles[k], "pass": int(quality[k]["pass_id"]), "split": splits["frames"][k], "labelled_frac_band": round(stats[k]["labelled_frac_band"], 4), "nearfield_px": (nf.get(k) or {}).get("median_px"), "nearfield_bad": nf_flag[k], "counts_band": stats[k]["counts_band"], "band_px": stats[k]["band_px"]} for k in frames},
     }
     (out_dir / "stats.json").write_text(json.dumps(summary, indent=0))
-    write_readme(SEGDS_DIR / "README.md", summary, bench)
+    write_readme(segds_dir() / "README.md", summary, bench)
     print(json.dumps({k: v for k, v in summary.items() if k != "per_frame"}, indent=1)[:3000])
     return summary
 

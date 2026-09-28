@@ -15,7 +15,8 @@ from scipy.spatial.transform import Rotation
 from geovap.domain.model import geometry
 from mapping import config, pass_reg
 from mapping.cli.assemble_poses import META_COLS, assemble, overlay_refined, transform_trajectory
-from mapping.poses import Poses, load_poses, read_pose_table, write_pose_table
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses, read as read_pose_table, write as write_pose_table
 from mapping.trajectory import CamSensorRig, Trajectory
 from mapping.config import PANO_H, PANO_W
 
@@ -61,7 +62,7 @@ def test_write_read_round_trip(export_poses, tmp_path: Path):
     prov = json.loads(prov_path.read_text())
     assert prov["stage"] == "test"
     assert prov["poses_hash"] == p2.hash()
-    assert "git" in prov and "export_csv_sha1" in prov
+    assert "git" in prov and "pose_source_sha1" in prov
 
 
 def test_read_pose_table_attaches_registration(export_poses, tmp_path: Path):
@@ -316,7 +317,12 @@ def test_assemble_end_to_end(tmp_path: Path, monkeypatch):
     """Writes a self-contained synthetic base/refined/transforms input set (no cache dependency),
     runs `assemble()`, and checks: per-frame status combination, S4 pass-reassignment carried
     through, provenance chaining, and that the corrected table round-trips through `load_poses`."""
-    monkeypatch.setattr(config, "EXPORT_CSV", tmp_path / "no_such_export.csv")  # keep write_pose_table's sha1 lookup a harmless no-op
+    # keep write_pose_table's sha1 lookup a harmless no-op: `s.poses.source_file()` (the vendor
+    # export path) is made to point at a file that does not exist, same intent as the old
+    # `monkeypatch.setattr(config, "EXPORT_CSV", ...)` against the pre-refactor global.
+    from geovap.runtime import settings
+
+    monkeypatch.setattr(type(settings.get().poses), "source_file", lambda self: tmp_path / "no_such_export.csv")
 
     lin = _straight_line_poses(6, dt=1.0)
     lin.pass_id[3:] = 1  # frames 0-2 pass 0, frames 3-5 pass 1

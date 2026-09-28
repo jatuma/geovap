@@ -16,21 +16,28 @@ import cv2
 import numpy as np
 
 from .. import vectors
-from ..cloud_store import CloudStore, open_store
+from geovap.runtime.store import CloudStore, open_store
 from ..config import CLEAN_FRAMES_JSON, NO_POINT, PANO_H, PANO_W, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
 from geovap.runtime import settings
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.stages.prepare import render
 from geovap.stages.prepare.products import FrameProducts, load_products
 from geovap.stages.prepare.masks import VehicleMask
 from geovap.domain.scheme import classes as C
-from .areas import SEGDS_DIR, load_objects
+from .areas import segds_dir, load_objects
 from .point_labels import PointLabels
 
-LABELS_DIR = SEGDS_DIR / "labels_erp"
-BANDS_DIR = SEGDS_DIR / "bands_erp"
-QA_DIR = SEGDS_DIR / "qa"
+def labels_dir() -> Path:
+    return segds_dir() / "labels_erp"
+
+def bands_dir() -> Path:
+    return segds_dir() / "bands_erp"
+
+def qa_dir() -> Path:
+    return segds_dir() / "qa"
+
 CLEAN_JSON = CLEAN_FRAMES_JSON
 
 # JVF codes rasterised as evaluation bands (14 cm at range) -> band id
@@ -89,14 +96,14 @@ def render_one(k: int, store, pl, fi, vm_cells, objects, range_max: float, poses
     lab[vm_cells] = C.IGNORE
     bands, _occ = vectors.render_objects(objects, fi.R[k], fi.C[k], fp, BAND_IDS, scale=ZB_W / PANO_W, r_max=range_max)
     bands[vm_cells] = 0
-    cv2.imwrite(str(LABELS_DIR / f"f{k:04d}.png"), lab)
-    cv2.imwrite(str(BANDS_DIR / f"f{k:04d}.png"), bands)
+    cv2.imwrite(str(labels_dir() / f"f{k:04d}.png"), lab)
+    cv2.imwrite(str(bands_dir() / f"f{k:04d}.png"), bands)
     if write_qa:
-        photo = cv2.imread(poses.path(k))
+        photo = cv2.imread(pano_path(poses, k))
         pal = C.palette()[..., ::-1]  # BGR
         vis = render.overlay_on_photo(photo, pal[lab], lab != C.IGNORE, 0.55)
         vis[bands > 0] = (0.4 * vis[bands > 0] + np.array([0, 255, 255]) * 0.6).astype(np.uint8)
-        cv2.imwrite(str(QA_DIR / f"f{k:04d}.jpg"), vis, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        cv2.imwrite(str(qa_dir() / f"f{k:04d}.jpg"), vis, [cv2.IMWRITE_JPEG_QUALITY, 80])
     counts = np.bincount(lab.ravel(), minlength=256)
     band_counts = np.bincount(bands.ravel(), minlength=8)
     store.release()
@@ -105,7 +112,7 @@ def render_one(k: int, store, pl, fi, vm_cells, objects, range_max: float, poses
 
 def _init(range_max, poses_source=None):
     _G["poses"] = load_poses(poses_source)
-    _G["store"] = open_store(_G["poses"])  # registered cloud, consistent with the point_labels rasters
+    _G["store"] = open_store(poses=_G["poses"])  # registered cloud, consistent with the point_labels rasters
     _G["pl"] = PointLabels(_G["store"])
     _G["fi"] = FrameIndex(_G["poses"])
     _s = settings.get()
@@ -119,7 +126,7 @@ def _work(k: int) -> dict:
 
 
 def build(frames: str = "clean", workers: int = 6, limit: int | None = None, range_max: float = C.RULES["range_max_m"], poses_source: str | None = None) -> list[dict]:
-    for d in (LABELS_DIR, BANDS_DIR, QA_DIR):
+    for d in (labels_dir(), bands_dir(), qa_dir()):
         d.mkdir(parents=True, exist_ok=True)
     ks = frames_arg(frames)[:limit]
     res = []
@@ -130,5 +137,5 @@ def build(frames: str = "clean", workers: int = 6, limit: int | None = None, ran
                 lab_frac = 1 - r["ignore"] / (ZB_H * ZB_W)
                 print(f"[{i + 1}/{len(ks)}] frame {r['frame']}: labelled {lab_frac:.2f}")
     res.sort(key=lambda r: r["frame"])
-    (SEGDS_DIR / "labels_erp_stats.json").write_text(json.dumps({"frames": res, "classes": [c.name for c in C.CLASSES], "bands": BAND_NAMES, "range_max_m": range_max}))
+    (segds_dir() / "labels_erp_stats.json").write_text(json.dumps({"frames": res, "classes": [c.name for c in C.CLASSES], "bands": BAND_NAMES, "range_max_m": range_max}))
     return res

@@ -43,7 +43,7 @@ QUALITY_CSV = BASELINE_DIR / "frame_quality.csv"
 POTREE_OUTPUT_DIR = Path(os.environ.get("POTREE_OUTPUT", "/home/jatuma/repos/Geovap/potree_output"))  # fast local drive since 2026-09-17; /mnt (slow) holds the cache
 
 # pose source: "export" (default, the regression anchor) or a corrected pose-table name/path.
-# override with env GEOVAP_POSES; see mapping/poses.py:load_poses.
+# override with env GEOVAP_POSES; see geovap.runtime.pose_tables.load.
 POSES_SOURCE = os.environ.get("GEOVAP_POSES", "export")
 
 # panorama
@@ -98,7 +98,7 @@ def source_dir(base: Path, poses) -> Path:
     """Per-pose-source output root: `base` itself for the default "export" pose table (byte-identical
     paths, the regression anchor), a hash-suffixed sibling directory for any corrected one, so a
     corrected run's outputs never overwrite (or mix with) the export ones. `poses` is any object with
-    `.source` and `.hash()` (a `mapping.poses.Poses`); mirrors `geovap.runtime.workspace.Workspace.frames_dir`."""
+    `.source` and `.hash()` (a `geovap.domain.model.poses.Poses`); mirrors `geovap.runtime.workspace.Workspace.frames_dir`."""
     base = Path(base)
     if poses.source == "export":
         return base

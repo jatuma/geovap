@@ -2,20 +2,31 @@
 import numpy as np
 import pytest
 
-from mapping import config
-from mapping.cloud_store import SCALE, CloudStore
+from geovap.runtime import settings
+from geovap.runtime.store import SCALE, CloudStore
 
 
 @pytest.fixture(scope="module")
 def store():
-    if not (config.STORE_DIR / "tiles.json").exists():
-        pytest.skip("store not built")
-    return CloudStore()
+    # Guard and open the SAME path. Guarding on one root and opening another is how this test
+    # started erroring instead of skipping when the workspace moved.
+    root = settings.get().workspace.store
+    if not (root / "tiles.json").exists():
+        pytest.skip(f"store not built at {root}")
+    return CloudStore(root)
 
 
 def test_total_count(store):
-    assert store.total == config.EXPECTED_TOTAL_POINTS
-    assert len(store.tiles) == 38
+    """The total is checked against what `ingest` MEASURED for this dataset, not against a literal.
+    `config.py` asserted 584 809 840 -- Dražkov's own point count, which no second dataset can
+    satisfy and which a product cannot ship as a constant."""
+    from geovap.runtime.manifest import RunManifest
+
+    assert store.total == sum(t.n for t in store.tiles)
+    measured = RunManifest.load(settings.get().workspace)
+    if measured is not None and measured.total_points is not None:
+        assert store.total == measured.total_points
+        assert len(store.tiles) == measured.n_tiles
     offs = [t.row_offset for t in store.tiles]
     assert offs == sorted(offs) and offs[0] == 0
 

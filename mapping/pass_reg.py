@@ -10,7 +10,7 @@ Pipeline: `extract_patches` (planar voxels + curb break-lines, cached per pass) 
 (pairwise 4-DoF point-to-plane ICP between passes whose frame origins come close) and `jvf_offset`
 (own-pass curbs vs the JVF road-boundary polylines, the absolute datum) -> `solve_global` (a small
 linear pose graph over 30 nodes) -> `pass_transforms.json`. Application: `CloudStore(registration=...)`
-on the cloud side (see `cloud_store.py`), `apply_pass_transforms` here on the pose side.
+on the cloud side (see `geovap.runtime.store`), `apply_pass_transforms` here on the pose side.
 
 Curb corridor (see `CURB_JVF_CORRIDOR_M`): `_curb_points` is a generic ground height-jump detector run
 over each pass' whole (80 m-padded) bbox, which on this rural dataset picks up plough-furrow and field
@@ -49,11 +49,12 @@ from scipy.optimize import least_squares
 from scipy.spatial import cKDTree
 
 from geovap.domain.model import geometry
-from . import compat
-from .cloud_store import CloudStore, STORE_DIR
-from .config import JVF_GEOJSON, OUT_DIR, PANO_H, PANO_W, POSES_DIR, ZB_H, ZB_W
+from geovap.runtime.store import CloudStore
+from .config import OUT_DIR, PANO_H, PANO_W, POSES_DIR, STORE_DIR, ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
-from .poses import Poses, load_poses
+from geovap.domain.model.poses import Poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.stages.prepare.products import FrameProducts
 
 PASS_REG_DIR = OUT_DIR / "pass_reg"
@@ -301,7 +302,7 @@ def _load_pass_psid() -> dict:
 
 def _extract_one(args) -> tuple[int, dict]:
     pass_id, store_root, use_psid = args
-    from .poses import load_poses as _lp
+    from geovap.runtime.pose_tables import load as _lp
 
     poses = _lp()
     store = CloudStore(store_root)
@@ -446,11 +447,13 @@ def overlap_pairs(poses: Poses) -> list[tuple[int, int]]:
 # ---------------------------------------------------------------------------------------- JVF datum
 def load_road_boundary() -> list[np.ndarray]:
     """3D polylines (E,N,H) of the JVF road-boundary code, own object list (cached process-wide)."""
-    compat.ensure_experiments_on_path()
-    from common import io_data
+    from geovap.runtime import settings
 
-    objs = io_data.load_jvf_objects(str(JVF_GEOJSON))
-    return [o.coords for o in objs if o.jvfcode == ROAD_BOUNDARY_CODE and o.geom_type == "LineString" and len(o.coords) >= 2]
+    ref = settings.get().reference
+    if ref is None:
+        return []
+    objs = ref.objects()
+    return [o.coords for o in objs if o.code == ROAD_BOUNDARY_CODE and o.geom_type == "LineString" and len(o.coords) >= 2]
 
 
 RESAMPLE_STEP_M = 0.1  # dense resampling of the JVF polylines for the nearest-sample KD-tree
@@ -590,7 +593,7 @@ def _photo_edge_dist(poses: Poses, k: int, rows: tuple[int, int] = PHOTO_ROWS, m
     same computation as `mapping.seg.nearfield.band_edge_distance`, plus the component-size filter
     above; factored out so a per-frame result can be reused across every (dE, dN) grid point instead
     of being recomputed for each one."""
-    photo = cv2.imread(poses.path(k))
+    photo = cv2.imread(pano_path(poses, k))
     photo = cv2.resize(photo, (ZB_W, ZB_H), interpolation=cv2.INTER_AREA)
     g = cv2.GaussianBlur(cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY), (3, 3), 0)
     edges = (cv2.Canny(g, 40, 100) > 0).astype(np.uint8)

@@ -11,3 +11,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 only-include = ["geovap"]
+# `geovap/infra` is Dockerfiles, an nginx config and viewer HTML -- not Python, and hatchling would
+# drop them from the wheel. They ship because `geovap publish` builds the octree and serves the
+# viewer from them; a delivery install without them can convert nothing.
+artifacts = [
+    "geovap/infra/containers/*",
+    "geovap/infra/viewer/**/*",
+    "geovap/infra/shots/*",
+]

@@ -1,5 +1,5 @@
 """WIRE: pose-source-aware output paths and registration wiring (config.source_dir,
-geovap.stages.prepare.products.load_products, cloud_store.open_store).
+geovap.stages.prepare.products.load_products, geovap.runtime.store.open_store).
 
 Synthetic poses only -- no cache dependency (no export.csv, no store, no frame products on disk).
 Proves the contract that matters for the whole WIRE change: the default ("export", GEOVAP_POSES
@@ -17,7 +17,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mapping import cloud_store, config
+from mapping import config
+from geovap.runtime import store as store_mod
 from geovap.stages.prepare import products
 from geovap.domain.model.poses import Poses
 from geovap.domain.model.rig import IDENTITY
@@ -78,7 +79,7 @@ def test_source_dir_corrected_hash_matches_frames_dir_scheme():
     assert ws.frames_dir(CORRECTED).name == CORRECTED.hash()[:6]
 
 
-# ------------------------------------------------------------------------------------- cloud_store.open_store
+# ------------------------------------------------------------------------------------- store.open_store
 class _RecordingCloudStore:
     """Stand-in for CloudStore that records its constructor args instead of touching disk."""
 
@@ -90,24 +91,24 @@ class _RecordingCloudStore:
 
 @pytest.fixture(autouse=True)
 def _patch_cloud_store(monkeypatch):
-    monkeypatch.setattr(cloud_store, "CloudStore", _RecordingCloudStore)
+    monkeypatch.setattr(store_mod, "CloudStore", _RecordingCloudStore)
     yield
 
 
 def test_open_store_none_poses_is_unregistered():
-    store = cloud_store.open_store(None, root=Path("/fake/store"))
+    store = store_mod.open_store(_FakeSettings(Path("/fake")), None)
     assert isinstance(store, _RecordingCloudStore)
     assert store.last_kwargs["registration"] is None
     assert store.last_kwargs["root"] == Path("/fake/store")
 
 
 def test_open_store_export_poses_is_unregistered():
-    cloud_store.open_store(EXPORT, root=Path("/fake/store"))
+    store_mod.open_store(_FakeSettings(Path("/fake")), EXPORT)
     assert _RecordingCloudStore.last_kwargs["registration"] is None
 
 
 def test_open_store_corrected_poses_passes_registration():
-    cloud_store.open_store(CORRECTED, root=Path("/fake/store"))
+    store_mod.open_store(_FakeSettings(Path("/fake")), CORRECTED)
     assert _RecordingCloudStore.last_kwargs["registration"] == CORRECTED.registration
     assert _RecordingCloudStore.last_kwargs["root"] == Path("/fake/store")
 

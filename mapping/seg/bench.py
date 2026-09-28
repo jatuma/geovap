@@ -18,23 +18,27 @@ import torch
 
 from ..config import ZB_H, ZB_W
 from geovap.domain.model.frames import FrameIndex
-from ..poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.domain.scheme import taxonomy as T
-from .areas import SEGDS_ROOT
+from .areas import segds_root
 from .fusion import fuse, to_common
 from .models import SPECS, SegModel
 from .views import VIEWS, VIEW_SIZE, extract_image, level_rotation, view_to_pano_maps
 
 # Pose-independent: a 2D prediction depends only on the photo (and the rig's fixed leveling
 # rotation), never on the panorama's position/pose-correction state, so bench predictions always
-# live under the export root (SEGDS_ROOT), not the pose-source-aware SEGDS_DIR (mapping.config.source_dir) -
+# live under the export root (segds_root()), not the pose-source-aware segds_dir() (mapping.config.source_dir) -
 # unlike areas/point_labels/labels_erp/... which are derived from the pose-dependent point cloud.
-BENCH_DIR = SEGDS_ROOT / "bench"
+def bench_dir() -> Path:
+    return segds_root() / "bench"
+
 DATASET_SEG_DIR = Path(__file__).resolve().parents[2] / "dataset" / "seg"
 
 
-def missing_predictions(tag: str, frames: list[int], out_root: Path = BENCH_DIR) -> list[int]:
+def missing_predictions(tag: str, frames: list[int], out_root: Path | None = None) -> list[int]:
     """Frames in `frames` that don't yet have a `f%04d_common.png` prediction for `tag`."""
+    out_root = bench_dir() if out_root is None else out_root
     out = out_root / tag
     return [k for k in frames if not (out / f"f{k:04d}_common.png").exists()]
 
@@ -61,7 +65,7 @@ def segment_frame(model: SegModel, photo_bgr: np.ndarray, R_cam: np.ndarray, R_l
     return native.cpu().numpy(), cmn.cpu().numpy(), conf.cpu().numpy(), cov.cpu().numpy()
 
 
-def run(tags: list[str], frames: list[int], out_root: Path = BENCH_DIR, amp: bool = True, skip_existing: bool = True, poses_source: str | None = None) -> None:
+def run(tags: list[str], frames: list[int], out_root: Path | None = None, amp: bool = True, skip_existing: bool = True, poses_source: str | None = None) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     poses = load_poses(poses_source)
     fi = FrameIndex(poses)
@@ -85,7 +89,7 @@ def run(tags: list[str], frames: list[int], out_root: Path = BENCH_DIR, amp: boo
             for i, k in enumerate(frames):
                 if k in done:
                     continue
-                photo = cv2.imread(poses.path(k))
+                photo = cv2.imread(pano_path(poses, k))
                 torch.cuda.reset_peak_memory_stats() if device.type == "cuda" else None
                 t1 = time.time()
                 native, cmn, conf, cov = segment_frame(model, photo, fi.R[k], level_rotation(poses, k))

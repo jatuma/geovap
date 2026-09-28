@@ -19,21 +19,26 @@ _ENV_DEFAULTS = {
 }
 
 
+# Ensure the three dataset roots are set for the whole session -- at IMPORT time, not inside a
+# fixture. A few `mapping/seg` modules still resolve `geovap.runtime.settings.get()` at their own
+# import time (a pre-existing anti-pattern, e.g. `mapping.seg.areas.segds_dir()`), and pytest imports
+# every test module during collection, before any fixture -- even an autouse, session-scoped one --
+# has run. Without this, importing such a module during collection raises `DescriptorError:
+# ${GEOVAP_DATA} is not set` -- correct behaviour for a product, unhelpful for a unit test that only
+# wanted a filename template. Values already exported by the developer (pointing at the real
+# dataset) are left alone, so `-m slow` still runs against it.
+_tmp_dataset_root = tempfile.mkdtemp(prefix="geovap-test-roots-")
+_added_dataset_env = [k for k in _ENV_DEFAULTS if not os.environ.get(k)]
+for _k in _added_dataset_env:
+    os.environ[_k] = _tmp_dataset_root
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _dataset_env():
-    """Ensure the three dataset roots are set for the whole session.
-
-    Without this, importing any module that calls `settings.get()` raises `DescriptorError:
-    ${GEOVAP_DATA} is not set` -- correct behaviour for a product, unhelpful for a unit test that
-    only wanted a filename template. Values already exported by the developer (pointing at the real
-    dataset) are left alone, so `-m slow` still runs against it.
-    """
-    tmp = tempfile.mkdtemp(prefix="geovap-test-roots-")
-    added = [k for k in _ENV_DEFAULTS if not os.environ.get(k)]
-    for k in added:
-        os.environ[k] = tmp
+    """The env defaulting itself happens at import time above; this fixture only provides the
+    session-scoped teardown and a name for `has_data` to depend on for ordering."""
     yield
-    for k in added:
+    for k in _added_dataset_env:
         os.environ.pop(k, None)
 
 

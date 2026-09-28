@@ -735,9 +735,9 @@ class Trajectory:
         `_linear_origin` below) -- i.e. exactly `Poses.interp`'s non-`traj` branch, never `S(t)`.
     The `lin_*` fields hold the export table's own per-frame (t, origin, roll, pitch, yaw, pass_id)
     (every frame, not just covered ones) so `_linear_origin` can rebuild a `traj=None` `Poses` on
-    demand after a save/load round trip, without this module depending on `mapping.poses` at import
-    time (mirrors `Poses.traj`'s loose typing the other way) or `poses.py` needing to know about
-    `Trajectory` internals."""
+    demand after a save/load round trip, without this module depending on `geovap.domain.model.poses`
+    at import time (mirrors `Poses.traj`'s loose typing the other way) or that module needing to know
+    about `Trajectory` internals."""
 
     t: np.ndarray  # [N] concatenated over passes, ascending within each pass (not globally)
     pass_id: np.ndarray  # [N] int32
@@ -774,9 +774,9 @@ class Trajectory:
         """rot_only only: the export table's plain linear interpolation of origin at `t_query`, via a
         fresh, minimal `traj=None` Poses built from `lin_*` (see class docstring) -- reproduces
         `Poses.interp`'s non-traj branch exactly (same code, not a re-derivation) without an
-        import-time dependency on `mapping.poses` or a live reference to the original Poses object
-        (which would not survive a save/load round trip)."""
-        from .poses import Poses  # local: avoid any import-time coupling with mapping.poses
+        import-time dependency on `geovap.domain.model.poses` or a live reference to the original Poses
+        object (which would not survive a save/load round trip)."""
+        from geovap.domain.model.poses import Poses  # local: avoid any import-time coupling
 
         n = len(self.lin_t)
         plain = Poses(
@@ -1083,3 +1083,13 @@ def fit_rotation_rig(t: np.ndarray, quat: np.ndarray, poses, straight_idx: np.nd
         "euler_R_cs_deg": _euler_xyz_deg(R_cs),
     }
     return CamSensorRig(R_cs=R_cs, l_cs=np.zeros(3), dt_s=dt_best, stats=stats)
+
+
+# A pose table's sidecar may name a `.trajectory.npz`; `runtime.pose_tables.read` attaches it
+# through a registered loader rather than importing this module, because `runtime` sits BELOW
+# `stages` in the layering and this file is a thousand lines of scipy plane fitting. Registering
+# here closes the loop for anyone who has imported the registration code at all -- and a caller who
+# has not simply gets `Poses.traj is None`, which is the documented best-effort behaviour.
+from geovap.runtime.pose_tables import set_trajectory_loader as _set_trajectory_loader  # noqa: E402
+
+_set_trajectory_loader(Trajectory.load)

@@ -22,10 +22,11 @@ from . import las_out
 from geovap.runtime import manifest, settings
 from geovap.stages.prepare import products
 from .accumulate import ColourTopK, NearestInTime
-from .cloud_store import CloudStore, TileInfo, open_store
+from geovap.runtime.store import CloudStore, TileInfo, open_store
 from .config import INCIDENCE_MAX_DEG, OUT_DIR, PANO_H, PANO_W, R_MAX, R_MIN, SCORE_R0, TOP_K
 from geovap.domain.model.frames import FrameIndex
-from .poses import load_poses
+from geovap.runtime.pose_tables import load as load_poses
+from geovap.runtime.panos import pano_path
 from geovap.domain.model.rig import IDENTITY, RigModel
 from geovap.domain.math.sampling import PanoSampler
 from geovap.io.images import load_pano_rgb
@@ -142,7 +143,7 @@ def colorize_tile(tile: TileInfo, store: CloudStore, fi: FrameIndex, opt: Option
             if len(sel) == 0:
                 continue
 
-        ps = PanoSampler(load_pano_rgb(fi.poses.path(k)), footprint=(opt.sampling == "footprint"))
+        ps = PanoSampler(load_pano_rgb(pano_path(fi.poses, k)), footprint=(opt.sampling == "footprint"))
         # ---- product: visible, unsaturated, footprint-sampled, scored
         if opt.sampling == "nearest":
             rgb_p = ps.nearest(u, v)
@@ -236,7 +237,7 @@ def _init(opt: Options):
     # explicit poses_source on opt (not just env inheritance via fork) so it is honoured even if
     # the pool start method is not "fork".
     _G["poses"] = load_poses(opt.poses_source)
-    _G["store"] = open_store(_G["poses"])  # registered cloud when poses carries a "registration"
+    _G["store"] = open_store(poses=_G["poses"])  # registered cloud when poses carries a "registration"
     _G["fi"] = FrameIndex(_G["poses"], opt.rig)
     _G["opt"] = opt
 
@@ -259,7 +260,7 @@ def _run_tile(name: str) -> TileResult:
 def run(tiles: list[str] | None, opt: Options, workers: int = 8) -> list[TileResult]:
     from multiprocessing import Pool
 
-    store = open_store(load_poses(opt.poses_source))
+    store = open_store(poses=load_poses(opt.poses_source))
     names = [t.name for t in store.tiles] if tiles is None else tiles
     names = sorted(names, key=lambda nm: -store.by_name[nm].n)  # largest first
     (Path(opt.out_dir) / opt.tag).mkdir(parents=True, exist_ok=True)

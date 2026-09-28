@@ -8,8 +8,8 @@ import laspy
 import numpy as np
 import pytest
 
-from mapping import cloud_store, las_out
-from mapping.cloud_store import SCALE, CloudStore, PassRegistration, build_tile
+from mapping import las_out
+from geovap.runtime.store import SCALE, CloudStore, PassRegistration, build_tile
 from mapping.merge import MergeInputs, check_same_points, merge_tile, registered_xyz_int
 from geovap.domain.model.poses import Poses
 
@@ -45,14 +45,13 @@ def poses():
 
 
 @pytest.fixture
-def store_root(tmp_path, monkeypatch):
-    # `TileInfo.dir` resolves against the module-global `cloud_store.STORE_DIR`, so a synthetic store
-    # must patch that global to its own tmp root to avoid `TileData` reading the real cache's tile "037".
+def store_root(tmp_path):
+    # `TileInfo.dir` is derived from `TileInfo.root` (a per-instance field), so a synthetic store
+    # just points that at its own tmp root without touching any global.
     root = tmp_path / "store"
-    monkeypatch.setattr(cloud_store, "STORE_DIR", root)
     src = tmp_path / "ID3432_000037_JTSK.laz"
     _write_source_laz(src)
-    meta = build_tile(str(src), str(root / "tiles" / NAME))
+    meta = build_tile(str(src), str(root / "tiles" / NAME), 4.0, NAME)
     meta["row_offset"] = 0
     meta["polygon"] = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 0.0]]
     (root / "tiles.json").write_text(json.dumps({"total": meta["n"], "cell_size": 4.0, "tiles": [meta]}))
