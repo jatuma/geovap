@@ -25,7 +25,7 @@ class Profile:
 PROFILES: dict[str, Profile] = {
     "full": Profile(
         name="full",
-        summary="everything the installed distributions provide, including the optional branches",
+        summary="everything the installed package provides, including the optional branches",
         with_optional=True,
     ),
     "core": Profile(

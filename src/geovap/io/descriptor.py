@@ -102,7 +102,7 @@ def search_path() -> list[Path]:
     `$GEOVAP_DATASETS` (colon-separated) comes first so a deployment can keep its descriptors
     anywhere; then `./datasets`, which is where this repository keeps them; then the few shipped
     inside the package. Real datasets deliberately do NOT ship in the wheel -- a descriptor plus its
-    tracked baseline is data about one site, and `pip install geovap-core` should not carry it.
+    tracked baseline is data about one site, and `pip install geovap` should not carry it.
     """
     out = [Path(p) for p in os.environ.get(ENV_SEARCH_PATH, "").split(os.pathsep) if p]
     out.append(Path("datasets"))

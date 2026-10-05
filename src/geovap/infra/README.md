@@ -1,8 +1,8 @@
 # infra — the non-Python parts of delivery
 
 Docker images, the Potree viewer pages and the screenshot harness. They live inside the
-`geovap-deliver` distribution rather than in a top-level tools directory because they are part of
-what that distribution delivers: `geovap publish` builds an octree with the PotreeConverter image
+`geovap` package rather than in a top-level tools directory because they are part of
+what delivery needs: `geovap publish` builds an octree with the PotreeConverter image
 and serves it with the viewer image, and neither works if they were left behind.
 
     containers/   compose.yml + the three images (PotreeConverter, nginx viewer, PDAL shell)

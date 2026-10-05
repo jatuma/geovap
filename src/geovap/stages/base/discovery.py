@@ -1,9 +1,8 @@
 """Finding the stages that are installed.
 
-Which stages exist depends on which distributions are installed: `geovap-core` contributes
-`prepare`, `register`, `colour`, `objects` and `verify`; `geovap-semantics` adds `semantics`;
-`geovap-deliver` adds `deliver`. They all populate the same `geovap.stages` namespace package, so
-the set can only be known by looking.
+Every group ships with the package, but `semantics` needs the `[semantics]` extra (torch,
+transformers): without it its stage modules fail to import and are skipped, so the set of stages
+can only be known by looking.
 
 A stage group's `__init__.py` deliberately does NOT import its stage modules. If it did, running a
 stage directly -- `python -m geovap.stages.objects.cluster`, which is the whole reason each stage
@@ -15,14 +14,14 @@ So registration is pulled from here instead, by whoever needs the whole picture:
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import pkgutil
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from geovap.stages.base.spec import StageRegistry
 
-#: Groups to look in, in the order they appear in a run. A group that is not installed is skipped
-#: silently -- that is the normal state of a core-only install, not an error.
+#: Groups to look in, in the order they appear in a run.
 #:
 #: `semantics` is listed as its three SUB-packages rather than itself: `pkgutil.iter_modules`
 #: below only walks one package's own top-level modules, and `geovap.stages.semantics` itself has
@@ -36,38 +35,41 @@ GROUPS = (
 )
 
 #: Modules inside a group that are libraries rather than stages. Importing them is harmless but
-#: pointless, and some pull heavy dependencies (torch) that a core-only install does not have.
+#: pointless, and some pull heavy dependencies (torch) that an install without `[semantics]` does not have.
 _SKIP_PREFIX = "_"
+
+#: Top-level modules the `[semantics]` extra provides; `semantics.*` stages cannot import without them.
+_SEMANTICS_REQUIRES = ("torch", "transformers", "shapely", "huggingface_hub")
 
 
 def discover(groups: tuple[str, ...] = GROUPS) -> "StageRegistry":
     """Import every stage module of every installed group, so `registry` holds all of them."""
     from geovap.stages.base.spec import registry
 
-    for group in groups:
+    # Without the `[semantics]` extra its groups are left out: the normal light install, not an error.
+    for group in installed_groups(groups):
         package_name = f"geovap.stages.{group}"
-        try:
-            package = importlib.import_module(package_name)
-        except ImportError:
-            continue  # the distribution contributing this group is not installed
+        package = importlib.import_module(package_name)
         for info in pkgutil.iter_modules(package.__path__):
             if info.name.startswith(_SKIP_PREFIX):
                 continue
             try:
                 importlib.import_module(f"{package_name}.{info.name}")
             except ImportError as exc:
-                # A stage whose optional dependency is missing must not take down the whole
-                # listing; it simply will not be registered, and the driver reports it as absent.
+                # A stage whose optional dependency is missing (the `[semantics]` extra) must not
+                # take down the whole listing; it simply will not be registered, and the driver
+                # reports it as absent.
                 print(f"geovap: skipping {package_name}.{info.name}: {exc}")
     return registry
 
 
+def semantics_available() -> bool:
+    """Whether the `[semantics]` extra is importable (looked up, not imported: torch is slow)."""
+    return all(importlib.util.find_spec(m) is not None for m in _SEMANTICS_REQUIRES)
+
+
 def installed_groups(groups: tuple[str, ...] = GROUPS) -> list[str]:
-    out = []
-    for group in groups:
-        try:
-            importlib.import_module(f"geovap.stages.{group}")
-        except ImportError:
-            continue
-        out.append(group)
-    return out
+    """Groups whose stages can actually be imported here: all of them, minus the `semantics`
+    sub-groups when the `[semantics]` extra is missing."""
+    with_extra = semantics_available()
+    return [g for g in groups if with_extra or not g.startswith("semantics.")]

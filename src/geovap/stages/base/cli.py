@@ -1,7 +1,7 @@
 """The command line every stage shares.
 
 The restructuring requires each stage to be runnable on its own -- `python -m
-geovap.stages.colour.colorize run --tag tw45` must work in a checkout where `geovap-app` is not
+geovap.stages.colour.colorize run --tag tw45` must work in a checkout where the `geovap` command is not
 even installed, because that is what lets a team own a stage without owning the driver. That only
 stays true if the dataset flags are identical everywhere and cost a stage one line to adopt.
 

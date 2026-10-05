@@ -9,7 +9,7 @@
 
 Every subcommand takes the same five dataset flags as every stage, and a stage remains runnable on
 its own -- `python -m geovap.stages.colour.colorize --dataset drazkov` -- so a team can own a stage
-without installing `geovap-app` at all. This command is a convenience over that, never a
+without the `geovap` command at all. This command is a convenience over that, never a
 requirement.
 """
 from __future__ import annotations

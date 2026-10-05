@@ -18,7 +18,7 @@ def test_a_dataset_resolves_and_describes_itself():
 
 
 def test_every_layer_imports():
-    """The four distributions share one namespace package; a broken `__init__` shows up here."""
+    """A broken `__init__` anywhere in the package shows up here."""
     import geovap.domain.model.geometry  # noqa: F401
     import geovap.io.registry  # noqa: F401
     import geovap.runtime.settings  # noqa: F401

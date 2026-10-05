@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 #: carried; these are the only EXTRA dims kept in the octree -- see the module docstring.
 VIEWER_EXTRA_DIMS: tuple[str, ...] = ("cluster_id", "obj_class", "dE00_med", "ref_r", "ref_g", "ref_b")
 
-_INFRA_ROOT = Path(__file__).resolve().parents[3] / "infra"
+_INFRA_ROOT = Path(__file__).resolve().parents[2] / "infra"
 
 
 def thin_tile(src: Path, dst: Path, extra_dims: tuple[str, ...] = VIEWER_EXTRA_DIMS) -> Path:

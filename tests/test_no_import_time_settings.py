@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-SCANNED = ("packages", "experiments")
+SCANNED = ("src", "experiments")
 
 #: Calls that resolve a dataset. Matched on the attribute and the object it is called on, which is
 #: enough while the project keeps to one name per module (`settings`, `pose_tables`, `store`).

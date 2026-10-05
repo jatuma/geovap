@@ -3,7 +3,7 @@
 # disagree about where the data is.
 #
 #   export GEOVAP_DATA=...  GEOVAP_WORKSPACE=...  GEOVAP_PUBLISH=...
-#   docker compose -f packages/geovap-deliver/geovap/infra/containers/compose.yml up viewer
+#   docker compose -f src/geovap/infra/containers/compose.yml up viewer
 #
 # `.env.example` in this directory shows one working set. The previous version of this file
 # hardcoded `../Geovap_data` and named Dražkov's tile files in its own comments.

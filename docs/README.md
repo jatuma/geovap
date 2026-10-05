@@ -1,7 +1,7 @@
 # Documentation index
 
 The eleven numbered documents below (`00`…`09`) are a **historical research record**. They were
-written against the flat `mapping/` layout that existed before the `packages/` restructuring. Their
+written against the flat `mapping/` layout that existed before the restructuring into `src/geovap/`. Their
 **commands and paths have been updated** in this pass so that copy-pasting one still works today
 (`python -m mapping.X` invocations are followed by a `dnes:`/`today:` line giving the current
 equivalent, and stale directories such as `dataset/` are rewritten to `datasets/drazkov/baseline/`).
@@ -34,5 +34,5 @@ lives, instead of silently editing the historical account.
 | [`artifacts.md`](artifacts.md) | The artifact contracts between team streams — generated from `geovap/runtime/artifacts.py`, always current. |
 | [`bring-your-own-dataset.md`](bring-your-own-dataset.md) | How to point the pipeline at a new dataset: the three roots, the descriptor TOML, writing an adapter, `geovap doctor`, the synthetic fixture. |
 
-The root [`README.md`](../README.md) covers the four `packages/*` distributions, the layering rule,
+The root [`README.md`](../README.md) covers the subpackage map, the layering rule,
 and the one-command quickstart.

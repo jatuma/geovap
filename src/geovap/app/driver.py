@@ -216,11 +216,11 @@ def status(s: "Settings", registry: StageRegistry | None = None) -> list[dict]:
 
 # ------------------------------------------------------------------------------------- internals
 def _repo_root() -> Path | None:
-    """Where to run a stage from. `uv run` needs the workspace root; fall back to the cwd when the
+    """Where to run a stage from. `uv run` needs the project root; fall back to the cwd when the
     package is installed outside a checkout."""
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / "pyproject.toml").exists() and (parent / "packages").is_dir():
+        if (parent / "pyproject.toml").exists() and (parent / "src" / "geovap").is_dir():
             return parent
     return None
 

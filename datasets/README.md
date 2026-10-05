@@ -2,7 +2,7 @@
 
 One TOML per dataset, plus its git-tracked reference results under `<name>/baseline/`.
 
-Descriptors live **here, not in the package**. `geovap-core` ships the adapters that can read a
+Descriptors live **here, not in the package**. `geovap` ships the adapters that can read a
 posed-panorama + tiled-LAZ dataset; it does not ship any particular one. A descriptor names paths on
 someone's machine and its baseline is a folder of measurements of one site — neither belongs in a
 wheel. The only descriptor inside the package is `synthetic.toml`, which describes a dataset the

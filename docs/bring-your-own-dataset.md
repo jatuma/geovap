@@ -6,7 +6,7 @@ the detail this page leaves out.
 
 ## 1. The three roots
 
-`geovap.runtime.settings.Paths` (`packages/geovap-core/geovap/runtime/settings.py`) pins a dataset to
+`geovap.runtime.settings.Paths` (`src/geovap/runtime/settings.py`) pins a dataset to
 exactly three directories:
 
 - `data_root` — read-only input: panoramas, LAZ tiles, reference vectors. Never written to.
@@ -23,7 +23,7 @@ extra path segment.
 ### How a descriptor resolves these
 
 A dataset is described by one TOML file (`geovap.io.descriptor.Descriptor.load`,
-`packages/geovap-core/geovap/io/descriptor.py`). Its `[paths]` table gives `data_root`, `workspace`,
+`src/geovap/io/descriptor.py`). Its `[paths]` table gives `data_root`, `workspace`,
 `publish` either as literal paths or as `${VAR}` references that are expanded from the process
 environment at load time — an unset variable is a hard, immediate `DescriptorError` naming both the
 variable and the file, never a silent fallback to a stray `${VAR}` string. `datasets/drazkov.toml`
@@ -166,7 +166,7 @@ math. These are physical properties of the actual sensor and site; copy the valu
 
 ## 3. The four adapter Protocols, and adding a new vendor format
 
-`geovap.io.protocols` (`packages/geovap-core/geovap/io/protocols.py`) defines four `Protocol`s that
+`geovap.io.protocols` (`src/geovap/io/protocols.py`) defines four `Protocol`s that
 `domain`/`runtime`/`stages` code depends on instead of any concrete vendor format:
 
 - `PoseSource` — `load() -> Poses`, `source_file()`, `describe()`.

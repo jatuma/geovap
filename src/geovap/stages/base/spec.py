@@ -88,10 +88,10 @@ class Stage(Protocol):
 
 @dataclass
 class StageRegistry:
-    """Every StageSpec the installed distributions contribute, resolved into a run order.
+    """Every StageSpec the installed package provides, resolved into a run order.
 
     Stage groups register themselves on import; which groups exist depends on what is installed, so
-    a core-only install simply has no `semantics` stages rather than a broken pipeline.
+    an install without `[semantics]` simply has no `semantics` stages rather than a broken pipeline.
     """
 
     stages: dict[str, Stage] = field(default_factory=dict)
@@ -136,8 +136,8 @@ class StageRegistry:
         """Stage names in dependency order (Kahn, ties broken by name so a run is reproducible).
 
         An `after` naming a stage that is not installed is ignored rather than fatal: that is the
-        normal state of a core-only install, where `merge` lists `label` as a predecessor but the
-        semantics distribution is absent.
+        normal state of an install without `[semantics]`, where `merge` lists `label` as a predecessor but the
+        `[semantics]` extra is absent.
         """
         known = set(self.stages)
         pending = {n: {a for a in st.spec.after if a in known} for n, st in self.stages.items()}

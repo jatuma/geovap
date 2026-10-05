@@ -8,7 +8,7 @@ photo-only (opacity 1), blend (opacity 0.5)} screenshots for each panorama varia
 AZ_OFFSET (and export vs corrected) to summary.json - independent of (and a numeric
 second opinion on) `pose.py`'s own interpolation-error verdict.
 
-Prefers the Playwright driver (`driver.js`, shipped by `geovap-deliver` at
+Prefers the Playwright driver (`driver.js`, shipped by the package at
 `geovap/infra/shots/driver.js`, one page load per frame+variant, several shots via
 window.__setCam/__setOpacity); falls back to plain
 `chrome --headless=new --screenshot` (one URL load per shot, all params in the query
@@ -42,18 +42,18 @@ OPACITIES = {"cloud": 0.0, "photo": 1.0, "blend": 0.5}
 
 
 def _driver_js() -> Path | None:
-    """Path to the Playwright driver, shipped as data by `geovap-deliver`
-    (`packages/geovap-deliver/geovap/infra/shots/driver.js`). Resolved via `importlib.resources`
+    """Path to the Playwright driver, shipped as data
+    (`src/geovap/infra/shots/driver.js`). Resolved via `importlib.resources`
     rather than a repo-relative `Path(__file__).parents[...]` -- this module has no reason to assume
-    it is running from a checkout at all, only that `geovap-deliver` is installed (it is optional:
-    a core-only install has no driver and falls back to the plain chrome screenshot below)."""
+    it is running from a checkout at all, only that the package data is installed (if it is absent,
+    e.g. an odd packaging, this falls back to the plain chrome screenshot below)."""
     try:
         import importlib.resources as res
 
         p = res.files("geovap.infra") / "shots" / "driver.js"
         return Path(str(p)) if p.is_file() else None
     except (ImportError, ModuleNotFoundError, FileNotFoundError):
-        return None  # geovap-deliver not installed
+        return None  # package data not installed
 
 
 def _driver_dir() -> Path | None:
@@ -262,7 +262,7 @@ def run_visual_check(
     elif _driver_available():
         run_playwright(jobs, out_dir, width, height)
     else:
-        print("playwright driver not available (run `npm install` in the geovap-deliver `geovap/infra/shots/` dir); falling back to chrome --headless=new --screenshot")
+        print("playwright driver not available (run `npm install` in the `geovap/infra/shots/` dir); falling back to chrome --headless=new --screenshot")
         run_chrome_fallback(shot_index, base_url, mode, out_dir, width, height)
 
     edge_rows = compute_edge_metrics(shot_index, out_dir)

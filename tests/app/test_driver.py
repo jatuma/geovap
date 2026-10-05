@@ -63,8 +63,8 @@ def test_order_comes_from_what_stages_declare(s):
 
 
 def test_an_unknown_predecessor_is_ignored_not_fatal(s):
-    """A core-only install has `merge` listing `label` as a predecessor while the semantics
-    distribution is absent. That must run, not crash."""
+    """An install without `[semantics]` has `merge` listing `label` as a predecessor while the
+    semantics stages are absent. That must run, not crash."""
     r = _registry(FakeStage(StageSpec(name="merge", after=("label", "colorize"))),
                   FakeStage(StageSpec(name="colorize")))
     assert r.order() == ["colorize", "merge"]

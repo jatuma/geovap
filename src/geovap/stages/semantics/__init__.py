@@ -1,7 +1,7 @@
 """Stage group: semantics -- pseudo-ground-truth, zero-shot segmentation, and label projection.
 
-The only distribution allowed to import torch/transformers/shapely (see the `core-without-torch`
-import-linter contract). Split into three sub-groups by what they do:
+The only stage group allowed to import torch/transformers/shapely (see the `core-without-torch`
+import-linter contract); needs the `[semantics]` extra. Split into three sub-groups by what they do:
 
   pseudogt   JVF pseudo-ground-truth dataset (areas -> rasters -> point/ERP labels -> views)
   segment    zero-shot panorama segmentation + its benchmark against the pseudo-GT

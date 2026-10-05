@@ -1,43 +1,43 @@
-# The workspace root. It is NOT a package: `mapping/` is gone and nothing lives here but the
-# workspace definition, the shared dev dependencies and the tool configuration. Everything that
-# ships is under `packages/`.
+# One package, one command. The subpackage tree under `src/geovap/` is the map of who owns what
+# (see `CODEOWNERS` and the docstring of `src/geovap/__init__.py`).
 #
-#   geovap-core       domain, io, runtime, and the stages that need no GPU
-#   geovap-semantics  the segmentation stages (torch, transformers)
-#   geovap-deliver    the consolidated product, the octree and the viewer infrastructure
-#   geovap-app        the `geovap` command
-#
-# Install just what you need: `uv pip install geovap-core` gives a working doctor, store, products
-# and colourisation with no torch anywhere in the tree.
+# `pip install geovap` gives a working doctor, point store, products, colourisation and delivery
+# with no torch anywhere in the tree; `pip install "geovap[semantics]"` adds the segmentation stages.
 [project]
-name = "geovap-workspace"
+name = "geovap"
 version = "0.1.0"
-description = "Development workspace for the geovap distributions. Installs all four, editable."
+description = "Posed panoramas + tiled point clouds in, one coloured, semantically labelled cloud per tile out; served through Potree."
 requires-python = ">=3.11,<3.12"
 dependencies = [
-    "geovap-core",
-    "geovap-semantics",
-    "geovap-deliver",
-    "geovap-app",
+    "numpy>=2.0,<2.3",
+    "numba>=0.60",
+    "scipy>=1.13",
+    "laspy[lazrs]>=2.5",
+    "scikit-image>=0.24",
+    "opencv-python-headless>=4.9",
+    "matplotlib>=3.8",
+    "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]
-turbo = ["geovap-core[turbo]"]
+# The segmentation stages (stages/semantics) and domain/math/camera_torch.py, the independent
+# reference camera used by tests.
+semantics = [
+    "torch>=2.6",
+    "transformers>=5.0",
+    "shapely>=2.0",
+    "huggingface-hub>=0.25",
+]
+turbo = ["PyTurboJPEG>=1.7"]
+
+[project.scripts]
+geovap = "geovap.app.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "import-linter>=2.0"]
-
-[tool.uv.workspace]
-members = ["packages/*"]
-
-[tool.uv]
-package = true
+# `uv sync` installs the project plus everything the tests exercise.
+dev = ["geovap[semantics,turbo]", "pytest>=8", "import-linter>=2.0"]
 
 [tool.uv.sources]
-geovap-core = { workspace = true }
-geovap-semantics = { workspace = true }
-geovap-deliver = { workspace = true }
-geovap-app = { workspace = true }
 torch = [{ index = "pytorch-cu126" }]
 
 [[tool.uv.index]]
@@ -49,26 +49,16 @@ explicit = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# Nothing to build here: the root is a workspace, not a distribution.
+# Non-Python files under the package (descriptor/taxonomy TOMLs, `infra/` Dockerfiles, nginx config
+# and viewer HTML) ship in the wheel: `geovap publish` builds the octree and serves the viewer from
+# them, and the adapters load the TOMLs at runtime.
 [tool.hatch.build.targets.wheel]
-bypass-selection = true
+packages = ["src/geovap"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # The repository root on sys.path, so `tests.io.conftest`'s synthetic-dataset fixtures can be
-# imported by the other test packages. It used to arrive by accident, via the editable install of
-# the root `mapping` package; the root is a workspace now and installs nothing.
+# imported by the other test packages.
 pythonpath = ["."]
 markers = ["slow: needs the full dataset / long runtime"]
 addopts = "-m 'not slow'"
-
-[tool.pyright]
-# The four distributions each contribute to the same `geovap` PEP 420 namespace. They are installed
-# editable, so imports resolve at runtime, but an editor that only looks at the source tree needs to
-# be told where the roots are -- otherwise every `from geovap.domain...` is flagged unresolved.
-extraPaths = [
-    "packages/geovap-core",
-    "packages/geovap-semantics",
-    "packages/geovap-deliver",
-    "packages/geovap-app",
-]

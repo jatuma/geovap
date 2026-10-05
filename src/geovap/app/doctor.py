@@ -8,8 +8,8 @@ disk".
 The checks are `stages.prepare.ingest`'s, reused rather than reimplemented -- a doctor that
 disagrees with the stage is worse than no doctor. The difference is that `doctor` writes nothing at
 all: no manifest, no marker. It also reports what `ingest` cannot, because `ingest` is about the
-data and `doctor` is about the installation: which distributions are present, which stages they
-contribute, and where every path resolved from.
+data and `doctor` is about the installation: whether the `[semantics]` extra is importable, which stages
+are available, and where every path resolved from.
 """
 from __future__ import annotations
 

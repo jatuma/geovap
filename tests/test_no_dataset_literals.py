@@ -31,8 +31,8 @@ DATASET_LITERAL = re.compile(
 #: The only places a dataset literal is legitimate: the adapter that reads that vendor format (in
 #: prose and in its own regex defaults) and the descriptors themselves.
 ALLOWED = (
-    "packages/geovap-core/geovap/io/adapters/",
-    "packages/geovap-core/geovap/io/datasets/",
+    "src/geovap/io/adapters/",
+    "src/geovap/io/datasets/",
 )
 
 #: Legacy modules still holding dataset literals, each deleted by the phase named. This set may only
@@ -43,7 +43,7 @@ KNOWN_LEGACY = frozenset({
     # silent addition.
 })
 
-SCANNED = ("packages", "experiments")
+SCANNED = ("src", "experiments")
 
 
 def _string_constants(path: Path) -> list[tuple[int, str]]:
@@ -89,10 +89,10 @@ def test_the_legacy_allowlist_only_shrinks():
     assert not stale, f"these no longer hold dataset literals; remove them from KNOWN_LEGACY: {sorted(stale)}"
 
 
-def test_the_new_packages_are_completely_clean():
-    """Stated separately because it is the actual deliverable: `packages/` is what ships."""
-    offenders = {f: h for f, h in _offenders().items() if f.startswith("packages/")}
-    assert not offenders, f"the shipped packages still name one dataset: {offenders}"
+def test_the_shipped_package_is_completely_clean():
+    """Stated separately because it is the actual deliverable: `src/` is what ships."""
+    offenders = {f: h for f, h in _offenders().items() if f.startswith("src/")}
+    assert not offenders, f"the shipped package still names one dataset: {offenders}"
 
 
 @pytest.mark.parametrize("bad", ["ID3432_000037.laz", "/mnt/Geovap_cache/store", "EPSG:5514"])

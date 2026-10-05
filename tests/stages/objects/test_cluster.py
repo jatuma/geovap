@@ -20,7 +20,7 @@ import pytest
 from geovap.io.datasets import synthetic
 
 ALGORITHMS = ("cluster_laz.py", "merge_tiles.py")
-OBJECTS_DIR = Path(__file__).resolve().parents[3] / "packages/geovap-core/geovap/stages/objects"
+OBJECTS_DIR = Path(__file__).resolve().parents[3] / "src/geovap/stages/objects"
 
 
 def _top_level_imports(path: Path) -> set[str]:

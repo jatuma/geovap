@@ -6,20 +6,26 @@ served through Potree. Built and validated against a ~600 GB real-world dataset 
 tiny synthetic fixture so the whole pipeline runs, and every stage's contract is testable, with no
 real data mounted.
 
-## The four distributions
+## Layout
 
-A `uv` workspace under `packages/*`, sharing the `geovap` namespace so each installs and imports as
-part of the same package:
+One package, `src/geovap/`; the subpackage tree says who owns what (see `CODEOWNERS`).
 
-| distribution | owns | needs |
-|---|---|---|
-| **geovap-core** | `domain` (pure geometry/math/scheme, no I/O), `io` (dataset descriptors + vendor-format adapters), `runtime` (settings, workspace layout, artifact contracts), and the stages that need no GPU (`prepare`, `register`, `colour`, `objects`, `verify`) | numpy/laspy/scipy only |
-| **geovap-semantics** | the segmentation stages: pseudo-GT construction from reference vectors, zero-shot model benchmarking, projecting labels into the cloud | torch, transformers |
-| **geovap-deliver** | the consolidated LAZ product, the Potree octree, the viewer/PotreeConverter container infra | — |
-| **geovap-app** | the `geovap` command: `doctor`/`stages`/`datasets`/`run`/`status`/`compare` | the other three |
+| subpackage | owns |
+|---|---|
+| `domain` | pure geometry, math and scheme, no I/O |
+| `io` | dataset descriptors and vendor-format adapters |
+| `runtime` | settings, workspace layout, artifact contracts |
+| `stages/base`, `stages/prepare` | stage spec, registry and CLI; ingest and dataset checks |
+| `stages/register` | panorama registration |
+| `stages/semantics` | pseudo-GT, zero-shot segmentation, label projection (needs `geovap[semantics]`: torch, transformers) |
+| `stages/objects` | clustering |
+| `stages/colour` | colourisation |
+| `stages/deliver`, `infra` | the consolidated LAZ product, the Potree octree, the viewer/PotreeConverter container infra |
+| `app`, `stages/verify` | the `geovap` command (`doctor`/`stages`/`datasets`/`run`/`status`/`compare`); visual and numeric verification |
 
-Install just what you need: `uv pip install geovap-core` gives a working `doctor`, point store,
-frame products and colourisation, with no torch anywhere in the tree.
+`pip install geovap` gives a working `doctor`, point store, frame products, colourisation and
+delivery, with no torch anywhere in the tree; `pip install "geovap[semantics]"` adds the
+segmentation stages, and `geovap[turbo]` faster JPEG decoding.
 
 ## Layering, and how it's enforced
 
@@ -54,7 +60,7 @@ uv run geovap run     --dataset <name>    # run it
 uv run geovap status  --dataset <name>    # what has been done
 ```
 
-Every stage is also runnable standalone, without `geovap-app` installed at all:
+Every stage is also runnable standalone, without the `geovap` command at all:
 `python -m geovap.stages.colour.colorize --dataset <name>`.
 
 ## Tests and baselines

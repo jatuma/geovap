@@ -1,7 +1,7 @@
-; Architectural contracts for the geovap workspace.
+; Architectural contracts for the geovap package.
 ;
-; These are the boundaries the four distributions are built around. They are checked in CI because
-; nothing else stops an upward import: every package installs into the same virtualenv, so a stray
+; These are the boundaries the subpackages are built around. They are checked in CI because
+; nothing else stops an upward import: it is all one package, so a stray
 ; `from geovap.runtime import settings` inside `geovap.domain` would work perfectly at runtime and
 ; silently undo the layering.
 ;
@@ -55,7 +55,7 @@ modules =
     geovap.stages.verify
 
 ; ------------------------------------------------------------------------------- install boundary
-; geovap-core must stay installable and runnable without the torch/transformers stack, so nothing
+; an install without the `[semantics]` extra must stay runnable without the torch/transformers stack, so nothing
 ; below `geovap.stages.semantics` may be imported by the core stages.
 [importlinter:contract:core-without-torch]
 name = core stages do not import the semantics stage group
@@ -73,17 +73,17 @@ forbidden_modules =
     geovap.stages.semantics
     torch
     transformers
-; Two domain modules are torch-based by nature and ship behind the `geovap-core[torch]` extra:
+; Two domain modules are torch-based by nature and need torch, which comes with the `[semantics]` extra:
 ;   camera_torch  an independent reference implementation of the camera model, used only by
 ;                 tests/test_geometry.py to cross-check geometry.py, and imported inside the test
 ;                 function rather than at module scope.
 ;   reproject     ERP <-> gnomonic view extraction, used by the view-tiling code in the semantics
 ;                 stage group.
-; Neither is reachable from a core stage's import graph, so `uv pip install geovap-core` without the
-; extra still imports and runs. The test below proves that; do not widen this exemption without it.
+; Neither is reachable from a core stage's import graph, so an install without
+; `[semantics]` still imports and runs. The test below proves that; do not widen this exemption without it.
 ; `stages.prepare.ingest` imports torch inside a try/except, purely to report whether CUDA is
 ; importable (one of the `env-check` checks it absorbs) -- never at module scope, and it degrades
-; to "not importable" rather than failing when torch is absent, so `geovap-core` without the extra
+; to "not importable" rather than failing when torch is absent, so an install without `[semantics]`
 ; still imports and runs `ingest` fine.
 ignore_imports =
     geovap.domain.math.camera_torch -> torch
